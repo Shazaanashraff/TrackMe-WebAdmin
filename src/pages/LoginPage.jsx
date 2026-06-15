@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -7,29 +7,57 @@ import {
   CircularProgress,
   Divider,
   FormControlLabel,
+  IconButton,
+  InputAdornment,
   Link,
   Stack,
   TextField,
   Typography
 } from '@mui/material';
+import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import { motion } from 'framer-motion';
+
+const leftSlides = [
+  {
+    src: 'https://images.unsplash.com/photo-1493238792000-8113da705763?auto=format&fit=crop&w=1400&q=80',
+    label: 'Live fleet visibility',
+    description: 'Follow route activity and keep operations coordinated.'
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1400&q=80',
+    label: 'Manager oversight',
+    description: 'Monitor trips, drivers, and service status in one place.'
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=1400&q=80',
+    label: 'Every route in view',
+    description: 'Keep TrackMe aligned with every movement that matters.'
+  }
+];
 
 export function LoginPage({
   onLogin,
+  onForgotPassword = () => {},
   loading,
   error,
-  roleTitle = 'Super Admin Sign In',
-  roleSubtitle = 'Secure access for global fleet management operations.',
+  roleTitle = 'Sign In',
+  roleSubtitle = 'Secure access for TrackMe manager accounts.',
   usernameLabel = 'Email',
-  usernamePlaceholder = 'superadmin@company.com',
-  submitLabel = 'Enter Control Tower'
+  usernamePlaceholder = 'manager@trackme.com',
+  submitLabel = 'Sign In'
 }) {
-  const [form, setForm] = useState({ email: '', password: '' });
-  const leftImages = [
-    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80',
-    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1400&q=80',
-    'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1400&q=80'
-  ];
+  const [form, setForm] = useState({ email: '', password: '', rememberMe: true });
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveSlide((currentIndex) => (currentIndex + 1) % leftSlides.length);
+    }, 5200);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   const handleChange = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -39,6 +67,8 @@ export function LoginPage({
     event.preventDefault();
     onLogin(form);
   };
+
+  const currentSlide = leftSlides[activeSlide];
 
   return (
     <Box
@@ -73,9 +103,10 @@ export function LoginPage({
             }}
           >
             <Box
-              component="img"
-              src={leftImages[0]}
-              alt="Monochrome landscape"
+              component={motion.img}
+              key={currentSlide.src}
+              src={currentSlide.src}
+              alt={currentSlide.label}
               sx={{
                 position: 'absolute',
                 inset: 0,
@@ -85,6 +116,9 @@ export function LoginPage({
                 filter: 'grayscale(100%) contrast(1.05) brightness(0.55)',
                 transform: 'scale(1.03)'
               }}
+              initial={{ opacity: 0, scale: 1.04 }}
+              animate={{ opacity: 1, scale: 1.03 }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
             />
             <Box
               sx={{
@@ -97,47 +131,42 @@ export function LoginPage({
             />
 
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ position: 'relative', zIndex: 1 }}>
-              <Typography sx={{ color: '#f5f5f5', fontWeight: 800, letterSpacing: '0.08em' }}>ACEBUS</Typography>
-              <Button
-                size="small"
-                variant="outlined"
-                sx={{
-                  color: '#e5e7eb',
-                  borderColor: 'rgba(255,255,255,0.22)',
-                  backgroundColor: 'rgba(255,255,255,0.06)',
-                  fontSize: '0.68rem',
-                  px: 1.4,
-                  py: 0.4,
-                  minWidth: 'unset'
-                }}
-              >
-                Back to Website
-              </Button>
+              <Typography sx={{ color: '#f5f5f5', fontWeight: 800, letterSpacing: '0.08em' }}>TrackMe</Typography>
             </Stack>
 
             <Box sx={{ position: 'absolute', left: 28, bottom: 28, zIndex: 1 }}>
               <Typography sx={{ color: '#f3f4f6', fontSize: { xs: '1.15rem', md: '1.6rem' }, fontWeight: 700, lineHeight: 1.2 }}>
-                Capture Clarity,
-                <br />
-                Control Operations
+                {currentSlide.label}
               </Typography>
-              <Stack direction="row" spacing={0.8} sx={{ mt: 2 }}>
-                {leftImages.map((img, index) => (
+              <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: { xs: '0.8rem', md: '0.92rem' }, fontWeight: 500, mt: 0.5 }}>
+                {currentSlide.description}
+              </Typography>
+              <Stack direction="row" spacing={0.8} sx={{ mt: 2, alignItems: 'center' }}>
+                {leftSlides.map((slide, index) => (
                   <Box
-                    key={img}
+                    key={slide.src}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setActiveSlide(index)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        setActiveSlide(index);
+                      }
+                    }}
                     sx={{
-                      width: 34,
-                      height: 22,
-                      borderRadius: 1,
+                      width: 40,
+                      height: 24,
+                      borderRadius: 999,
                       overflow: 'hidden',
-                      border: index === 0 ? '1px solid rgba(255,255,255,0.85)' : '1px solid rgba(255,255,255,0.35)',
-                      opacity: index === 0 ? 1 : 0.72
+                      border: index === activeSlide ? '1px solid rgba(255,255,255,0.92)' : '1px solid rgba(255,255,255,0.25)',
+                      opacity: index === activeSlide ? 1 : 0.72,
+                      cursor: 'pointer'
                     }}
                   >
                     <Box
                       component="img"
-                      src={img}
-                      alt={`Preview ${index + 1}`}
+                      src={slide.src}
+                      alt={`Slide ${index + 1}`}
                       sx={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(100%) brightness(0.7)' }}
                     />
                   </Box>
@@ -186,13 +215,28 @@ export function LoginPage({
 
               <TextField
                 size="small"
-                type="password"
+                type={passwordVisible ? 'text' : 'password'}
                 value={form.password}
                 onChange={handleChange('password')}
                 label="Password"
                 placeholder="Enter your password"
                 required
                 fullWidth
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        type="button"
+                        onClick={() => setPasswordVisible((visible) => !visible)}
+                        edge="end"
+                        size="small"
+                        aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+                      >
+                        {passwordVisible ? <VisibilityOffRoundedIcon fontSize="small" /> : <VisibilityRoundedIcon fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
                 InputLabelProps={{ sx: { color: '#6b7280' } }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
@@ -207,11 +251,11 @@ export function LoginPage({
 
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 0.2 }}>
                 <FormControlLabel
-                  control={<Checkbox size="small" defaultChecked sx={{ color: '#6b7280', '&.Mui-checked': { color: '#374151' } }} />}
+                  control={<Checkbox size="small" checked={form.rememberMe} onChange={(event) => setForm((prev) => ({ ...prev, rememberMe: event.target.checked }))} sx={{ color: '#6b7280', '&.Mui-checked': { color: '#374151' } }} />}
                   label={<Typography sx={{ color: '#6b7280', fontSize: '0.75rem' }}>Remember me</Typography>}
                   sx={{ m: 0 }}
                 />
-                <Link href="#" underline="hover" sx={{ color: '#4b5563', fontSize: '0.75rem' }}>Forgot password?</Link>
+                <Link component="button" type="button" underline="hover" onClick={onForgotPassword} sx={{ color: '#4b5563', fontSize: '0.75rem' }}>Forgot password?</Link>
               </Stack>
 
               {error ? <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert> : null}
@@ -235,32 +279,22 @@ export function LoginPage({
             </Box>
 
             <Divider sx={{ my: 2.3, borderColor: '#e5e7eb' }} />
-            <Stack direction="row" spacing={1}>
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
               <Button
+                component="a"
+                href="mailto:mohamedshazaan7@gmail.com?subject=TrackMe%20Admin%20Support"
                 variant="outlined"
-                fullWidth
                 sx={{
                   borderColor: '#d1d5db',
                   color: '#374151',
                   textTransform: 'none',
-                  fontSize: '0.8rem'
+                  fontSize: '0.8rem',
+                  minWidth: 210
                 }}
               >
-                Workspace Help
+                Contact admin
               </Button>
-              <Button
-                variant="outlined"
-                fullWidth
-                sx={{
-                  borderColor: '#d1d5db',
-                  color: '#374151',
-                  textTransform: 'none',
-                  fontSize: '0.8rem'
-                }}
-              >
-                Contact Admin
-              </Button>
-            </Stack>
+            </Box>
           </Box>
         </Box>
       </motion.div>

@@ -1,3 +1,5 @@
+import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const handleUnauthorized = (message) => {
@@ -6,16 +8,51 @@ const handleUnauthorized = (message) => {
 
   if (!isAuthError) return;
 
-  localStorage.removeItem('admin-auth');
+  clearStoredAuth();
 
   if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
     window.location.assign('/login');
   }
 };
 
+const safeParseJson = async (response) => {
+  try {
+    return await response.json();
+  } catch {
+    return {};
+  }
+};
+
+const refreshStoredAuth = async () => {
+  const storedAuth = readStoredAuth();
+  if (!storedAuth?.refreshToken) return null;
+
+  const response = await fetch(`${API_BASE_URL}/api/auth/refresh-token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ refreshToken: storedAuth.refreshToken })
+  });
+
+  const data = await safeParseJson(response);
+
+  if (!response.ok) {
+    throw new Error(data.message || 'Session refresh failed');
+  }
+
+  return writeStoredAuth({
+    ...storedAuth,
+    ...data,
+    token: data?.token || data?.accessToken || null,
+    accessToken: data?.accessToken || data?.token || null,
+    refreshToken: data?.refreshToken || storedAuth.refreshToken
+  }, storedAuth.rememberMe);
+};
+
 const request = async (path, options = {}) => {
-  const cachedAuth = localStorage.getItem('admin-auth');
-  const token = cachedAuth ? (JSON.parse(cachedAuth)?.token || JSON.parse(cachedAuth)?.accessToken) : null;
+  const cachedAuth = readStoredAuth();
+  const token = cachedAuth?.token || cachedAuth?.accessToken || null;
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
@@ -26,10 +63,33 @@ const request = async (path, options = {}) => {
     }
   });
 
-  const data = await response.json();
+  const data = await safeParseJson(response);
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
+    const isAuthFailure = response.status === 401 || response.status === 403;
+    const shouldRetryAfterRefresh =
+      isAuthFailure &&
+      options.retryAfterRefresh !== false &&
+      cachedAuth?.refreshToken &&
+      ![
+        '/api/auth/login',
+        '/api/auth/refresh-token',
+        '/api/auth/logout',
+        '/api/auth/forgot-password/request-otp',
+        '/api/auth/forgot-password/verify-otp',
+        '/api/auth/forgot-password/reset'
+      ].includes(path);
+
+    if (shouldRetryAfterRefresh) {
+      try {
+        await refreshStoredAuth();
+        return request(path, { ...options, retryAfterRefresh: false });
+      } catch {
+        handleUnauthorized(data.message);
+      }
+    }
+
+    if (isAuthFailure) {
       handleUnauthorized(data.message);
     }
 
@@ -51,6 +111,34 @@ export const adminApi = {
       ...response,
       token: response?.token || response?.accessToken || null
     })),
+
+  refreshToken: (refreshToken) =>
+    request('/api/auth/refresh-token', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+      retryAfterRefresh: false
+    }),
+
+  requestPasswordResetOtp: (email) =>
+    request('/api/auth/forgot-password/request-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+      retryAfterRefresh: false
+    }),
+
+  verifyPasswordResetOtp: (email, otp) =>
+    request('/api/auth/forgot-password/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+      retryAfterRefresh: false
+    }),
+
+  resetPasswordWithToken: (email, resetToken, password) =>
+    request('/api/auth/forgot-password/reset', {
+      method: 'POST',
+      body: JSON.stringify({ email, resetToken, password }),
+      retryAfterRefresh: false
+    }),
 
   getSuperAdminDashboard: () => request('/api/super-admin/dashboard'),
 

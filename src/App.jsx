@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import { Snackbar, Alert } from '@mui/material';
+import { Alert, Box, CircularProgress, Snackbar, Stack, Typography } from '@mui/material';
 import { LoginPage } from './pages/LoginPage';
+import { ForgotPasswordRequestPage } from './pages/ForgotPasswordRequestPage';
+import { ForgotPasswordVerifyPage } from './pages/ForgotPasswordVerifyPage';
+import { ForgotPasswordResetPage } from './pages/ForgotPasswordResetPage';
 import { SuperAdminLayout } from './layout/SuperAdminLayout';
 import { ManagerLayout } from './layout/ManagerLayout';
 import { DashboardPage } from './pages/DashboardPage';
@@ -15,6 +18,18 @@ import { ManagerTrackingPage } from './pages/ManagerTrackingPage';
 import { ManagerAccountsPage } from './pages/ManagerAccountsPage';
 import { ManagerSettingsPage } from './pages/ManagerSettingsPage';
 import { adminApi } from './api';
+import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
+
+function AppLoading() {
+  return (
+    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%)' }}>
+      <Stack spacing={1.5} alignItems="center">
+        <CircularProgress />
+        <Typography sx={{ color: '#6b7280', fontWeight: 600 }}>Restoring session...</Typography>
+      </Stack>
+    </Box>
+  );
+}
 
 function ProtectedShell({ auth, onLogout, refreshSignal, triggerRefresh }) {
   const authToken = auth?.token || auth?.accessToken;
@@ -64,21 +79,21 @@ function LoginShell({ auth, setAuth }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = async ({ email, password }) => {
+  const handleLogin = async ({ email, password, rememberMe }) => {
     setLoading(true);
     setError('');
     try {
       const response = await adminApi.login(email, password);
       if (!['super-admin', 'admin'].includes(response?.user?.role)) {
-        throw new Error('Access denied. This portal is only for superAdmin and manager accounts.');
+        throw new Error('Access denied. This portal is reserved for authorized TrackMe administrative accounts.');
       }
 
-      const normalizedAuth = {
+      const normalizedAuth = writeStoredAuth({
         ...response,
-        token: response?.token || response?.accessToken || null
-      };
+        token: response?.token || response?.accessToken || null,
+        accessToken: response?.accessToken || response?.token || null
+      }, rememberMe);
 
-      localStorage.setItem('admin-auth', JSON.stringify(normalizedAuth));
       setAuth(normalizedAuth);
       if (response?.user?.role === 'super-admin') {
         navigate('/dashboard', { replace: true });
@@ -101,36 +116,77 @@ function LoginShell({ auth, setAuth }) {
       onLogin={handleLogin}
       loading={loading}
       error={error}
-      roleTitle="SuperAdmin / Manager Sign In"
-      roleSubtitle="Secure access for software owner and bus organization managers."
-      usernameLabel="Username (Email)"
-      usernamePlaceholder="manager@company.com"
-      submitLabel="Enter Workspace"
+      roleTitle="Sign In"
+      roleSubtitle="Secure access for TrackMe manager accounts."
+      usernameLabel="Manager Email"
+      usernamePlaceholder="manager@trackme.com"
+      submitLabel="Sign In"
+      onForgotPassword={() => navigate('/forgot-password')}
     />
   );
 }
 
 export default function App() {
-  const [auth, setAuth] = useState(() => {
-    try {
-      const cached = localStorage.getItem('admin-auth');
-      if (!cached) return null;
-      const parsed = JSON.parse(cached);
-      return {
-        ...parsed,
-        token: parsed?.token || parsed?.accessToken || null
-      };
-    } catch {
-      return null;
-    }
-  });
+  const [auth, setAuth] = useState(() => readStoredAuth());
+  const [hydrating, setHydrating] = useState(true);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [toast, setToast] = useState('');
+  const refreshSignal = refreshCounter;
 
-  const refreshSignal = useMemo(() => refreshCounter, [refreshCounter]);
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreAuth = async () => {
+      const storedAuth = readStoredAuth();
+
+      if (!storedAuth) {
+        if (!cancelled) {
+          setAuth(null);
+          setHydrating(false);
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setAuth(storedAuth);
+      }
+
+      if (storedAuth.refreshToken) {
+        try {
+          const refreshedAuth = await adminApi.refreshToken(storedAuth.refreshToken);
+          const normalizedAuth = writeStoredAuth({
+            ...storedAuth,
+            ...refreshedAuth,
+            token: refreshedAuth?.token || refreshedAuth?.accessToken || null,
+            accessToken: refreshedAuth?.accessToken || refreshedAuth?.token || null,
+            refreshToken: refreshedAuth?.refreshToken || storedAuth.refreshToken
+          }, storedAuth.rememberMe);
+
+          if (!cancelled) {
+            setAuth(normalizedAuth);
+          }
+        } catch {
+          clearStoredAuth();
+          if (!cancelled) {
+            setAuth(null);
+          }
+        }
+      }
+
+      if (!cancelled) {
+        setHydrating(false);
+      }
+    };
+
+    restoreAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('admin-auth');
+    clearStoredAuth();
     setAuth(null);
     setToast('Logged out successfully');
   };
@@ -142,8 +198,13 @@ export default function App() {
 
   return (
     <>
+      {hydrating ? <AppLoading /> : null}
+      {!hydrating ? (
       <Routes>
         <Route path="/login" element={<LoginShell auth={auth} setAuth={setAuth} />} />
+        <Route path="/forgot-password" element={<ForgotPasswordRequestPage />} />
+        <Route path="/forgot-password/verify" element={<ForgotPasswordVerifyPage />} />
+        <Route path="/forgot-password/reset" element={<ForgotPasswordResetPage />} />
         <Route
           path="/*"
           element={
@@ -156,6 +217,7 @@ export default function App() {
           }
         />
       </Routes>
+      ) : null}
 
       <Snackbar open={Boolean(toast)} autoHideDuration={2200} onClose={() => setToast('')}>
         <Alert severity="info" variant="filled" onClose={() => setToast('')}>{toast}</Alert>

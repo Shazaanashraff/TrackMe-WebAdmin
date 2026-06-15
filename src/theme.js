@@ -1,7 +1,7 @@
 import { createTheme } from '@mui/material/styles';
 
 /**
- * ACEBUS SOFT UI THEME
+ * TrackMe SOFT UI THEME
  * Inspired by Creative Tim's Soft UI / Material Dashboard
  */
 export const darkTheme = createTheme({

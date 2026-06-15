@@ -68,9 +68,9 @@ export function SuperAdminLayout({ user, onLogout, onRefresh }) {
               justifyContent: 'center',
               alignItems: 'center',
             }}>
-              <Typography variant="h6" color="white" sx={{ fontSize: 14, fontWeight: 900 }}>A</Typography>
+              <Typography variant="h6" color="white" sx={{ fontSize: 14, fontWeight: 900 }}>T</Typography>
             </Box>
-            <Typography variant="h6" sx={{ color: '#2f2f2f', fontSize: 13, fontWeight: 800, letterSpacing: 0.5, fontFamily: 'Uber Move' }}>ACEBUS ADMIN</Typography>
+            <Typography variant="h6" sx={{ color: '#2f2f2f', fontSize: 13, fontWeight: 800, letterSpacing: 0.5, fontFamily: 'Uber Move' }}>TRACKME ADMIN</Typography>
           </Box>
         </Toolbar>
 
