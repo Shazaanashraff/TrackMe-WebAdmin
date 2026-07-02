@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, Box, Button, Card, CardContent, Grid, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Box, Button, Card, CardContent, Chip, Divider, Grid, List, ListItemButton, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { DataGrid } from '@mui/x-data-grid';
 import { adminApi } from '../api';
 
@@ -14,11 +15,30 @@ const createInitialForm = () => ({
   stops: []
 });
 
+// The 9 Sri Lanka provinces + their manager accounts. Order controls how the
+// summary cards are laid out. Keep the slugs in sync with
+// backend scripts/assign-provinces-and-managers.js.
+const PROVINCES = [
+  { name: 'Western', slug: 'western' },
+  { name: 'Central', slug: 'central' },
+  { name: 'Southern', slug: 'southern' },
+  { name: 'North Western', slug: 'northwestern' },
+  { name: 'North Central', slug: 'northcentral' },
+  { name: 'Sabaragamuwa', slug: 'sabaragamuwa' },
+  { name: 'Uva', slug: 'uva' },
+  { name: 'Eastern', slug: 'eastern' },
+  { name: 'Northern', slug: 'northern' }
+];
+const UNASSIGNED = '__unassigned__';
+const managerEmail = (slug) => `${slug}.manager@trackme.com`;
+
 export function RoutesPage({ refreshSignal }) {
   const [routes, setRoutes] = useState([]);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState('');
   const [routeForm, setRouteForm] = useState(() => createInitialForm());
+  // null = show the province/manager summary; a province name = show its routes.
+  const [selectedProvince, setSelectedProvince] = useState(null);
 
   const loadRoutes = useCallback(async () => {
     setRouteLoading(true);
@@ -36,6 +56,29 @@ export function RoutesPage({ refreshSignal }) {
   useEffect(() => {
     loadRoutes();
   }, [loadRoutes, refreshSignal]);
+
+  // Route counts per province, plus any routes with no province set.
+  const { countsByProvince, unassignedCount } = useMemo(() => {
+    const counts = {};
+    let unassigned = 0;
+    for (const route of routes) {
+      const province = (route.province || '').trim();
+      if (!province) {
+        unassigned += 1;
+        continue;
+      }
+      counts[province] = (counts[province] || 0) + 1;
+    }
+    return { countsByProvince: counts, unassignedCount: unassigned };
+  }, [routes]);
+
+  const visibleRoutes = useMemo(() => {
+    if (!selectedProvince) return [];
+    if (selectedProvince === UNASSIGNED) {
+      return routes.filter((route) => !(route.province || '').trim());
+    }
+    return routes.filter((route) => (route.province || '').trim() === selectedProvince);
+  }, [routes, selectedProvince]);
 
   const addStop = () => {
     setRouteForm((prev) => ({
@@ -132,6 +175,8 @@ export function RoutesPage({ refreshSignal }) {
     { field: 'stopsCount', headerName: 'Stops', width: 90 },
     { field: 'isActive', headerName: 'Status', width: 100, valueGetter: (_value, row) => (row.isActive ? 'Active' : 'Inactive') }
   ];
+
+  const totalRoutes = routes.length;
 
   return (
     <Grid container spacing={2}>
@@ -231,14 +276,75 @@ export function RoutesPage({ refreshSignal }) {
               <Button type="submit" variant="contained" sx={{ width: 'fit-content' }}>Create Route</Button>
             </Box>
 
-            <DataGrid
-              rows={routes}
-              getRowId={(row) => row._id}
-              columns={routeColumns}
-              loading={routeLoading}
-              autoHeight
-              hideFooter
-            />
+            {selectedProvince ? (
+              <Box>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }} flexWrap="wrap" gap={1}>
+                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                    <Button size="small" variant="outlined" onClick={() => setSelectedProvince(null)}>← All managers</Button>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      {selectedProvince === UNASSIGNED ? 'Unassigned routes' : `${selectedProvince} Province`}
+                    </Typography>
+                    <Chip size="small" label={`${visibleRoutes.length} routes`} />
+                  </Stack>
+                  {selectedProvince !== UNASSIGNED ? (
+                    <Typography variant="body2" color="text.secondary">
+                      Manager: {managerEmail(PROVINCES.find((p) => p.name === selectedProvince)?.slug || '')}
+                    </Typography>
+                  ) : null}
+                </Stack>
+                <DataGrid
+                  rows={visibleRoutes}
+                  getRowId={(row) => row._id}
+                  columns={routeColumns}
+                  loading={routeLoading}
+                  autoHeight
+                  pageSizeOptions={[10, 25, 50, 100]}
+                  initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+                />
+              </Box>
+            ) : (
+              <Box>
+                <Stack direction="row" alignItems="baseline" justifyContent="space-between" sx={{ mb: 1.5 }}>
+                  <Typography variant="subtitle1" fontWeight={600}>Routes by province manager</Typography>
+                  <Typography variant="body2" color="text.secondary">{totalRoutes} routes total</Typography>
+                </Stack>
+                <Card variant="outlined">
+                  <List disablePadding>
+                    {PROVINCES.map((province, index) => {
+                      const count = countsByProvince[province.name] || 0;
+                      return (
+                        <Box key={province.slug}>
+                          {index > 0 ? <Divider component="li" /> : null}
+                          <ListItemButton onClick={() => setSelectedProvince(province.name)} sx={{ py: 1.5, px: 2 }}>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Typography variant="subtitle1" fontWeight={700}>{province.name} Province</Typography>
+                              <Typography variant="body2" color="text.secondary" noWrap>
+                                {managerEmail(province.slug)}
+                              </Typography>
+                            </Box>
+                            <Chip size="small" color="primary" label={`${count} routes`} sx={{ mr: 1 }} />
+                            <ChevronRightIcon fontSize="small" color="action" />
+                          </ListItemButton>
+                        </Box>
+                      );
+                    })}
+                    {unassignedCount > 0 ? (
+                      <Box>
+                        <Divider component="li" />
+                        <ListItemButton onClick={() => setSelectedProvince(UNASSIGNED)} sx={{ py: 1.5, px: 2 }}>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="subtitle1" fontWeight={700}>Unassigned</Typography>
+                            <Typography variant="body2" color="text.secondary" noWrap>No province manager</Typography>
+                          </Box>
+                          <Chip size="small" color="warning" label={`${unassignedCount} routes`} sx={{ mr: 1 }} />
+                          <ChevronRightIcon fontSize="small" color="action" />
+                        </ListItemButton>
+                      </Box>
+                    ) : null}
+                  </List>
+                </Card>
+              </Box>
+            )}
           </CardContent>
         </Card>
       </Grid>
