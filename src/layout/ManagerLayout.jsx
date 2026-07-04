@@ -1,4 +1,5 @@
-import { Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography, Button, IconButton, Avatar, Breadcrumbs, Link, Divider } from '@mui/material';
+import { useCallback, useEffect, useState } from 'react';
+import { Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography, Button, IconButton, Avatar, Breadcrumbs, Link, Divider, Badge } from '@mui/material';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import DirectionsBusRoundedIcon from '@mui/icons-material/DirectionsBusRounded';
 import MapRoundedIcon from '@mui/icons-material/MapRounded';
@@ -9,8 +10,10 @@ import NotificationsNoneRoundedIcon from '@mui/icons-material/NotificationsNoneR
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
+import RouteRoundedIcon from '@mui/icons-material/RouteRounded';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { adminApi } from '../api';
 
 const drawerWidth = 260;
 
@@ -19,6 +22,7 @@ const navItems = [
   { label: 'Buses', path: '/manager/buses', icon: <DirectionsBusRoundedIcon /> },
   { label: 'Live Tracking', path: '/manager/tracking', icon: <MapRoundedIcon /> },
   { label: 'Drivers', path: '/manager/accounts', icon: <BadgeRoundedIcon /> },
+  { label: 'Route Approvals', path: '/manager/route-approvals', icon: <RouteRoundedIcon />, badgeKey: 'pendingRoutes' },
 ];
 
 const accountItems = [
@@ -28,8 +32,28 @@ const accountItems = [
 export function ManagerLayout({ user, onLogout, onRefresh }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [pendingRoutesCount, setPendingRoutesCount] = useState(0);
 
   const activeLabel = navItems.find(i => location.pathname.startsWith(i.path))?.label || 'Overview';
+
+  const loadPendingRoutesCount = useCallback(async () => {
+    try {
+      const [routesRes, changeRequestsRes] = await Promise.all([
+        adminApi.getManagerCustomRoutes({ status: 'PENDING_NAMING' }),
+        adminApi.getRouteChangeRequests({ status: 'PENDING' })
+      ]);
+      const recorded = (routesRes.data || []).filter((route) => route.pathPolyline);
+      setPendingRoutesCount(recorded.length + (changeRequestsRes.data || []).length);
+    } catch {
+      // Badge is a nice-to-have; never break the layout if this call fails.
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPendingRoutesCount();
+    const interval = setInterval(loadPendingRoutesCount, 60000);
+    return () => clearInterval(interval);
+  }, [loadPendingRoutesCount, location.pathname]);
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: '#f8f9fa' }}>
@@ -111,14 +135,18 @@ export function ManagerLayout({ user, onLogout, onRefresh }) {
                 }}
               >
                 <ListItemIcon sx={{ fontSize: 18 }}>
-                   {item.icon}
+                   {item.badgeKey === 'pendingRoutes' && pendingRoutesCount > 0 ? (
+                     <Badge badgeContent={pendingRoutesCount} color="error" overlap="circular">
+                       {item.icon}
+                     </Badge>
+                   ) : item.icon}
                 </ListItemIcon>
-                <ListItemText 
-                  primary={item.label} 
-                  primaryTypographyProps={{ 
-                    fontSize: '0.8rem', 
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    fontSize: '0.8rem',
                     fontWeight: active ? 700 : 500,
-                  }} 
+                  }}
                 />
               </ListItemButton>
             );
@@ -247,7 +275,11 @@ export function ManagerLayout({ user, onLogout, onRefresh }) {
             </Box>
             <IconButton onClick={onRefresh} size="small" sx={{ color: '#6b7280' }}><RefreshRoundedIcon sx={{ fontSize: 18 }} /></IconButton>
             <IconButton size="small" sx={{ color: '#6b7280' }}><SettingsRoundedIcon sx={{ fontSize: 18 }} /></IconButton>
-            <IconButton size="small" sx={{ color: '#6b7280' }}><NotificationsNoneRoundedIcon sx={{ fontSize: 18 }} /></IconButton>
+            <IconButton size="small" sx={{ color: '#6b7280' }} onClick={() => navigate('/manager/route-approvals')} data-testid="notifications-bell">
+              <Badge badgeContent={pendingRoutesCount} color="error" overlap="circular">
+                <NotificationsNoneRoundedIcon sx={{ fontSize: 18 }} />
+              </Badge>
+            </IconButton>
             <Avatar sx={{ width: 32, height: 32, ml: 1, backgroundColor: '#2f2f2f', fontSize: 12, fontWeight: 800 }}>{user?.email?.[0].toUpperCase() || 'M'}</Avatar>
           </Box>
         </Box>

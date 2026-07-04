@@ -38,3 +38,14 @@
 |---|---|---|---|---|
 | adminApi.getSuperAdminDashboard() | unit (fetch) | src/__tests__/api.test.js | GET + auth | dashboard payload changes |
 | Dashboard page flow | RTL | src/__tests__/pages/DashboardPage.test.jsx | cards + error state | metrics layout changes |
+
+## Custom Routes (school/work shuttles)
+| Item (fn / flow) | Test type | Test file | Cases covered | Update when |
+|---|---|---|---|---|
+| lib/polyline.js decodePolyline | unit (Vitest) | src/lib/__tests__/polyline.test.js | canonical round trip, empty/missing input | polyline decode logic changes |
+| ManagerBusesPage route-assignment toggle | RTL (Vitest) | src/pages/__tests__/ManagerBusesPage.test.jsx | submits routeMode CUSTOM with no routeId, EXISTING with routeId, custom mode skips route requirement | create-bus wizard or routeMode contract changes |
+| ManagerRouteApprovalsPage + CustomRoutePreviewModal | RTL (Vitest) | src/pages/__tests__/ManagerRouteApprovalsPage.test.jsx | recorded vs awaiting-driver rendering, empty state, name-field validation (disabled until filled), nameCustomRoute call | approvals list or naming modal changes |
+| ManagerRouteApprovalsPage — route change requests + RouteComparisonPanel (Phase 2) | RTL (Vitest) | src/pages/__tests__/ManagerRouteApprovalsPage.test.jsx | pending list renders with deviation stats, comparison panel shows both route maps, resolveRouteChangeRequest called with KEEP_OLD/ADOPT_NEW | diff resolver UI or resolve contract changes |
+| Full custom-route flow (mocked backend) | e2e (Playwright) | e2e/custom-routes.spec.ts | create CUSTOM driver request, review→name a recorded route→becomes ACTIVE→selectable in another bus's route dropdown, **Phase 2**: seeded route-change request→review diff→Adopt New→route geometry updates | end-to-end custom-route UX changes |
+
+Setup: `npm run test` (Vitest, jsdom) and `npm run test:e2e` (Playwright, mocks all `/api/manager/*` calls — no live backend/DB needed). Run `npx playwright install chromium` once before the first `test:e2e` run.

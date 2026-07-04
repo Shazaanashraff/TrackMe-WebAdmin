@@ -249,5 +249,31 @@ export const adminApi = {
     }),
 
   getManagerBusLocation: (busId, minutes = 15) =>
-    request(`/api/manager/buses/${busId}/location?minutes=${minutes}`)
+    request(`/api/manager/buses/${busId}/location?minutes=${minutes}`),
+
+  // Public routes + this manager's own named (ACTIVE) private custom routes —
+  // the correct source for any "assign a route to my bus" dropdown.
+  getManagerAssignableRoutes: () => request('/api/manager/routes'),
+
+  getManagerCustomRoutes: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/api/manager/custom-routes${query ? `?${query}` : ''}`);
+  },
+
+  nameCustomRoute: (routeId, payload) =>
+    request(`/api/manager/custom-routes/${routeId}/name`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    }),
+
+  getRouteChangeRequests: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/api/manager/route-change-requests${query ? `?${query}` : ''}`);
+  },
+
+  resolveRouteChangeRequest: (id, payload) =>
+    request(`/api/manager/route-change-requests/${id}/resolve`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    })
 };

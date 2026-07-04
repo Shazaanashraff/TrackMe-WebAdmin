@@ -15,6 +15,8 @@ import {
   Stepper,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
@@ -29,6 +31,7 @@ const emptyCreateForm = {
   busId: '',
   busName: '',
   numberPlate: '',
+  routeMode: 'EXISTING',
   routeId: '',
   seatCapacity: 40,
   busType: 'AC',
@@ -75,7 +78,8 @@ export function ManagerBusesPage({ refreshSignal }) {
 
   const loadRoutes = useCallback(async () => {
     try {
-      const response = await adminApi.getBusRoutes();
+      // Includes public routes + this manager's own named private custom routes.
+      const response = await adminApi.getManagerAssignableRoutes();
       setRoutes(response.data || []);
     } catch (err) {
       setError(err.message || 'Failed to load available routes');
@@ -191,8 +195,11 @@ export function ManagerBusesPage({ refreshSignal }) {
 
   const validateCreateStep = (step) => {
     if (step === 0) {
-      if (!createForm.busId || !createForm.busName || !createForm.numberPlate || !createForm.routeId) {
-        return 'Please complete Bus ID, Bus Name, Number Plate, and Route.';
+      const isCustomRoute = createForm.routeMode === 'CUSTOM';
+      if (!createForm.busId || !createForm.busName || !createForm.numberPlate || (!isCustomRoute && !createForm.routeId)) {
+        return isCustomRoute
+          ? 'Please complete Bus ID, Bus Name, and Number Plate.'
+          : 'Please complete Bus ID, Bus Name, Number Plate, and Route.';
       }
       if (!Number(createForm.seatCapacity) || Number(createForm.seatCapacity) <= 0) {
         return 'Seat capacity should be a valid positive number.';
@@ -328,21 +335,45 @@ export function ManagerBusesPage({ refreshSignal }) {
                 <TextField size="small" label="Bus ID" value={createForm.busId} onChange={(e) => setCreateForm((p) => ({ ...p, busId: e.target.value }))} required />
                 <TextField size="small" label="Bus Name" value={createForm.busName} onChange={(e) => setCreateForm((p) => ({ ...p, busName: e.target.value }))} required />
                 <TextField size="small" label="Number Plate" value={createForm.numberPlate} onChange={(e) => setCreateForm((p) => ({ ...p, numberPlate: e.target.value.toUpperCase() }))} required />
-                <TextField
-                  select
-                  size="small"
-                  label="Route"
-                  value={createForm.routeId}
-                  onChange={(e) => setCreateForm((p) => ({ ...p, routeId: e.target.value }))}
-                  required
-                  helperText={routes.length === 0 ? 'No active routes found. Create routes first.' : 'Select a valid route ID'}
-                >
-                  {routes.map((route) => (
-                    <MenuItem key={route.routeId} value={route.routeId}>
-                      {route.routeName || route.routeId} ({route.routeId})
-                    </MenuItem>
-                  ))}
-                </TextField>
+
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#67748e', fontWeight: 700, display: 'block', mb: 0.5 }}>
+                    Route Assignment
+                  </Typography>
+                  <ToggleButtonGroup
+                    exclusive
+                    size="small"
+                    fullWidth
+                    value={createForm.routeMode}
+                    onChange={(_e, value) => value && setCreateForm((p) => ({ ...p, routeMode: value, routeId: value === 'CUSTOM' ? '' : p.routeId }))}
+                  >
+                    <ToggleButton value="EXISTING">Existing route</ToggleButton>
+                    <ToggleButton value="CUSTOM">Custom route (driver records)</ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+
+                {createForm.routeMode === 'CUSTOM' ? (
+                  <Alert severity="info">
+                    No route needed yet — the driver will record the route by driving it. You'll name it once it's submitted.
+                  </Alert>
+                ) : (
+                  <TextField
+                    select
+                    size="small"
+                    label="Route"
+                    value={createForm.routeId}
+                    onChange={(e) => setCreateForm((p) => ({ ...p, routeId: e.target.value }))}
+                    required
+                    helperText={routes.length === 0 ? 'No active routes found. Create routes first.' : 'Select a valid route ID'}
+                  >
+                    {routes.map((route) => (
+                      <MenuItem key={route.routeId} value={route.routeId}>
+                        {route.routeName || route.routeId} ({route.routeId}){route.visibility === 'PRIVATE' ? ' — Custom' : ''}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+
                 <TextField size="small" label="Seat Capacity" type="number" value={createForm.seatCapacity} onChange={(e) => setCreateForm((p) => ({ ...p, seatCapacity: e.target.value }))} required />
                 <TextField select size="small" label="Bus Type" value={createForm.busType} onChange={(e) => setCreateForm((p) => ({ ...p, busType: e.target.value }))}>
                   {BUS_TYPES.map((option) => <MenuItem key={option} value={option}>{option}</MenuItem>)}
@@ -369,7 +400,9 @@ export function ManagerBusesPage({ refreshSignal }) {
               <Box sx={{ display: 'grid', gap: 1.1 }}>
                 <Typography variant="body2"><strong>Bus:</strong> {createForm.busId} - {createForm.busName}</Typography>
                 <Typography variant="body2"><strong>Number Plate:</strong> {createForm.numberPlate}</Typography>
-                <Typography variant="body2"><strong>Route:</strong> {createForm.routeId}</Typography>
+                <Typography variant="body2">
+                  <strong>Route:</strong> {createForm.routeMode === 'CUSTOM' ? 'Driver will record a custom route' : createForm.routeId}
+                </Typography>
                 <Typography variant="body2"><strong>Capacity:</strong> {createForm.seatCapacity} seats</Typography>
                 <Typography variant="body2"><strong>Type:</strong> {createForm.busType} / {createForm.serviceType}</Typography>
                 <Typography variant="body2"><strong>Driver:</strong> {createForm.driverName || 'Not provided'}</Typography>
@@ -379,16 +412,16 @@ export function ManagerBusesPage({ refreshSignal }) {
             )}
           </DialogContent>
           <DialogActions sx={{ px: 3, py: 2 }}>
-            <Button onClick={handleCloseCreateDialog} disabled={creating}>Cancel</Button>
-            <Button variant="outlined" disabled={activeCreateStep === 0 || creating} onClick={handleBackStep}>
+            <Button type="button" onClick={handleCloseCreateDialog} disabled={creating}>Cancel</Button>
+            <Button type="button" variant="outlined" disabled={activeCreateStep === 0 || creating} onClick={handleBackStep}>
               Back
             </Button>
             {activeCreateStep < CREATE_STEPS.length - 1 ? (
-              <Button variant="contained" onClick={handleNextStep}>
+              <Button key="continue" type="button" variant="contained" onClick={handleNextStep}>
                 Continue
               </Button>
             ) : (
-              <Button type="submit" variant="contained" disabled={creating}>
+              <Button key="submit" type="button" variant="contained" disabled={creating} onClick={handleCreateRequest}>
                 {creating ? 'Submitting...' : 'Submit Request'}
               </Button>
             )}
