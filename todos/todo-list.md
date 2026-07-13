@@ -25,7 +25,7 @@ rows whose `Dep` are all `[x]`. Tick `[x]` + `done: DATE <sha>` on close-out.
 | ✓ | ID | Slug | Pri | Dep | One-line |
 |---|----|------|-----|-----|----------|
 | [ ] | 008 | fix-operations-dark-boxes | P2 | 001 | Fix invisible dark `#0f172a`/`#0b1220` boxes in OperationsPage on the light theme |
-| [ ] | 009 | migrate-routes-grid-api | P2 | — | Migrate RoutesPage deprecated MUI Grid v1 (`item xs`) → v7 `size={{}}` |
+| [x] | 009 | migrate-routes-grid-api | P2 | — | Migrate RoutesPage deprecated MUI Grid v1 (`item xs`) → v7 `size={{}}` — done: 2026-07-13 |
 | [ ] | 010 | replace-window-prompts | P2 | 001 | Replace `window.prompt()` flows (Operations review note, bus delete reason) with dialogs |
 | [ ] | 011 | build-manager-profile | P2 | 003 | Build a real Manager Profile/Settings page (or hide the nav item) — kill the stub |
 
