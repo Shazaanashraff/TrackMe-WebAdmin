@@ -7,7 +7,7 @@ import { BarChart } from '@mui/x-charts/BarChart';
 import { LineChart } from '@mui/x-charts/LineChart';
 import { motion } from 'framer-motion';
 import {
-  AttachMoneyRounded,
+  ConfirmationNumberRounded,
   PeopleAltRounded,
   DirectionsBusRounded,
   BookOnlineRounded,
@@ -330,7 +330,7 @@ export function DashboardPage({ refreshSignal }) {
               value={confirmedBookings}
               change="+18%"
               changePositive={true}
-              icon={AttachMoneyRounded}
+              icon={ConfirmationNumberRounded}
             />
           </Grid>
         </Grid>

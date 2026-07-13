@@ -4,6 +4,7 @@ import Grid from '@mui/material/Grid';
 import { Edit as EditIcon } from '@mui/icons-material';
 import { DataGrid } from '@mui/x-data-grid';
 import { adminApi } from '../api';
+import { formatLKR } from '../lib/formatCurrency';
 
 export function OperationsPage({ refreshSignal }) {
   const [overview, setOverview] = useState([]);
@@ -179,7 +180,7 @@ export function OperationsPage({ refreshSignal }) {
       },
       {
         label: 'Revenue',
-        value: `₹${(managerDetail.buses || []).reduce((sum, bus) => sum + (bus.bookingMetrics?.totalRevenue || 0), 0).toLocaleString()}`
+        value: formatLKR((managerDetail.buses || []).reduce((sum, bus) => sum + (bus.bookingMetrics?.totalRevenue || 0), 0))
       }
     ];
   }, [managerDetail]);
@@ -426,7 +427,7 @@ export function OperationsPage({ refreshSignal }) {
                       field: 'revenue',
                       headerName: 'Revenue',
                       width: 120,
-                      valueGetter: (_value, row) => `₹${Number(row.bookingMetrics?.totalRevenue || 0).toLocaleString()}`
+                      valueGetter: (_value, row) => formatLKR(row.bookingMetrics?.totalRevenue || 0)
                     },
                     {
                       field: 'actions',

@@ -32,7 +32,7 @@ rows whose `Dep` are all `[x]`. Tick `[x]` + `done: DATE <sha>` on close-out.
 ## Phase 2.5 — Stakeholder-review targeted fixes (P2)
 | ✓ | ID | Slug | Pri | Dep | One-line |
 |---|----|------|-----|-----|----------|
-| [ ] | 017 | currency-lkr | P2 | — | Replace `₹`/`$` symbols + `AttachMoney` icons with Sri Lankan LKR + a `formatLKR` helper (dashboards, Operations) |
+| [x] | 017 | currency-lkr | P2 | — | Replace `₹`/`$` symbols + `AttachMoney` icons with Sri Lankan LKR + a `formatLKR` helper (dashboards, Operations) — done: 2026-07-13 |
 | [ ] | 018 | manager-fleet-distance-backend | P2 | — | Backend: aggregate distance travelled for a manager's fleet; expose on `/api/manager/dashboard` (feeds the KPI in 013) |
 | [ ] | 019 | harden-bus-account-password-reset | P2 | 001 | Reset flow: old + new + confirm (all required, show/hide eye); backend verifies old password before update |
 | [ ] | 020 | remove-booking-enabled-ui | P2 | — | Remove "booking enabled" UI (bookings not implemented): Buses grid/edit, create wizard, Operations edit-bus |
