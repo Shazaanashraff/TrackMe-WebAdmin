@@ -9,7 +9,7 @@ rows whose `Dep` are all `[x]`. Tick `[x]` + `done: DATE <sha>` on close-out.
 ## Phase 0 — Design-system foundation (P1)
 | ✓ | ID | Slug | Pri | Dep | One-line |
 |---|----|------|-----|-----|----------|
-| [ ] | 001 | design-tokens-theme | P1 | — | Central MUI theme + tokens (color/space/radius/shadow/type); ThemeProvider; kill scattered inline hex |
+| [x] | 001 | design-tokens-theme | P1 | — | Central MUI theme + tokens (color/space/radius/shadow/type); ThemeProvider; kill scattered inline hex — done: 2026-07-13 |
 | [ ] | 002 | unify-button-system | P1 | 001 | Pick ONE Button; retire the duplicate `components/ui/button.jsx` vs MUI `Button` split |
 | [ ] | 003 | app-shell-and-topbar | P1 | 001 | Shared AppShell; fix breadcrumb/title fallback bug; wire-or-remove dead search + gear + bell |
 

@@ -3,13 +3,22 @@ import { createTheme } from '@mui/material/styles';
 /**
  * TrackMe SOFT UI THEME
  * Inspired by Creative Tim's Soft UI / Material Dashboard
+ *
+ * Single source of truth for color/space/radius/shadow/type tokens. Pages should read these via
+ * `theme.palette.*` / `theme.custom.*` and `sx` callbacks instead of hardcoding hex literals.
+ * See docs/DESIGN_TOKENS.md for the token catalogue.
  */
+
+// Recurring "soft UI" gradient used across sidebars, active nav items and primary CTAs.
+const GRADIENT_PRIMARY = 'linear-gradient(310deg, #161616 0%, #4a4a4a 100%)';
+
 export const darkTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
       main: '#2f2f2f',
       dark: '#161616',
+      light: '#4a4a4a',
       contrastText: '#ffffff'
     },
     secondary: {
@@ -29,7 +38,7 @@ export const darkTheme = createTheme({
       main: '#ea0606'
     },
     background: {
-      default: '#f5f5f5',
+      default: '#f8f9fa',
       paper: '#ffffff'
     },
     divider: 'rgba(0, 0, 0, 0.08)',
@@ -38,6 +47,15 @@ export const darkTheme = createTheme({
       secondary: '#6b7280'
     },
   },
+  // Non-standard MUI keys: extra tokens the design-token pass introduces (gradients, shared
+  // border color) that don't map onto an existing palette slot.
+  custom: {
+    gradients: {
+      primary: GRADIENT_PRIMARY
+    },
+    border: '#d2d6da'
+  },
+  spacing: 8,
   shape: {
     borderRadius: 8 // Standard unit
   },
@@ -88,7 +106,7 @@ export const darkTheme = createTheme({
           }
         },
         containedPrimary: {
-          background: 'linear-gradient(310deg, #161616 0%, #4a4a4a 100%)',
+          background: GRADIENT_PRIMARY,
           color: '#ffffff'
         }
       }
