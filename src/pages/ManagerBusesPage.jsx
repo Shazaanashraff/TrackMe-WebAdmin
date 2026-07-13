@@ -125,7 +125,6 @@ export function ManagerBusesPage({ refreshSignal }) {
       seatCapacity: bus.seatCapacity,
       busType: bus.busType,
       serviceType: bus.serviceType,
-      bookingEnabled: bus.bookingEnabled,
       isActive: bus.isActive,
       maintenanceStatus: bus.maintenanceStatus
     });
@@ -168,7 +167,6 @@ export function ManagerBusesPage({ refreshSignal }) {
     { field: 'numberPlate', headerName: 'Number Plate', width: 150 },
     { field: 'routeId', headerName: 'Route', width: 120 },
     { field: 'serviceType', headerName: 'Service', width: 120 },
-    { field: 'bookingEnabled', headerName: 'Booking', width: 110, valueGetter: (_v, row) => row.bookingEnabled ? 'Enabled' : 'Disabled' },
     { field: 'isActive', headerName: 'State', width: 100, valueGetter: (_v, row) => row.isActive ? 'Active' : 'Inactive' },
     {
       field: 'actions',
@@ -188,9 +186,8 @@ export function ManagerBusesPage({ refreshSignal }) {
   const summary = useMemo(() => {
     const total = buses.length;
     const active = buses.filter((bus) => bus.isActive).length;
-    const bookingEnabled = buses.filter((bus) => bus.bookingEnabled).length;
     const inactive = total - active;
-    return { total, active, inactive, bookingEnabled };
+    return { total, active, inactive };
   }, [buses]);
 
   const validateCreateStep = (step) => {
@@ -260,7 +257,6 @@ export function ManagerBusesPage({ refreshSignal }) {
           { label: 'Total Buses', value: summary.total },
           { label: 'Active Fleet', value: summary.active },
           { label: 'Inactive Fleet', value: summary.inactive },
-          { label: 'Booking Enabled', value: summary.bookingEnabled },
         ].map((item) => (
           <Grid key={item.label} size={{ xs: 6, md: 3 }}>
             <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.2)' }}>
@@ -441,10 +437,6 @@ export function ManagerBusesPage({ refreshSignal }) {
           </TextField>
           <TextField select size="small" label="Service Type" value={editForm.serviceType || 'PUBLIC'} onChange={(e) => setEditForm((p) => ({ ...p, serviceType: e.target.value }))}>
             {SERVICE_TYPES.map((option) => <MenuItem key={option} value={option}>{option}</MenuItem>)}
-          </TextField>
-          <TextField select size="small" label="Booking" value={String(Boolean(editForm.bookingEnabled))} onChange={(e) => setEditForm((p) => ({ ...p, bookingEnabled: e.target.value === 'true' }))}>
-            <MenuItem value="true">Enabled</MenuItem>
-            <MenuItem value="false">Disabled</MenuItem>
           </TextField>
           <TextField select size="small" label="Status" value={String(Boolean(editForm.isActive))} onChange={(e) => setEditForm((p) => ({ ...p, isActive: e.target.value === 'true' }))}>
             <MenuItem value="true">Active</MenuItem>

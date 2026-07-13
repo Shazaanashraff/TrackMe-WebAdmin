@@ -84,3 +84,32 @@ describe('ManagerBusesPage route assignment toggle', () => {
     expect(payload.routeId).toBe('PUB-1');
   });
 });
+
+describe('ManagerBusesPage booking-enabled removal', () => {
+  it('renders no booking-enabled controls in the grid, summary, or edit dialog', async () => {
+    adminApi.getManagerBuses.mockResolvedValue({
+      data: [{
+        _id: 'bus-1',
+        busId: 'BUS-1',
+        busName: 'Shuttle 1',
+        numberPlate: 'AB-1234',
+        routeId: 'PUB-1',
+        serviceType: 'PUBLIC',
+        seatCapacity: 40,
+        busType: 'AC',
+        bookingEnabled: true,
+        isActive: true
+      }]
+    });
+
+    render(<ManagerBusesPage />);
+    await screen.findByText('Shuttle 1');
+
+    expect(screen.queryByText(/booking enabled/i)).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: /booking/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }));
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.queryByLabelText(/^booking$/i)).toBeNull();
+  });
+});

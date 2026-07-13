@@ -21,7 +21,7 @@ export function OperationsPage({ refreshSignal }) {
   const [auditFilters, setAuditFilters] = useState({ managerId: '', action: '', startDate: '', endDate: '' });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingBus, setEditingBus] = useState(null);
-  const [editFormData, setEditFormData] = useState({ serviceType: '', bookingEnabled: null });
+  const [editFormData, setEditFormData] = useState({ serviceType: '' });
   const [updating, setUpdating] = useState(false);
   const [reviewingRequestId, setReviewingRequestId] = useState('');
   const [requestPreview, setRequestPreview] = useState(null);
@@ -102,8 +102,7 @@ export function OperationsPage({ refreshSignal }) {
   const handleEditBus = (bus) => {
     setEditingBus(bus);
     setEditFormData({
-      serviceType: bus.serviceType || 'PUBLIC',
-      bookingEnabled: bus.bookingEnabled !== false
+      serviceType: bus.serviceType || 'PUBLIC'
     });
     setEditDialogOpen(true);
   };
@@ -386,18 +385,6 @@ export function OperationsPage({ refreshSignal }) {
                       }
                     },
                     {
-                      field: 'bookingEnabled',
-                      headerName: 'Bookings',
-                      width: 110,
-                      renderCell: (params) => (
-                        <Chip 
-                          size="small" 
-                          label={params.row.bookingEnabled !== false ? 'Enabled' : 'Disabled'} 
-                          color={params.row.bookingEnabled !== false ? 'success' : 'error'}
-                        />
-                      )
-                    },
-                    {
                       field: 'active',
                       headerName: 'State',
                       width: 100,
@@ -609,25 +596,6 @@ export function OperationsPage({ refreshSignal }) {
                 <ToggleButton value="UNIVERSITY">University</ToggleButton>
                 <ToggleButton value="OFFICE">Office</ToggleButton>
               </ToggleButtonGroup>
-            </Box>
-            
-            <Box>
-              <Typography variant="subtitle2" mb={1}>Booking Status</Typography>
-              <ToggleButtonGroup
-                value={editFormData.bookingEnabled ? 'enabled' : 'disabled'}
-                onChange={(e, newStatus) => {
-                  if (newStatus) setEditFormData({ ...editFormData, bookingEnabled: newStatus === 'enabled' });
-                }}
-                exclusive
-                fullWidth
-                size="small"
-              >
-                <ToggleButton value="enabled">Enabled</ToggleButton>
-                <ToggleButton value="disabled">Disabled</ToggleButton>
-              </ToggleButtonGroup>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                Drivers can toggle booking availability on/off. Disabled prevents new reservations.
-              </Typography>
             </Box>
           </Stack>
         </DialogContent>
