@@ -18,7 +18,7 @@ rows whose `Dep` are all `[x]`. Tick `[x]` + `done: DATE <sha>` on close-out.
 |---|----|------|-----|-----|----------|
 | [ ] | 004 | kill-superadmin-settings-fake | P1 | 003 | Delete/replace the 100%-decorative super-admin Settings page |
 | [ ] | 005 | kill-manager-fake-operations | P1 | 003 | Remove hardcoded "Recent Operations" table + dead "View All Operations" button |
-| [ ] | 006 | kill-fake-metrics-deltas | P1 | — | Strip all hardcoded % deltas + fake "updated N ago" timestamps on both dashboards |
+| [x] | 006 | kill-fake-metrics-deltas | P1 | — | Strip all hardcoded % deltas + fake "updated N ago" timestamps on both dashboards — done: 2026-07-13 |
 | [ ] | 007 | honest-dashboard-charts | P1 | 006 | Real series or honest empty/insufficient-data states for every chart |
 
 ## Phase 2 — Fix real bugs (P2)
