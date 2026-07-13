@@ -11,6 +11,7 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import RouteRoundedIcon from '@mui/icons-material/RouteRounded';
+import LockRoundedIcon from '@mui/icons-material/LockRounded';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { adminApi } from '../api';
@@ -23,6 +24,7 @@ const navItems = [
   { label: 'Live Tracking', path: '/manager/tracking', icon: <MapRoundedIcon /> },
   { label: 'Drivers', path: '/manager/accounts', icon: <BadgeRoundedIcon /> },
   { label: 'Route Approvals', path: '/manager/route-approvals', icon: <RouteRoundedIcon />, badgeKey: 'pendingRoutes' },
+  { label: 'Private Routes', path: '/manager/private-routes', icon: <LockRoundedIcon /> },
 ];
 
 const accountItems = [

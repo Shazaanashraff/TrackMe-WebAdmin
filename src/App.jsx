@@ -18,6 +18,7 @@ import { ManagerTrackingPage } from './pages/ManagerTrackingPage';
 import { ManagerAccountsPage } from './pages/ManagerAccountsPage';
 import { ManagerSettingsPage } from './pages/ManagerSettingsPage';
 import { ManagerRouteApprovalsPage } from './pages/ManagerRouteApprovalsPage';
+import { ManagerPrivateRoutesPage } from './pages/ManagerPrivateRoutesPage';
 import { adminApi } from './api';
 import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
 
@@ -69,6 +70,7 @@ function ProtectedShell({ auth, onLogout, refreshSignal, triggerRefresh }) {
         <Route path="/manager/tracking" element={<ManagerTrackingPage refreshSignal={refreshSignal} />} />
         <Route path="/manager/accounts" element={<ManagerAccountsPage refreshSignal={refreshSignal} />} />
         <Route path="/manager/route-approvals" element={<ManagerRouteApprovalsPage refreshSignal={refreshSignal} />} />
+        <Route path="/manager/private-routes" element={<ManagerPrivateRoutesPage refreshSignal={refreshSignal} />} />
         <Route path="/manager/settings" element={<ManagerSettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/manager/dashboard" replace />} />
