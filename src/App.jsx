@@ -121,7 +121,6 @@ function LoginShell({ auth, setAuth }) {
       loading={loading}
       error={error}
       roleTitle="Sign In"
-      roleSubtitle="Secure access for TrackMe manager accounts."
       usernameLabel="Manager Email"
       usernamePlaceholder="manager@trackme.com"
       submitLabel="Sign In"

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import { Alert, Box, Button, TextField } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../api';
+import { AuthCard, ACCENT, ACCENT_HOVER, authFieldSx, authErrorAlertSx } from '../components/auth/AuthCard';
 
 export function ForgotPasswordRequestPage() {
   const navigate = useNavigate();
@@ -26,38 +26,44 @@ export function ForgotPasswordRequestPage() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', px: 2, background: 'linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%)' }}>
-      <Paper elevation={0} sx={{ width: '100%', maxWidth: 520, p: { xs: 3, md: 4 }, borderRadius: 4, border: '1px solid #e5e7eb' }}>
-        <Stack spacing={1.2} sx={{ mb: 3 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: '1.75rem', color: '#111827' }}>Reset your password</Typography>
-          <Typography sx={{ color: '#6b7280' }}>Enter the email address linked to your TrackMe account and we’ll send a recovery code.</Typography>
-        </Stack>
+    <AuthCard
+      title="Reset your password"
+      subtitle="Enter the email address linked to your TrackMe account and we'll send a recovery code."
+      onBack={() => navigate('/login')}
+      backLabel="Back to sign in"
+    >
+      <Box component="form" onSubmit={handleSubmit} sx={{ display: 'grid', gap: 1.75 }}>
+        <TextField
+          size="small"
+          label="Email"
+          type="email"
+          required
+          fullWidth
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          sx={authFieldSx}
+        />
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'grid', gap: 1.5 }}>
-          <TextField
-            label="Email"
-            type="email"
-            required
-            fullWidth
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-
-          {error ? <Alert severity="error">{error}</Alert> : null}
-
-          <Button type="submit" variant="contained" disabled={loading} sx={{ py: 1.2 }}>
-            {loading ? 'Sending...' : 'Send recovery code'}
-          </Button>
-        </Box>
+        {error ? <Alert severity="error" sx={authErrorAlertSx}>{error}</Alert> : null}
 
         <Button
-          startIcon={<ArrowBackRoundedIcon />}
-          onClick={() => navigate('/login')}
-          sx={{ mt: 2, color: '#374151' }}
+          type="submit"
+          variant="contained"
+          disabled={loading}
+          sx={{
+            py: 1.2,
+            borderRadius: 1.5,
+            background: ACCENT,
+            color: '#ffffff',
+            fontWeight: 700,
+            textTransform: 'none',
+            boxShadow: 'none',
+            '&:hover': { background: ACCENT_HOVER, boxShadow: 'none' }
+          }}
         >
-          Back to sign in
+          {loading ? 'Sending...' : 'Send recovery code'}
         </Button>
-      </Paper>
-    </Box>
+      </Box>
+    </AuthCard>
   );
 }

@@ -20,6 +20,7 @@
     "@mui/x-charts": "^8.28.0",
     "@mui/x-data-grid": "^8.28.0",
     "@radix-ui/react-slot": "^1.2.4",
+    "@svg-maps/sri-lanka": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",

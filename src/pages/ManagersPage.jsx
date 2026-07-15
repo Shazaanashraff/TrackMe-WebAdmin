@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Card, CardContent, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material';
+import { Alert, Box, Card, CardContent, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography, useTheme } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { DataGrid } from '@mui/x-data-grid';
 import { Button } from '../components/ui/button';
@@ -11,6 +11,7 @@ const defaultForm = { managerId: null, name: '', email: '', password: '' };
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function ManagersPage({ refreshSignal }) {
+  const theme = useTheme();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -159,10 +160,10 @@ export function ManagersPage({ refreshSignal }) {
   return (
     <Box sx={{ display: 'grid', gap: 2.5 }}>
       <Box sx={{ display: 'grid', gap: 0.8 }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: '#344767' }}>
+        <Typography variant="h5" sx={{ fontWeight: 800, color: theme.palette.text.primary }}>
           Managers
         </Typography>
-        <Typography variant="body2" sx={{ color: '#67748e' }}>
+        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
           Maintain manager accounts, update access status, and rotate credentials securely.
         </Typography>
       </Box>
@@ -177,10 +178,10 @@ export function ManagersPage({ refreshSignal }) {
           <Grid key={item.label} size={{ xs: 6, md: 3 }}>
             <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.2)' }}>
               <CardContent sx={{ py: 2 }}>
-                <Typography variant="caption" sx={{ color: '#67748e', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>
+                <Typography variant="caption" sx={{ color: theme.palette.text.secondary, textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>
                   {item.label}
                 </Typography>
-                <Typography variant="h6" sx={{ color: '#344767', fontWeight: 800, mt: 0.8 }}>
+                <Typography variant="h6" sx={{ color: theme.palette.text.primary, fontWeight: 800, mt: 0.8 }}>
                   {item.value}
                 </Typography>
               </CardContent>
