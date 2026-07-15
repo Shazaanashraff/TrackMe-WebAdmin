@@ -1,11 +1,16 @@
+/* ─── Self-hosted fonts (offline-first; no CDN) ─────────────────────────────
+   @import must precede all other statements. Uber Move = brand/headings,
+   Inter = body/UI, Fira Code = numbers/IDs/keys. */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/fira-code/400.css';
+@import '@fontsource/fira-code/500.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Self-hosted fonts (offline-first; no CDN) ─────────────────────────────
-   Uber Move = brand/headings. Inter (body) + Fira Code (numbers) land in a
-   later checkpoint via @fontsource; until then they fall back to the system
-   sans / mono stacks declared in --font-sans / --font-mono below. */
 @font-face {
   font-family: 'Uber Move';
   src: url('./assets/fonts/UberMoveMedium.otf') format('opentype');

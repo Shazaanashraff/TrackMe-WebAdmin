@@ -50,11 +50,14 @@ Work ONE checkpoint at a time. After each: run `npm run lint` + `npm test`, upda
   `<html>` so one control drives MUI + Tailwind, and honors `prefers-color-scheme` on first
   run. **Tailwind stayed v3** (v4 jump moved to Phase 6). Inter/Fira Code self-hosting moved
   to CP 0.2. Verified: tokens resolve + toggle, app boots clean, production build green.
-- **CP 0.2** shadcn init (`components.json`, jsx, path aliases `@/`); vendor primitives:
-  button, badge, card, input, label, textarea, select, checkbox, switch, radio-group,
-  separator, skeleton, tooltip, popover, dropdown-menu, dialog, alert-dialog, sheet, tabs,
-  table, avatar, breadcrumb, command, sonner, scroll-area, alert, pagination, chart.
-  Delete the 3 orphan files in `components/ui/` (replaced by vendored versions).
+- **CP 0.2** ✅ (2026-07-16) — shadcn foundation (`components.json` jsx; `@/` alias in
+  vite.config + jsconfig); 24 token-based primitives vendored (button, badge, card, input,
+  label, textarea, select, checkbox, switch, radio-group, separator, skeleton, tooltip,
+  popover, dropdown-menu, dialog, alert-dialog, sheet, tabs, table, avatar, breadcrumb,
+  sonner, scroll-area, alert, pagination); `tailwindcss-animate` wired; Inter + Fira Code
+  self-hosted (`@fontsource`). Orphan button/input/card **replaced in place** (ManagersPage
+  keeps building). **Deferred:** `command` (cmdk) → CP 1.2, `chart` (recharts) → CP 3.1/4.1.
+  Verified: build green, primitives smoke test 7/7, lint 0 errors, fonts load, app boots clean.
 - **CP 0.3** TanStack Query provider in `main.jsx`; `src/hooks/` query/mutation hooks wrapping
   every `adminApi` method used by pages (one hook file per domain: managers, operations,
   routes, buses, tracking, approvals, private-routes, dashboards). `refreshSignal` prop
