@@ -9,7 +9,7 @@ rows whose `Dep` are all `[x]`. Tick `[x]` + `done: DATE <sha>` on close-out.
 ## Phase 0 — Design-system foundation (P1)
 | ✓ | ID | Slug | Pri | Dep | One-line |
 |---|----|------|-----|-----|----------|
-| [ ] | 001 | design-tokens-theme | P1 | — | Central MUI theme + tokens (color/space/radius/shadow/type); ThemeProvider; kill scattered inline hex |
+| [x] | 001 | design-tokens-theme | P1 | — | Central MUI theme + tokens (color/space/radius/shadow/type); ThemeProvider; kill scattered inline hex — done: 2026-07-13 |
 | [ ] | 002 | unify-button-system | P1 | 001 | Pick ONE Button; retire the duplicate `components/ui/button.jsx` vs MUI `Button` split |
 | [ ] | 003 | app-shell-and-topbar | P1 | 001 | Shared AppShell; fix breadcrumb/title fallback bug; wire-or-remove dead search + gear + bell |
 
@@ -18,14 +18,14 @@ rows whose `Dep` are all `[x]`. Tick `[x]` + `done: DATE <sha>` on close-out.
 |---|----|------|-----|-----|----------|
 | [ ] | 004 | kill-superadmin-settings-fake | P1 | 003 | Delete/replace the 100%-decorative super-admin Settings page |
 | [ ] | 005 | kill-manager-fake-operations | P1 | 003 | Remove hardcoded "Recent Operations" table + dead "View All Operations" button |
-| [ ] | 006 | kill-fake-metrics-deltas | P1 | — | Strip all hardcoded % deltas + fake "updated N ago" timestamps on both dashboards |
+| [x] | 006 | kill-fake-metrics-deltas | P1 | — | Strip all hardcoded % deltas + fake "updated N ago" timestamps on both dashboards — done: 2026-07-13 |
 | [ ] | 007 | honest-dashboard-charts | P1 | 006 | Real series or honest empty/insufficient-data states for every chart |
 
 ## Phase 2 — Fix real bugs (P2)
 | ✓ | ID | Slug | Pri | Dep | One-line |
 |---|----|------|-----|-----|----------|
 | [ ] | 008 | fix-operations-dark-boxes | P2 | 001 | Fix invisible dark `#0f172a`/`#0b1220` boxes in OperationsPage on the light theme |
-| [ ] | 009 | migrate-routes-grid-api | P2 | — | Migrate RoutesPage deprecated MUI Grid v1 (`item xs`) → v7 `size={{}}` |
+| [x] | 009 | migrate-routes-grid-api | P2 | — | Migrate RoutesPage deprecated MUI Grid v1 (`item xs`) → v7 `size={{}}` — done: 2026-07-13 |
 | [ ] | 010 | replace-window-prompts | P2 | 001 | Replace `window.prompt()` flows (Operations review note, bus delete reason) with dialogs |
 | [ ] | 011 | build-manager-profile | P2 | 003 | Build a real Manager Profile/Settings page (or hide the nav item) — kill the stub |
 
