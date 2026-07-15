@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography, Button, IconButton, Avatar, Breadcrumbs, Link, Divider, Badge } from '@mui/material';
+import { Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Typography, Button, IconButton, Avatar, Breadcrumbs, Link, Divider, Badge, useTheme } from '@mui/material';
 import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import DirectionsBusRoundedIcon from '@mui/icons-material/DirectionsBusRounded';
 import MapRoundedIcon from '@mui/icons-material/MapRounded';
@@ -32,6 +32,7 @@ const accountItems = [
 ];
 
 export function ManagerLayout({ user, onLogout, onRefresh }) {
+  const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [pendingRoutesCount, setPendingRoutesCount] = useState(0);
@@ -58,7 +59,7 @@ export function ManagerLayout({ user, onLogout, onRefresh }) {
   }, [loadPendingRoutesCount, location.pathname]);
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: '#f8f9fa' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', width: '100%', backgroundColor: theme.palette.background.default }}>
       <Drawer
         variant="permanent"
         sx={{
@@ -67,9 +68,9 @@ export function ManagerLayout({ user, onLogout, onRefresh }) {
           '& .MuiDrawer-paper': {
             width: drawerWidth - 24,
             boxSizing: 'border-box',
-            backgroundColor: '#ffffff',
+            backgroundColor: theme.palette.background.paper,
             borderRight: 'none',
-            color: '#2f2f2f',
+            color: theme.palette.text.primary,
             padding: '24px 0',
             margin: '1.5rem 0 1.5rem 1.5rem',
             height: 'calc(100vh - 3rem)',
@@ -84,18 +85,18 @@ export function ManagerLayout({ user, onLogout, onRefresh }) {
       >
         <Toolbar sx={{ minHeight: '70px !important', px: 3, mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{ 
-              width: 32, 
-              height: 32, 
-              borderRadius: 1, 
-              background: 'linear-gradient(310deg, #161616 0%, #4a4a4a 100%)',
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center' 
+            <Box sx={{
+              width: 32,
+              height: 32,
+              borderRadius: 1,
+              background: theme.custom.gradients.primary,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
             }}>
               <Typography variant="h6" color="white" sx={{ fontSize: 14, fontWeight: 900 }}>T</Typography>
             </Box>
-            <Typography variant="h6" sx={{ color: '#2f2f2f', fontSize: 13, fontWeight: 800, letterSpacing: 0.5, fontFamily: 'Uber Move' }}>TRACKME MGR</Typography>
+            <Typography variant="h6" sx={{ color: theme.palette.text.primary, fontSize: 13, fontWeight: 800, letterSpacing: 0.5, fontFamily: 'Uber Move' }}>TRACKME MGR</Typography>
           </Box>
         </Toolbar>
 
@@ -115,19 +116,19 @@ export function ManagerLayout({ user, onLogout, onRefresh }) {
                   py: 1.2,
                   px: 2,
                   '&.Mui-selected': {
-                    backgroundColor: '#ffffff',
-                    backgroundImage: 'linear-gradient(310deg, #161616 0%, #4a4a4a 100%)',
-                    color: '#ffffff',
+                    backgroundColor: theme.palette.background.paper,
+                    backgroundImage: theme.custom.gradients.primary,
+                    color: theme.palette.primary.contrastText,
                     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
-                    '&:hover': { backgroundColor: '#161616' },
+                    '&:hover': { backgroundColor: theme.palette.primary.dark },
                   },
                   '& .MuiListItemIcon-root': {
                     minWidth: 32,
                     height: 32,
                     width: 32,
                     borderRadius: '8px',
-                    backgroundColor: active ? 'transparent' : '#ffffff',
-                    color: active ? '#ffffff' : '#2f2f2f',
+                    backgroundColor: active ? 'transparent' : theme.palette.background.paper,
+                    color: active ? theme.palette.primary.contrastText : theme.palette.text.primary,
                     boxShadow: active ? 'none' : '0 2px 4px rgba(0,0,0,0.05)',
                     display: 'flex',
                     alignItems: 'center',
@@ -154,8 +155,8 @@ export function ManagerLayout({ user, onLogout, onRefresh }) {
             );
           })}
 
-          <Typography variant="caption" sx={{ px: 2, mt: 3, mb: 1.5, display: 'block', color: '#2f2f2f', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.65rem', opacity: 0.6 }}>Account Pages</Typography>
-          
+          <Typography variant="caption" sx={{ px: 2, mt: 3, mb: 1.5, display: 'block', color: theme.palette.text.primary, fontWeight: 800, textTransform: 'uppercase', fontSize: '0.65rem', opacity: 0.6 }}>Account Pages</Typography>
+
           {accountItems.map((item) => {
             const active = location.pathname === item.path;
             return (
@@ -172,8 +173,8 @@ export function ManagerLayout({ user, onLogout, onRefresh }) {
                     height: 32,
                     width: 32,
                     borderRadius: '8px',
-                    backgroundColor: '#ffffff',
-                    color: '#2f2f2f',
+                    backgroundColor: theme.palette.background.paper,
+                    color: theme.palette.text.primary,
                     boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
                     display: 'flex',
                     alignItems: 'center',
@@ -198,12 +199,12 @@ export function ManagerLayout({ user, onLogout, onRefresh }) {
         </List>
 
         <Box sx={{ p: 3 }}>
-          <Button 
-            startIcon={<LogoutRoundedIcon />} 
-            variant="contained" 
-            sx={{ 
-                background: 'linear-gradient(310deg, #161616 0%, #4a4a4a 100%)',
-                color: '#ffffff', 
+          <Button
+            startIcon={<LogoutRoundedIcon />}
+            variant="contained"
+            sx={{
+                background: theme.custom.gradients.primary,
+                color: theme.palette.primary.contrastText,
                 fontSize: '0.7rem',
                 fontWeight: 700,
                 borderRadius: 2,
@@ -249,40 +250,40 @@ export function ManagerLayout({ user, onLogout, onRefresh }) {
         }}>
           <Box>
             <Breadcrumbs sx={{ mb: 0, '& .MuiBreadcrumbs-separator': { mx: 1, fontSize: 10 } }}>
-              <Link underline="hover" sx={{ fontSize: 12, color: '#2f2f2f', opacity: 0.5, display: 'flex', alignItems: 'center' }}>
+              <Link underline="hover" sx={{ fontSize: 12, color: theme.palette.text.primary, opacity: 0.5, display: 'flex', alignItems: 'center' }}>
                 <Box component="span" sx={{ mr: 0.5 }}>Manager</Box>
               </Link>
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: '#2f2f2f' }}>{activeLabel}</Typography>
+              <Typography sx={{ fontSize: 12, fontWeight: 600, color: theme.palette.text.primary }}>{activeLabel}</Typography>
             </Breadcrumbs>
-            <Typography variant="h6" sx={{ fontWeight: 800, fontSize: 16, color: '#2f2f2f', fontFamily: 'Uber Move' }}>{activeLabel}</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 800, fontSize: 16, color: theme.palette.text.primary, fontFamily: 'Uber Move' }}>{activeLabel}</Typography>
           </Box>
-          
+
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Box sx={{ position: 'relative', mr: 2, display: { xs: 'none', lg: 'block' } }}>
-               <SearchRoundedIcon sx={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#6b7280' }} />
-               <input 
-                 placeholder="Type here..." 
-                 style={{ 
-                   padding: '10px 12px 10px 40px', 
-                   borderRadius: 10, 
-                   border: '1px solid #d2d6da', 
-                   backgroundColor: '#ffffff',
+               <SearchRoundedIcon sx={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: theme.palette.text.secondary }} />
+               <input
+                 placeholder="Type here..."
+                 style={{
+                   padding: '10px 12px 10px 40px',
+                   borderRadius: 10,
+                   border: `1px solid ${theme.custom.border}`,
+                   backgroundColor: theme.palette.background.paper,
                    fontFamily: 'inherit',
                    fontSize: 13,
                    outline: 'none',
                    width: 180,
-                   color: '#495057'
-                 }} 
+                   color: theme.palette.text.primary
+                 }}
                />
             </Box>
-            <IconButton onClick={onRefresh} size="small" sx={{ color: '#6b7280' }}><RefreshRoundedIcon sx={{ fontSize: 18 }} /></IconButton>
-            <IconButton size="small" sx={{ color: '#6b7280' }}><SettingsRoundedIcon sx={{ fontSize: 18 }} /></IconButton>
-            <IconButton size="small" sx={{ color: '#6b7280' }} onClick={() => navigate('/manager/route-approvals')} data-testid="notifications-bell">
+            <IconButton onClick={onRefresh} size="small" sx={{ color: theme.palette.text.secondary }}><RefreshRoundedIcon sx={{ fontSize: 18 }} /></IconButton>
+            <IconButton size="small" sx={{ color: theme.palette.text.secondary }}><SettingsRoundedIcon sx={{ fontSize: 18 }} /></IconButton>
+            <IconButton size="small" sx={{ color: theme.palette.text.secondary }} onClick={() => navigate('/manager/route-approvals')} data-testid="notifications-bell">
               <Badge badgeContent={pendingRoutesCount} color="error" overlap="circular">
                 <NotificationsNoneRoundedIcon sx={{ fontSize: 18 }} />
               </Badge>
             </IconButton>
-            <Avatar sx={{ width: 32, height: 32, ml: 1, backgroundColor: '#2f2f2f', fontSize: 12, fontWeight: 800 }}>{user?.email?.[0].toUpperCase() || 'M'}</Avatar>
+            <Avatar sx={{ width: 32, height: 32, ml: 1, backgroundColor: theme.palette.primary.main, fontSize: 12, fontWeight: 800 }}>{user?.email?.[0].toUpperCase() || 'M'}</Avatar>
           </Box>
         </Box>
 

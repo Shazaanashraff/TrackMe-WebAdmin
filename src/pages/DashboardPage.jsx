@@ -60,16 +60,18 @@ function StatCard({ label, value, change, changePositive, icon: Icon, index }) {
               >
                 {value}
               </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: changePositive ? '#2e7d32' : '#c62828',
-                  fontWeight: 800,
-                  fontSize: '0.82rem',
-                }}
-              >
-                {change}
-              </Typography>
+              {change ? (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: changePositive ? '#2e7d32' : '#c62828',
+                    fontWeight: 800,
+                    fontSize: '0.82rem',
+                  }}
+                >
+                  {change}
+                </Typography>
+              ) : null}
             </Stack>
           </Box>
           <Box
@@ -298,8 +300,6 @@ export function DashboardPage({ refreshSignal }) {
               index={0}
               label="Total Managers"
               value={totalManagers}
-              change="+12%"
-              changePositive={true}
               icon={PeopleAltRounded}
             />
           </Grid>
@@ -308,8 +308,6 @@ export function DashboardPage({ refreshSignal }) {
               index={1}
               label="Active Buses"
               value={activeBuses}
-              change="+5%"
-              changePositive={true}
               icon={DirectionsBusRounded}
             />
           </Grid>
@@ -318,8 +316,6 @@ export function DashboardPage({ refreshSignal }) {
               index={2}
               label="Pending Requests"
               value={pendingRequests}
-              change={pendingRequests > 0 ? '-3%' : '0%'}
-              changePositive={pendingRequests === 0}
               icon={BookOnlineRounded}
             />
           </Grid>
@@ -328,8 +324,6 @@ export function DashboardPage({ refreshSignal }) {
               index={3}
               label="Confirmed Bookings"
               value={confirmedBookings}
-              change="+18%"
-              changePositive={true}
               icon={AttachMoneyRounded}
             />
           </Grid>
@@ -346,7 +340,6 @@ export function DashboardPage({ refreshSignal }) {
               index={0}
               title="Fleet Activity"
               subtitle="Daily active bus operations"
-              footer="updated 4 min ago"
               emphasis="primary"
               minHeight={280}
             >
@@ -368,8 +361,7 @@ export function DashboardPage({ refreshSignal }) {
             <ChartCard
               index={1}
               title="Booking Trend"
-              subtitle="(+15%) increase in bookings this month"
-              footer="updated 2 hours ago"
+              subtitle="Confirmed bookings by month"
               emphasis="primary"
               minHeight={280}
             >
@@ -472,7 +464,6 @@ export function DashboardPage({ refreshSignal }) {
                 index={2}
                 title="Rating Performance"
                 subtitle="Passenger satisfaction trends"
-                footer="just updated"
               >
                 <LineChart
                   xAxis={[{ scaleType: 'band', data: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'], tickLabelStyle: { fontSize: 10, fill: '#6b7280', fontWeight: 600 } }]}
@@ -498,8 +489,8 @@ export function DashboardPage({ refreshSignal }) {
                   <Typography variant="subtitle1" sx={{ color: '#2f2f2f', mb: 0.5, fontWeight: 800 }}>
                     Fleet Overview
                   </Typography>
-                  <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 3 }}>
-                    <TrendingUpRounded sx={{ fontSize: 14, color: '#82d616' }} /> <Box component="span" sx={{ fontWeight: 800, color: '#82d616' }}>+24%</Box> performance this month
+                  <Typography variant="caption" sx={{ color: '#6b7280', display: 'block', mb: 3 }}>
+                    Snapshot of current fleet activity
                   </Typography>
 
                   <Stack spacing={0} sx={{ position: 'relative' }}>

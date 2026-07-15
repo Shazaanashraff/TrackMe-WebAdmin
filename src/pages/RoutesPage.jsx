@@ -180,7 +180,7 @@ export function RoutesPage({ refreshSignal }) {
 
   return (
     <Grid container spacing={2}>
-      <Grid item xs={12}>
+      <Grid size={{ xs: 12 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" mb={1}>Route Management</Typography>
@@ -191,13 +191,13 @@ export function RoutesPage({ refreshSignal }) {
 
             <Box component="form" onSubmit={handleCreateRoute} sx={{ display: 'grid', gap: 2, mb: 2 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                   <TextField size="small" fullWidth label="Route ID" value={routeForm.routeId} onChange={(e) => setRouteForm((p) => ({ ...p, routeId: e.target.value }))} required />
                 </Grid>
-                <Grid item xs={12} md={5}>
+                <Grid size={{ xs: 12, md: 5 }}>
                   <TextField size="small" fullWidth label="Route Name" value={routeForm.routeName} onChange={(e) => setRouteForm((p) => ({ ...p, routeName: e.target.value }))} required />
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                   <TextField select size="small" fullWidth label="Service Type" value={routeForm.serviceType} onChange={(e) => setRouteForm((p) => ({ ...p, serviceType: e.target.value }))}>
                     <MenuItem value="PUBLIC">PUBLIC</MenuItem>
                     <MenuItem value="SCHOOL">SCHOOL</MenuItem>
@@ -205,16 +205,16 @@ export function RoutesPage({ refreshSignal }) {
                     <MenuItem value="OFFICE">OFFICE</MenuItem>
                   </TextField>
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                   <TextField size="small" fullWidth label="Source" value={routeForm.source} onChange={(e) => setRouteForm((p) => ({ ...p, source: e.target.value }))} required />
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                   <TextField size="small" fullWidth label="Destination" value={routeForm.destination} onChange={(e) => setRouteForm((p) => ({ ...p, destination: e.target.value }))} required />
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                   <TextField size="small" type="number" fullWidth label="Distance" value={routeForm.distance} onChange={(e) => setRouteForm((p) => ({ ...p, distance: e.target.value }))} required />
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                   <TextField size="small" type="number" fullWidth label="Fare (LKR)" value={routeForm.fare} onChange={(e) => setRouteForm((p) => ({ ...p, fare: e.target.value }))} required />
                 </Grid>
               </Grid>
@@ -231,7 +231,7 @@ export function RoutesPage({ refreshSignal }) {
                   <Stack spacing={1}>
                     {routeForm.stops.map((stop, index) => (
                       <Grid container spacing={1} key={`stop-${index}`} alignItems="center">
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{ xs: 12, md: 4 }}>
                           <TextField
                             size="small"
                             fullWidth
@@ -240,7 +240,7 @@ export function RoutesPage({ refreshSignal }) {
                             onChange={(e) => updateStop(index, 'stopName', e.target.value)}
                           />
                         </Grid>
-                        <Grid item xs={12} md={3}>
+                        <Grid size={{ xs: 12, md: 3 }}>
                           <TextField
                             size="small"
                             fullWidth
@@ -250,7 +250,7 @@ export function RoutesPage({ refreshSignal }) {
                             onChange={(e) => updateStop(index, 'lat', e.target.value)}
                           />
                         </Grid>
-                        <Grid item xs={12} md={3}>
+                        <Grid size={{ xs: 12, md: 3 }}>
                           <TextField
                             size="small"
                             fullWidth
@@ -260,7 +260,7 @@ export function RoutesPage({ refreshSignal }) {
                             onChange={(e) => updateStop(index, 'lng', e.target.value)}
                           />
                         </Grid>
-                        <Grid item xs={12} md={2}>
+                        <Grid size={{ xs: 12, md: 2 }}>
                           <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                             <Button type="button" size="small" variant="outlined" onClick={() => moveStop(index, 'up')} disabled={index === 0}>Up</Button>
                             <Button type="button" size="small" variant="outlined" onClick={() => moveStop(index, 'down')} disabled={index === routeForm.stops.length - 1}>Down</Button>

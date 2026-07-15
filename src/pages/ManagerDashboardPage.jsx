@@ -10,7 +10,6 @@ import {
   BookOnlineRounded,
   AttachMoneyRounded,
   HourglassEmptyRounded,
-  TrendingUpRounded,
   AccessTimeRounded,
 } from '@mui/icons-material';
 import { adminApi } from '../api';
@@ -58,16 +57,18 @@ function StatCard({ label, value, change, changePositive, icon: Icon, index }) {
               >
                 {value}
               </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: changePositive ? '#82d616' : '#ea0606',
-                  fontWeight: 800,
-                  fontSize: '0.7rem',
-                }}
-              >
-                {change}
-              </Typography>
+              {change ? (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: changePositive ? '#82d616' : '#ea0606',
+                    fontWeight: 800,
+                    fontSize: '0.7rem',
+                  }}
+                >
+                  {change}
+                </Typography>
+              ) : null}
             </Stack>
           </Box>
           <Box
@@ -167,7 +168,7 @@ export function ManagerDashboardPage({ refreshSignal }) {
       {/* Row 1: 4 Stat Cards */}
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard index={0} label="Total Buses" value={totalBuses} change="+0%" changePositive={true} icon={DirectionsBusRounded} />
+          <StatCard index={0} label="Total Buses" value={totalBuses} icon={DirectionsBusRounded} />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard index={1} label="Active Buses" value={activeBuses} change={`${totalBuses > 0 ? Math.round(activeBuses / totalBuses * 100) : 0}%`} changePositive={activeBuses > 0} icon={DirectionsBusRounded} />
@@ -176,7 +177,7 @@ export function ManagerDashboardPage({ refreshSignal }) {
           <StatCard index={2} label="Pending Requests" value={pendingReqs} change={pendingReqs > 0 ? "Action" : "Clear"} changePositive={pendingReqs === 0} icon={HourglassEmptyRounded} />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard index={3} label="Total Revenue" value={`₹${(revenue/1000).toFixed(1)}k`} change="+12%" changePositive={true} icon={AttachMoneyRounded} />
+          <StatCard index={3} label="Total Revenue" value={`₹${(revenue/1000).toFixed(1)}k`} icon={AttachMoneyRounded} />
         </Grid>
       </Grid>
 
@@ -218,8 +219,8 @@ export function ManagerDashboardPage({ refreshSignal }) {
               <Typography variant="subtitle1" sx={{ color: '#2f2f2f', mb: 0.5 }}>
                 Recent Activities
               </Typography>
-              <Typography variant="caption" sx={{ color: '#82d616', display: 'flex', alignItems: 'center', gap: 0.5, mb: 4 }}>
-                <TrendingUpRounded sx={{ fontSize: 14 }} /> Performance is peaking this week
+              <Typography variant="caption" sx={{ color: '#6b7280', display: 'block', mb: 4 }}>
+                Latest fleet events for your routes
               </Typography>
 
               <Stack spacing={0} sx={{ position: 'relative' }}>
