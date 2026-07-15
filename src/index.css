@@ -2,11 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Self-hosted fonts (offline-first; no CDN) ─────────────────────────────
+   Uber Move = brand/headings. Inter (body) + Fira Code (numbers) land in a
+   later checkpoint via @fontsource; until then they fall back to the system
+   sans / mono stacks declared in --font-sans / --font-mono below. */
 @font-face {
   font-family: 'Uber Move';
   src: url('./assets/fonts/UberMoveMedium.otf') format('opentype');
   font-weight: 500;
   font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
@@ -14,14 +19,71 @@
   src: url('./assets/fonts/UberMoveBold.otf') format('opentype');
   font-weight: 700;
   font-style: normal;
+  font-display: swap;
+}
+
+/* ─── Semantic tokens (light) ───────────────────────────────────────────────
+   Single source of truth for the redesign. Components consume these through
+   Tailwind utilities (bg-surface, text-foreground, border-border…) mapped in
+   tailwind.config.cjs — never raw hex in a component. See docs/redesign/01. */
+:root {
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-muted: #f1f5f9;
+  --border: #e2e8f0;
+  --foreground: #0f172a;
+  --muted-foreground: #64748b;
+  --primary: #059669;
+  --primary-hover: #047857;
+  --primary-foreground: #ffffff;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --ring: #059669;
+
+  /* status (label + colour, never colour alone) */
+  --status-pending: #64748b;
+  --status-progress: #2563eb;
+  --status-settled: #059669;
+  --status-warning: #d97706;
+  --status-danger: #dc2626;
+
+  /* typography roles */
+  --font-sans: 'Inter', 'Uber Move', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-heading: 'Uber Move', var(--font-sans);
+  --font-mono: 'Fira Code', ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Consolas, monospace;
+}
+
+/* ─── Semantic tokens (dark) — toggled by `.dark` on <html> ─────────────────
+   Kept in sync with MUI's ColorModeProvider (theme/ColorMode.jsx) so one
+   toggle drives both systems during the MUI→shadcn migration. */
+.dark {
+  --background: #0b1120;
+  --surface: #0f172a;
+  --surface-muted: #1e293b;
+  --border: #1e293b;
+  --foreground: #e2e8f0;
+  --muted-foreground: #94a3b8;
+  --primary: #10b981;
+  --primary-hover: #34d399;
+  --primary-foreground: #022c22;
+  --destructive: #f87171;
+  --destructive-foreground: #1a0000;
+  --ring: #10b981;
+
+  --status-pending: #94a3b8;
+  --status-progress: #60a5fa;
+  --status-settled: #34d399;
+  --status-warning: #fbbf24;
+  --status-danger: #f87171;
 }
 
 :root {
-  font-family: 'Uber Move', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  line-height: 1.6;
-  font-weight: 500;
-  color: #344767;
-  background-color: #f8f9fa;
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--foreground);
+  background-color: var(--background);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -39,14 +101,25 @@ body,
 #root {
   width: 100%;
   height: 100%;
-  background-color: #f8f9fa;
+  background-color: var(--background);
   overflow-x: hidden;
 }
 
-/* Custom Scrollbar - Soft UI Style */
+/* Visible keyboard focus everywhere (a11y priority 1) */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Tabular numerals for money / IDs / data columns */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -54,10 +127,21 @@ body,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d2d6da;
+  background: var(--border);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #adb5bd;
+  background: var(--muted-foreground);
+}
+
+/* Honour reduced-motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
