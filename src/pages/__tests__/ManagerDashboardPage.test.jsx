@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { ManagerDashboardPage } from '../ManagerDashboardPage';
+import { adminApi } from '../../api';
 
 vi.mock('../../api', () => ({
   adminApi: {
@@ -24,5 +25,17 @@ describe('ManagerDashboardPage', () => {
     expect(screen.queryByText(/\+0%/)).not.toBeInTheDocument();
     expect(screen.queryByText(/\+12%/)).not.toBeInTheDocument();
     expect(screen.queryByText(/peaking/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('ManagerDashboardPage currency', () => {
+  it('renders revenue in LKR and never in ₹ or $', async () => {
+    render(<ManagerDashboardPage />);
+    await waitFor(() => expect(adminApi.getManagerDashboard).toHaveBeenCalled());
+
+    const rsMatches = await screen.findAllByText(/Rs\./);
+    expect(rsMatches.length).toBeGreaterThan(0);
+    expect(screen.queryByText(/₹/)).toBeNull();
+    expect(document.body.textContent).not.toMatch(/\$\d/);
   });
 });

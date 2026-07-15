@@ -8,11 +8,12 @@ import { motion } from 'framer-motion';
 import {
   DirectionsBusRounded,
   BookOnlineRounded,
-  AttachMoneyRounded,
+  PaymentsRounded,
   HourglassEmptyRounded,
   AccessTimeRounded,
 } from '@mui/icons-material';
 import { adminApi } from '../api';
+import { formatLKR } from '../lib/formatCurrency';
 
 function StatCard({ label, value, change, changePositive, icon: Icon, index }) {
   return (
@@ -137,7 +138,7 @@ export function ManagerDashboardPage({ refreshSignal }) {
   ];
 
   const recentActivity = [
-    { icon: '$', color: '#82d616', text: `Revenue: ₹${Number(revenue).toLocaleString()}`, sub: 'Total booking earnings' },
+    { icon: 'Rs', color: '#82d616', text: `Revenue: ${formatLKR(revenue)}`, sub: 'Total booking earnings' },
     { icon: '✓', color: '#17c1e8', text: `${confirmed} bookings confirmed`, sub: 'Passenger journeys completed' },
     { icon: '!', color: '#fbcf33', text: `${pendingReqs} requests pending`, sub: 'Requires your approval' },
     { icon: '✗', color: '#ea0606', text: `${cancelled} bookings cancelled`, sub: 'Refund or dispute pending' },
@@ -177,7 +178,7 @@ export function ManagerDashboardPage({ refreshSignal }) {
           <StatCard index={2} label="Pending Requests" value={pendingReqs} change={pendingReqs > 0 ? "Action" : "Clear"} changePositive={pendingReqs === 0} icon={HourglassEmptyRounded} />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard index={3} label="Total Revenue" value={`₹${(revenue/1000).toFixed(1)}k`} icon={AttachMoneyRounded} />
+          <StatCard index={3} label="Total Revenue" value={`${formatLKR(revenue / 1000)}k`} icon={PaymentsRounded} />
         </Grid>
       </Grid>
 
