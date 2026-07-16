@@ -2,17 +2,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/api';
 import { qk } from '@/lib/queryKeys';
 
-export function useManagerCustomRoutes(params = {}) {
+export function useManagerCustomRoutes(params = {}, options = {}) {
   return useQuery({
     queryKey: qk.routeApprovals.customRoutes(params),
     queryFn: () => adminApi.getManagerCustomRoutes(params),
+    ...options,
   });
 }
 
-export function useRouteChangeRequests(params = {}) {
+export function useRouteChangeRequests(params = {}, options = {}) {
   return useQuery({
     queryKey: qk.routeApprovals.changeRequests(params),
     queryFn: () => adminApi.getRouteChangeRequests(params),
+    ...options,
   });
 }
 

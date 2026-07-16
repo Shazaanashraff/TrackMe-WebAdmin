@@ -1,11 +1,11 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** Phase 0 COMPLETE. Direction **LOCKED = 05 ATLAS**. All 5 CPs
-> (0.1 + 0.1-R + 0.2 + 0.3 + 0.4) committed on `redesign/phase-0-foundation`.
-> `/styleguide` route live (dev-only) — both light and dark themes verified in browser;
-> token values confirmed correct (bg #e8edf1 / surface #fff / primary #0f766e in light;
-> dark toggle confirmed via `.dark` class). **No app page renders differently yet** —
-> that is expected. **NEXT ACTION:** CP 1.1 — Atlas floating AppShell.
+> **CURRENT STATE:** Phase 1 in progress. CP 1.1 done — Atlas floating AppShell live.
+> Both `SuperAdminLayout` and `ManagerLayout` replaced by unified `AppShell` with
+> tinted canvas (14 px padding), floating sidebar card (w-56 ↔ w-14, persisted),
+> floating content card, role-driven nav, pending-approval badge (manager), and
+> minimal topbar (refresh + theme toggle). 12 AppShell tests green.
+> **NEXT ACTION:** CP 1.2 — full Topbar (breadcrumb, ⌘K, user menu).
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
@@ -18,7 +18,7 @@ One checkpoint per run. Tests green before ticking.
 - [x] CP 0.4 /styleguide review route (both themes) — done: 2026-07-16 (see next commit)
 
 ## Phase 1 — App shell
-- [ ] CP 1.1 AppShell + Sidebar (collapsible, role nav, badges)
+- [x] CP 1.1 AppShell + Sidebar (collapsible, role nav, badges) — done: 2026-07-16
 - [ ] CP 1.2 Topbar (breadcrumb, ⌘K, refresh, theme, user menu)
 - [ ] CP 1.3 ErrorBoundary + Toaster + AppLoading
 
@@ -67,3 +67,5 @@ One checkpoint per run. Tests green before ticking.
 | 2026-07-16 | 0.1-R | User rejected directions 01–03 then 04, chose **05 Atlas**. Cost of the change? | **Token values only** — every token *name* stayed identical, so all 24 primitives, the 13 tests, and the whole data layer survived untouched. Build green + 13/13 tests immediately after the re-skin. This is exactly why CP 0.1 defined tokens by role rather than by colour. |
 | 2026-07-16 | 0.1-R | `borderRadius` override (`lg:8 xl:12 2xl:16`) added, then removed. | It was **dead config** — identical to Tailwind 3's defaults, so it changed nothing. Caught by probing computed styles. Role mapping documented in `01-DESIGN-LANGUAGE.md` instead. |
 | 2026-07-16 | 0.3 | Lint error `'Buffer' is not defined` at `lib/authSession.js:68`. | **Pre-existing, in the untouched auth zone** — only surfaced because `src/lib` was linted for the first time. Not introduced by CP 0.3; leaving it alone (auth is out of scope). Worth a separate fix (`atob`/`globalThis.Buffer` guard) later. |
+| 2026-07-16 | 1.1 | `vite.config.js` introduced 2 `process is not defined` lint errors in CP 0.4 (not caught at the time). | Fixed in CP 1.1 by adding `/* global process */` at the top of vite.config.js. |
+| 2026-07-16 | 1.1 | Empty `catch {}` block in AppShell's `toggleCollapsed` triggered `no-empty` lint error. | Fixed: added `/* storage unavailable */` comment inside the catch. |

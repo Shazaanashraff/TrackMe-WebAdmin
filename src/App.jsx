@@ -5,8 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { ForgotPasswordRequestPage } from './pages/ForgotPasswordRequestPage';
 import { ForgotPasswordVerifyPage } from './pages/ForgotPasswordVerifyPage';
 import { ForgotPasswordResetPage } from './pages/ForgotPasswordResetPage';
-import { SuperAdminLayout } from './layout/SuperAdminLayout';
-import { ManagerLayout } from './layout/ManagerLayout';
+import { AppShell } from './layout/AppShell';
 import { DashboardPage } from './pages/DashboardPage';
 import { ManagersPage } from './pages/ManagersPage';
 import { OperationsPage } from './pages/OperationsPage';
@@ -45,12 +44,12 @@ function ProtectedShell({ auth, onLogout, refreshSignal, triggerRefresh }) {
     return <Navigate to="/login" replace />;
   }
 
+  const shell = <AppShell user={auth.user} onLogout={onLogout} onRefresh={triggerRefresh} />;
+
   if (isSuperAdmin) {
     return (
       <Routes>
-        <Route
-          element={<SuperAdminLayout user={auth.user} onLogout={onLogout} onRefresh={triggerRefresh} />}
-        >
+        <Route element={shell}>
           <Route path="/dashboard" element={<DashboardPage refreshSignal={refreshSignal} />} />
           <Route path="/managers" element={<ManagersPage refreshSignal={refreshSignal} />} />
           <Route path="/operations" element={<OperationsPage refreshSignal={refreshSignal} />} />
@@ -64,9 +63,7 @@ function ProtectedShell({ auth, onLogout, refreshSignal, triggerRefresh }) {
 
   return (
     <Routes>
-      <Route
-        element={<ManagerLayout user={auth.user} onLogout={onLogout} onRefresh={triggerRefresh} />}
-      >
+      <Route element={shell}>
         <Route path="/manager/dashboard" element={<ManagerDashboardPage refreshSignal={refreshSignal} />} />
         <Route path="/manager/buses" element={<ManagerBusesPage refreshSignal={refreshSignal} />} />
         <Route path="/manager/tracking" element={<ManagerTrackingPage refreshSignal={refreshSignal} />} />

@@ -1,0 +1,156 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ColorModeProvider } from '@/theme/ColorMode';
+import { AppShell } from '../AppShell';
+
+vi.mock('@/hooks/use-route-approvals', () => ({
+  useManagerCustomRoutes: vi.fn(() => ({ data: { data: [] } })),
+  useRouteChangeRequests: vi.fn(() => ({ data: { data: [] } })),
+}));
+
+function makeClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+function renderShell({ role = 'super-admin', path = '/dashboard', onLogout, onRefresh } = {}) {
+  const logout = onLogout ?? vi.fn();
+  const refresh = onRefresh ?? vi.fn();
+  return render(
+    <QueryClientProvider client={makeClient()}>
+      <ColorModeProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route
+              element={
+                <AppShell
+                  user={{ role, email: 'test@trackme.com' }}
+                  onLogout={logout}
+                  onRefresh={refresh}
+                />
+              }
+            >
+              <Route path="/dashboard" element={<div>sa dashboard</div>} />
+              <Route path="/managers" element={<div>managers page</div>} />
+              <Route path="/manager/dashboard" element={<div>mgr dashboard</div>} />
+              <Route path="/manager/route-approvals" element={<div>approvals page</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </ColorModeProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe('AppShell', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('renders super-admin nav links', () => {
+    renderShell({ role: 'super-admin', path: '/dashboard' });
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Managers' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Operations' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Routes' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument();
+  });
+
+  it('renders manager nav links', () => {
+    renderShell({ role: 'admin', path: '/manager/dashboard' });
+    expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Buses' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Live Tracking' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Drivers' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Route Approvals' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Private Routes' })).toBeInTheDocument();
+  });
+
+  it('marks the active route with aria-current="page"', () => {
+    renderShell({ role: 'super-admin', path: '/dashboard' });
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Managers' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('shows TRACKME ADMIN wordmark for super-admin', () => {
+    renderShell({ role: 'super-admin' });
+    expect(screen.getByText('TRACKME ADMIN')).toBeInTheDocument();
+  });
+
+  it('shows TRACKME MGR wordmark for manager', () => {
+    renderShell({ role: 'admin', path: '/manager/dashboard' });
+    expect(screen.getByText('TRACKME MGR')).toBeInTheDocument();
+  });
+
+  it('collapses the sidebar and persists to localStorage', async () => {
+    const user = userEvent.setup();
+    renderShell();
+    expect(screen.getByText('TRACKME ADMIN')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+
+    expect(screen.queryByText('TRACKME ADMIN')).not.toBeInTheDocument();
+    expect(localStorage.getItem('webadmin-sidebar-collapsed')).toBe('true');
+  });
+
+  it('expands the sidebar and updates localStorage', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('webadmin-sidebar-collapsed', 'true');
+    renderShell();
+    expect(screen.queryByText('TRACKME ADMIN')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Expand sidebar' }));
+
+    expect(screen.getByText('TRACKME ADMIN')).toBeInTheDocument();
+    expect(localStorage.getItem('webadmin-sidebar-collapsed')).toBe('false');
+  });
+
+  it('restores collapsed state from localStorage on mount', () => {
+    localStorage.setItem('webadmin-sidebar-collapsed', 'true');
+    renderShell();
+    expect(screen.queryByText('TRACKME ADMIN')).not.toBeInTheDocument();
+  });
+
+  it('calls onLogout when the sign-out button is clicked', async () => {
+    const user = userEvent.setup();
+    const onLogout = vi.fn();
+    renderShell({ onLogout });
+    await user.click(screen.getByRole('button', { name: 'Sign out' }));
+    expect(onLogout).toHaveBeenCalledOnce();
+  });
+
+  it('calls onRefresh when the refresh button is clicked', async () => {
+    const user = userEvent.setup();
+    const onRefresh = vi.fn();
+    renderShell({ onRefresh });
+    await user.click(screen.getByRole('button', { name: 'Refresh data' }));
+    expect(onRefresh).toHaveBeenCalledOnce();
+  });
+
+  it('toggles theme via the theme button', async () => {
+    const user = userEvent.setup();
+    renderShell();
+    await user.click(screen.getByRole('button', { name: /switch to dark mode/i }));
+    expect(screen.getByRole('button', { name: /switch to light mode/i })).toBeInTheDocument();
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+
+  it('renders the outlet content', () => {
+    renderShell({ path: '/dashboard' });
+    expect(screen.getByText('sa dashboard')).toBeInTheDocument();
+  });
+
+  it('shows a pending badge count for manager when approvals exist', async () => {
+    const { useManagerCustomRoutes, useRouteChangeRequests } = await import('@/hooks/use-route-approvals');
+    useManagerCustomRoutes.mockReturnValue({
+      data: { data: [{ pathPolyline: 'encoded123' }, { pathPolyline: null }] },
+    });
+    useRouteChangeRequests.mockReturnValue({
+      data: { data: [{ id: 'r1' }, { id: 'r2' }] },
+    });
+
+    renderShell({ role: 'admin', path: '/manager/dashboard' });
+    // 1 recorded route (has pathPolyline) + 2 change requests = 3
+    expect(screen.getByText('3')).toBeInTheDocument();
+  });
+});
