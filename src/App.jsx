@@ -21,6 +21,7 @@ import { ManagerRouteApprovalsPage } from './pages/ManagerRouteApprovalsPage';
 import { ManagerPrivateRoutesPage } from './pages/ManagerPrivateRoutesPage';
 import { adminApi } from './api';
 import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
+import { useRefreshData } from './hooks/use-refresh';
 
 function AppLoading() {
   return (
@@ -135,6 +136,7 @@ export default function App() {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [toast, setToast] = useState('');
   const refreshSignal = refreshCounter;
+  const refreshQueries = useRefreshData();
 
   useEffect(() => {
     let cancelled = false;
@@ -195,7 +197,8 @@ export default function App() {
   };
 
   const triggerRefresh = () => {
-    setRefreshCounter((prev) => prev + 1);
+    setRefreshCounter((prev) => prev + 1); // legacy signal for un-migrated pages
+    refreshQueries(); // invalidate TanStack Query caches for migrated pages
     setToast('Data refresh triggered');
   };
 
