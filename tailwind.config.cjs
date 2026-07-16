@@ -18,11 +18,13 @@ module.exports = {
           DEFAULT: 'var(--primary)',
           hover: 'var(--primary-hover)',
           foreground: 'var(--primary-foreground)',
+          soft: 'var(--primary-soft)',
         },
         destructive: {
           DEFAULT: 'var(--destructive)',
           foreground: 'var(--destructive-foreground)',
         },
+        overlay: 'var(--overlay)',
         ring: 'var(--ring)',
         status: {
           pending: 'var(--status-pending)',
@@ -44,9 +46,14 @@ module.exports = {
         uber: ['"Uber Move"', 'sans-serif'],
       },
       boxShadow: {
-        sm: '0 1px 2px rgb(15 23 42 / 0.06)',
-        md: '0 4px 12px rgb(15 23 42 / 0.10)',
+        // Atlas spends depth ONCE — `float` is for the two shell cards and for
+        // overlays (dialog/sheet/popover). Nothing inside the content card gets
+        // a shadow; use a 1px border or surface-muted instead.
+        float: 'var(--shadow-float)',
+        sm: '0 1px 2px rgb(11 18 32 / 0.05)',
       },
+      // NOTE: no borderRadius override — Tailwind's defaults already match the
+      // Atlas scale (lg 8px controls · xl 12px panels · 2xl 16px shell cards).
     },
   },
   plugins: [require('tailwindcss-animate')],

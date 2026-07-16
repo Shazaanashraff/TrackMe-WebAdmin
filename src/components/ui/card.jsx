@@ -1,10 +1,15 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
+/**
+ * Atlas panel: 12px radius, 1px rule, NO shadow. Depth is spent once — only the
+ * shell cards (AppShell) and overlays carry `shadow-float`. Nested shadows are
+ * the failure mode of this design language. See docs/redesign/01.
+ */
 const Card = React.forwardRef(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('rounded-lg border border-border bg-surface text-foreground shadow-sm', className)}
+    className={cn('rounded-xl border border-border bg-surface text-foreground', className)}
     {...props}
   />
 ));

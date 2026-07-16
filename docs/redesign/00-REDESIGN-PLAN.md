@@ -1,5 +1,12 @@
 # 00 — Master Redesign Plan
 
+> **Direction LOCKED 2026-07-16: 05 — ATLAS.** Petrol teal on a tinted canvas, with a
+> **floating shell** (inset rounded sidebar + content card). Chosen from five options —
+> see `design-options.html` (01 Refined Minimal / 02 Control Room / 03 The Line) and
+> `design-options-2.html` (04 Bento / 05 Atlas). Design language: `01-DESIGN-LANGUAGE.md`.
+> The change cost token *values* only — every token name, all 24 primitives, and the data
+> layer were unaffected. CP 1.1 implements the floating shell.
+
 Goal: every web-admin screen looks and behaves like a professional, minimal admin product —
 the Shabeer register — with zero MUI left at the end, zero fabricated data, and full
 loading/empty/error coverage. Scope excludes the auth pages (done).
@@ -66,9 +73,12 @@ Work ONE checkpoint at a time. After each: run `npm run lint` + `npm test`, upda
   themes (the review surface for sign-off before pages are touched).
 
 ### Phase 1 — App shell
-- **CP 1.1** `layout/AppShell.jsx`: collapsible sidebar (w-56 ↔ w-14, persisted), wordmark,
-  Lucide nav items with active state, role-driven nav list (super-admin vs manager), Sign out
-  pinned bottom. Mobile: sidebar becomes a Sheet.
+- **CP 1.1** `layout/AppShell.jsx` — **the Atlas floating shell**: tinted canvas
+  (`bg-background`, 14px padding), sidebar and content as two separate inset cards
+  (`bg-surface`, `rounded-2xl`, 1px `border-border`, `shadow-float`, 12px gap). Collapsible
+  sidebar (w-56 ↔ w-14, persisted), wordmark, Lucide nav with `bg-primary` active pill,
+  role-driven nav list (super-admin vs manager), Sign out pinned bottom. Mobile: sidebar
+  becomes a Sheet. Depth is spent here and on overlays only — never nested inside.
 - **CP 1.2** Topbar: breadcrumb (route-driven, no fallback bug), command menu (⌘K search over
   nav + actions), refresh (query invalidation + spinner while `isFetching`), theme toggle,
   user menu (avatar initial, role label, sign out). Dead gear/bell icons are NOT carried over.

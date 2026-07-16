@@ -1,98 +1,142 @@
-# 01 — Design Language
+# 01 — Design Language — **ATLAS** (LOCKED 2026-07-16)
 
-POV: **Refined minimal (Linear/Stripe register)** — the Shabeer design language adapted to
-TrackMe. Calm, precise, spacious at the page level, efficient inside tables. Light **and**
-dark, designed together. This is a fleet-operations tool: legibility and trust over flourish.
+Chosen by the user on 2026-07-16 from five directions (see `design-options.html` and
+`design-options-2.html`; direction **05 — Atlas**).
 
-## Color — semantic tokens (never raw hex in components)
+POV: **Premium calm.** Conventional to operate, considered to look at. The register is
+Linear/Stripe restraint plus one structural idea — **the shell floats**. Nothing about the
+interaction model is clever or novel; all of the character comes from structure, depth, and a
+single petrol accent. This is a fleet-operations tool: legibility and trust first.
 
-CSS variables in `src/index.css`, mapped through Tailwind v4 `@theme inline`. Components use
-`bg-surface text-foreground border-border` etc. Emerald stays the brand primary (it's already
-`ace-primary` and the user-app accent).
+## The one structural idea — a floating shell
+
+The app is **not** four flat regions butted together. The sidebar and the content are separate
+**inset rounded cards** resting on a tinted canvas:
+
+```
+┌─ canvas (tinted, --background) ───────────────────────┐
+│  ┌── sidebar card ──┐  ┌── content card ───────────┐  │
+│  │  radius 16       │  │  radius 16                │  │
+│  │  --surface       │  │  topbar / scroll body     │  │
+│  └──────────────────┘  └───────────────────────────┘  │
+└───────────────────────────────────────────────────────┘
+```
+
+- Canvas padding **14px**; gap between the two cards **12px**.
+- Both cards: `--surface`, 1px `--border`, radius **16px**, `shadow-float`.
+- The canvas is **tinted** (never white) — that contrast is what makes the cards read as
+  objects. Do not flatten the canvas to `--surface`.
+- Inside the content card, secondary panels are radius **12px** and sit on `--surface-muted`
+  or use a 1px rule — they do **not** get their own float shadow. Depth is used once, at the
+  shell level. Nested shadows are the failure mode.
+
+## Colour — semantic tokens (never raw hex in components)
+
+CSS variables in `src/index.css`, mapped through `tailwind.config.cjs`. Components use
+`bg-surface text-foreground border-border` etc. Accent is **petrol teal** — distinct from the
+default SaaS emerald/indigo, and calm enough to sit under data all day.
 
 ### Light
 
 | Token | Hex | Use |
 |---|---|---|
-| `--background` | `#F8FAFC` | app canvas |
-| `--surface` | `#FFFFFF` | cards, tables, dialogs |
-| `--surface-muted` | `#F1F5F9` | table header, hover fill |
-| `--border` | `#E2E8F0` | dividers, inputs |
-| `--foreground` | `#0F172A` | primary text |
-| `--muted-foreground` | `#64748B` | secondary text |
-| `--primary` | `#059669` | primary CTA, active nav, focus ring |
-| `--primary-hover` | `#047857` | CTA hover |
+| `--background` | `#E8EDF1` | **tinted canvas** the shell cards float on |
+| `--surface` | `#FFFFFF` | shell cards, panels, dialogs |
+| `--surface-muted` | `#F6F8FA` | inset stats, table header, hover fill |
+| `--border` | `#E3E8EE` | rules, dividers, inputs |
+| `--foreground` | `#0B1220` | primary text |
+| `--muted-foreground` | `#5B6875` | secondary text |
+| `--primary` | `#0F766E` | petrol — active nav, primary CTA, focus ring |
+| `--primary-hover` | `#115E59` | CTA hover |
 | `--primary-foreground` | `#FFFFFF` | text on primary |
-| `--destructive` | `#DC2626` | delete / revoke / reject |
-| `--ring` | `#059669` | focus ring |
+| `--primary-soft` | `#D6F0EC` | accent badge fill, subtle accent surfaces |
+| `--destructive` | `#B91C1C` | delete / revoke / reject |
+| `--overlay` | `rgb(11 18 32 / .45)` | dialog / sheet scrim |
+| `--ring` | `#0F766E` | focus ring |
 
 ### Dark (no pure black; off-white text)
 
 | Token | Hex | Use |
 |---|---|---|
-| `--background` | `#0B1120` | app canvas |
-| `--surface` | `#0F172A` | cards, tables, dialogs |
-| `--surface-muted` | `#1E293B` | table header, hover fill |
-| `--border` | `#1E293B` | dividers, inputs |
-| `--foreground` | `#E2E8F0` | primary text |
-| `--muted-foreground` | `#94A3B8` | secondary text |
-| `--primary` | `#10B981` | CTA/accent (lifted for contrast) |
-| `--primary-hover` | `#34D399` | CTA hover |
-| `--primary-foreground` | `#022C22` | text on primary |
+| `--background` | `#080C11` | tinted canvas |
+| `--surface` | `#111820` | shell cards, panels, dialogs |
+| `--surface-muted` | `#0C1219` | inset stats, table header, hover fill |
+| `--border` | `#1E2733` | rules, dividers, inputs |
+| `--foreground` | `#E8EEF4` | primary text |
+| `--muted-foreground` | `#8A97A6` | secondary text |
+| `--primary` | `#2DD4BF` | petrol lifted for dark contrast |
+| `--primary-hover` | `#5EEAD4` | CTA hover |
+| `--primary-foreground` | `#04211D` | text on primary |
+| `--primary-soft` | `#0C2E2A` | accent badge fill |
 | `--destructive` | `#F87171` | destructive (lifted) |
-| `--ring` | `#10B981` | focus ring |
+| `--overlay` | `rgb(0 0 0 / .6)` | dialog / sheet scrim |
+| `--ring` | `#2DD4BF` | focus ring |
 
-### Status colors (domain-tied — always label + color via `StatusBadge`, never color alone)
+> In dark, `--surface-muted` is **darker** than `--surface` (inset/sunk), not lighter. Panels
+> recede rather than stack — that is what keeps the depth reading correct in both themes.
 
-| Variant | Light / Dark | TrackMe domain states |
-|---|---|---|
-| `pending` (neutral) | slate-500 / slate-400 | request `pending`, bus `offline`, route `unnamed`, member `invited` |
-| `progress` (blue) | blue-600 / blue-400 | bus `idle`/`stopped`, request `in review`, route change `submitted` |
-| `settled` (emerald) | emerald-600 / emerald-400 | bus `online`/`active`, request `approved`, manager `active`, route `public` |
-| `warning` (amber) | amber-600 / amber-400 | GPS stale, low battery/signal, expiring credentials, route `private` |
-| `danger` (red) | red-600 / red-400 | request `rejected`, manager `suspended`, bus `deleted`, member `revoked` |
+### Status colours (domain-tied — always label + colour via `StatusBadge`, never colour alone)
 
-Theme toggle in Topbar; persist in localStorage; respect `prefers-color-scheme` on first run.
+`settled` is a true green, deliberately **not** the petrol accent, so "success" never reads as
+"branded".
+
+| Variant | Light | Dark | TrackMe domain states |
+|---|---|---|---|
+| `pending` | `#5B6875` | `#8A97A6` | request `pending`, bus `offline`, route `unnamed` |
+| `progress` | `#2563EB` | `#60A5FA` | bus `idle`, request `in review`, change `submitted` |
+| `settled` | `#15803D` | `#4ADE80` | bus `online`, request `approved`, manager `active` |
+| `warning` | `#B45309` | `#FBBF24` | GPS stale, low battery, expiring credentials, route `private` |
+| `danger` | `#B91C1C` | `#F87171` | request `rejected`, manager `suspended`, device fault |
+
+Theme toggle in Topbar; persisted in localStorage; honours `prefers-color-scheme` on first run.
+Both themes are designed together and every screen is checked in each.
 
 ## Typography
 
-- **Headings / wordmark:** Uber Move (500/700) — already self-hosted, keeps TrackMe brand.
-- **Body / UI:** Inter (400/500/600) via `@fontsource/inter` — self-hosted, no CDN.
-- **Numbers, IDs, plates, room keys, coordinates, money:** Fira Code (500) with
-  `tabular-nums`, right-aligned in table columns, via the `Money` / mono utilities.
-- Scale (px): 12 · 14 · 16(base) · 18 · 24 · 32. Body line-height 1.5.
-- Money: `formatLKR` helper (exists, todo 017) → `Rs 1,250,000.00`.
-- Dates: one `formatDate`/`RelativeTime` pair, Asia/Colombo; tables show relative
-  ("4 min ago") with absolute on tooltip.
+- **Headings / wordmark:** Uber Move (500/700) — self-hosted, keeps TrackMe brand.
+- **Body / UI:** Inter (400/500/600) — self-hosted via `@fontsource`.
+- **Numbers, plates, IDs, room keys, coordinates, money:** Fira Code (500) with
+  `tabular-nums`, right-aligned in numeric table columns.
+- Scale (px): 12 · 13 · 14(base UI) · 16 · 22 · 26. Body line-height 1.5.
+- Headings are tight: `letter-spacing: -0.02em` at 22px+.
+- Money via `formatLKR` → `Rs 1,250,000.00`. Dates via `RelativeTime` (Asia/Colombo),
+  relative in tables with the absolute on tooltip.
 
-## Spacing & density
+## Radius, spacing & density
 
-4/8px system. Table rows `h-11`, cells `px-4 py-3`. Page gutters 16 → 24 → 32px
-(mobile → tablet → desktop). Content max width `max-w-screen-2xl` centered. Forms `max-w-2xl`.
-Section rhythm 16/24/32/48. Cards: `rounded-lg` (8px) — no more mixed 8/16px radii.
-
-## Iconography
-
-**Lucide only**, stroke 1.5, sizes 16 (`h-4 w-4`) and 20 (`h-5 w-5`). No MUI icons, no emoji.
-Nav: LayoutDashboard, Users, Activity, Route, Settings / Bus, MapPin, KeyRound, GitPullRequest,
-Lock, UserCog. Status dots for live tracking get a CSS pulse (disabled under reduced-motion).
+- **Radius:** shell cards **16px** (`rounded-2xl`) · panels **12px** (`rounded-xl`) ·
+  controls/inputs/buttons **8px** (`rounded-lg`) · badges pill.
+- 4/8px spacing system. Table rows `h-11`, cells `px-4 py-3`.
+- Canvas padding 14px; shell gap 12px; content-card body padding 22px.
+- Forms `max-w-2xl`. Section rhythm 12/18/22/32.
 
 ## Elevation
 
-Flat-ish: `shadow-sm` on cards, `shadow-md` only on overlays (dialog/sheet/popover/command).
-No colored glows, no 3D soft-UI shadows (the current dashboard look is retired).
+Depth is spent **once**: `shadow-float` on the two shell cards and on overlays
+(dialog/sheet/popover/command). Everything inside the content card is flat — separated by
+1px `--border` rules and `--surface-muted` fills, never by another shadow.
+
+- `--shadow-float` light: `0 1px 3px rgb(11 18 32 / .06), 0 12px 32px -14px rgb(11 18 32 / .22)`
+- `--shadow-float` dark: `0 1px 3px rgb(0 0 0 / .6), 0 12px 32px -14px rgb(0 0 0 / .8)`
+
+## Iconography
+
+**Lucide only**, stroke 1.5, sizes 16 (`h-4 w-4`) / 20 (`h-5 w-5`). No MUI icons, no emoji.
+Nav: LayoutDashboard, Users, Activity, Route, Settings / Bus, MapPin, KeyRound,
+GitPullRequest, Lock, UserCog.
 
 ## Accessibility (priority 1)
 
-- Contrast ≥ 4.5:1 body, ≥ 3:1 large text/glyphs — both themes.
-- Visible 2px primary focus ring on every interactive element (`:focus-visible`).
+- Contrast ≥ 4.5:1 body, ≥ 3:1 large text/glyphs — **both** themes. Petrol `#0F766E` on
+  `#FFFFFF` clears 4.5:1; `#2DD4BF` is used on dark surfaces only.
+- Visible 2px `--ring` focus ring on every interactive element, offset against the surface.
 - Keyboard order = visual order; dialogs trap + restore focus.
-- Status = label + color, never color alone. `aria-label` on icon-only buttons.
-- `prefers-reduced-motion` honored globally (kill pulses/transitions).
+- Status = label + colour, never colour alone. `aria-label` on icon-only buttons.
+- `prefers-reduced-motion` honoured globally.
 
-## Avoid (this is what makes it professional)
+## Avoid
 
-No gradients (the `310deg` dark gradient dies), no glassmorphism, no decorative illustration,
-no fake data of any kind, no second accent color, no color-coded rows, no framer-motion
-entrance animations, no giant ghost "Dashboard" watermark heading, no filler cards
-("Editing Mode", "Password Policy", "Fleet Scale 70%").
+No gradients. No glassmorphism (the float is done with shadow + tint, not blur). No second
+accent. No nested shadows inside the content card. No decorative illustration. No fabricated
+data of any kind. No colour-coded rows. No entrance animations. No giant ghost watermark
+headings. No filler cards ("Editing Mode", "Password Policy", "Fleet Scale 70%").

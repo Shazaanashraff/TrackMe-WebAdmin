@@ -1,17 +1,19 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** Phase 0 foundation COMPLETE except the styleguide — CP 0.1 + 0.2 + 0.3
-> done & committed on `redesign/phase-0-foundation`. Tokens, 24 shadcn primitives, and the
-> TanStack Query data layer are all in place. **No page renders differently yet — that is
-> expected**; the first visible change is CP 1.1 (AppShell).
-> **NEXT ACTION:** CP 0.4 — dev-only `/styleguide` route rendering every primitive + kit
-> component in both themes (the sign-off surface before pages are touched). Then Phase 1.
+> **CURRENT STATE:** Direction **LOCKED = 05 ATLAS** (user, 2026-07-16) — petrol teal on a
+> tinted canvas, floating shell. Tokens re-skinned to Atlas and primitives realigned
+> (CP 0.1-R). Phase 0 complete except the styleguide: CP 0.1 (+R), 0.2, 0.3 committed on
+> `redesign/phase-0-foundation`. **No page renders differently yet — that is expected**;
+> the first visible change is CP 1.1 (AppShell), which implements the floating shell.
+> **NEXT ACTION:** CP 0.4 — dev-only `/styleguide` route rendering every primitive in both
+> themes (the Atlas sign-off surface before pages are touched). Then Phase 1.
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
 
 ## Phase 0 — Foundation
 - [x] CP 0.1 Semantic tokens (light/dark) + `darkMode:'class'` synced to MUI ColorMode + a11y/reduced-motion base — done: 2026-07-15 (Tailwind stays v3 for now — see Findings)
+- [x] CP 0.1-R **Atlas re-skin** — token values → petrol/tinted-canvas, `--primary-soft`/`--overlay`/`--shadow-float` added, primitives realigned (Card flat `rounded-xl`, overlays `bg-overlay` + `shadow-float`, no backdrop-blur) — done: 2026-07-16
 - [x] CP 0.2 shadcn foundation (`components.json`, `@/` alias via vite+jsconfig) + 24 vendored token-based primitives (JSX) + orphan button/input/card replaced in place + Inter/Fira Code self-hosted + `tailwindcss-animate` — done: 2026-07-16
 - [x] CP 0.3 TanStack Query provider + `queryKeys` + 9 domain hook files wrapping every `adminApi.*` + refresh control also invalidates queries — done: 2026-07-16 (`refreshSignal` KEPT as bridge — removed per-page in Phases 3–4, final cleanup Phase 6; see Findings)
 - [ ] CP 0.4 /styleguide review route (both themes)
@@ -63,4 +65,6 @@ One checkpoint per run. Tests green before ticking.
 | 2026-07-16 | 0.2 | `@fontsource` `@import`s must precede `@tailwind`; and `sonner` shadcn template uses `next-themes`. | Moved font `@import`s to top of `index.css` (verified fonts load, no 404). Rewired `sonner.jsx` to our `useColorMode()` instead of adding `next-themes`. |
 | 2026-07-16 | 0.2 | Lint: 3 `react-refresh/only-export-components` **warnings** on button/badge/alert (they co-export `*Variants`). | Inherent to shadcn's variant pattern (Shabeer's files carry the same); warnings, non-failing. 0 errors. |
 | 2026-07-16 | 0.3 | Plan said "remove `refreshSignal`", but all 12 pages use it as a `useEffect` dep to re-run their manual `load()`. Removing it now would break refresh everywhere, since no page consumes the new hooks yet. | **Kept `refreshSignal` as the bridge.** `App.triggerRefresh` now ALSO calls `invalidateQueries()`, so one control serves both un-migrated (counter) and migrated (useQuery) pages. `refreshSignal` is dropped **per-page** as each migrates in Phases 3–4; final `App.jsx`/layout cleanup in Phase 6. |
+| 2026-07-16 | 0.1-R | User rejected directions 01–03 then 04, chose **05 Atlas**. Cost of the change? | **Token values only** — every token *name* stayed identical, so all 24 primitives, the 13 tests, and the whole data layer survived untouched. Build green + 13/13 tests immediately after the re-skin. This is exactly why CP 0.1 defined tokens by role rather than by colour. |
+| 2026-07-16 | 0.1-R | `borderRadius` override (`lg:8 xl:12 2xl:16`) added, then removed. | It was **dead config** — identical to Tailwind 3's defaults, so it changed nothing. Caught by probing computed styles. Role mapping documented in `01-DESIGN-LANGUAGE.md` instead. |
 | 2026-07-16 | 0.3 | Lint error `'Buffer' is not defined` at `lib/authSession.js:68`. | **Pre-existing, in the untouched auth zone** — only surfaced because `src/lib` was linted for the first time. Not introduced by CP 0.3; leaving it alone (auth is out of scope). Worth a separate fix (`atob`/`globalThis.Buffer` guard) later. |

@@ -32,25 +32,33 @@
    Tailwind utilities (bg-surface, text-foreground, border-border…) mapped in
    tailwind.config.cjs — never raw hex in a component. See docs/redesign/01. */
 :root {
-  --background: #f8fafc;
+  /* ATLAS — light. --background is a TINTED canvas the shell cards float on;
+     never flatten it to --surface. See docs/redesign/01-DESIGN-LANGUAGE.md. */
+  --background: #e8edf1;
   --surface: #ffffff;
-  --surface-muted: #f1f5f9;
-  --border: #e2e8f0;
-  --foreground: #0f172a;
-  --muted-foreground: #64748b;
-  --primary: #059669;
-  --primary-hover: #047857;
+  --surface-muted: #f6f8fa;
+  --border: #e3e8ee;
+  --foreground: #0b1220;
+  --muted-foreground: #5b6875;
+  --primary: #0f766e;
+  --primary-hover: #115e59;
   --primary-foreground: #ffffff;
-  --destructive: #dc2626;
+  --primary-soft: #d6f0ec;
+  --destructive: #b91c1c;
   --destructive-foreground: #ffffff;
-  --ring: #059669;
+  --overlay: rgb(11 18 32 / 0.45);
+  --ring: #0f766e;
 
-  /* status (label + colour, never colour alone) */
-  --status-pending: #64748b;
+  /* status (label + colour, never colour alone). `settled` is a true green,
+     deliberately not the petrol accent, so success never reads as "branded". */
+  --status-pending: #5b6875;
   --status-progress: #2563eb;
-  --status-settled: #059669;
-  --status-warning: #d97706;
-  --status-danger: #dc2626;
+  --status-settled: #15803d;
+  --status-warning: #b45309;
+  --status-danger: #b91c1c;
+
+  /* elevation — depth is spent once, on the shell cards + overlays */
+  --shadow-float: 0 1px 3px rgb(11 18 32 / 0.06), 0 12px 32px -14px rgb(11 18 32 / 0.22);
 
   /* typography roles */
   --font-sans: 'Inter', 'Uber Move', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
@@ -63,24 +71,30 @@
    Kept in sync with MUI's ColorModeProvider (theme/ColorMode.jsx) so one
    toggle drives both systems during the MUI→shadcn migration. */
 .dark {
-  --background: #0b1120;
-  --surface: #0f172a;
-  --surface-muted: #1e293b;
-  --border: #1e293b;
-  --foreground: #e2e8f0;
-  --muted-foreground: #94a3b8;
-  --primary: #10b981;
-  --primary-hover: #34d399;
-  --primary-foreground: #022c22;
+  /* ATLAS — dark. Note --surface-muted is DARKER than --surface (sunk, not
+     stacked); panels recede so the float reads correctly in both themes. */
+  --background: #080c11;
+  --surface: #111820;
+  --surface-muted: #0c1219;
+  --border: #1e2733;
+  --foreground: #e8eef4;
+  --muted-foreground: #8a97a6;
+  --primary: #2dd4bf;
+  --primary-hover: #5eead4;
+  --primary-foreground: #04211d;
+  --primary-soft: #0c2e2a;
   --destructive: #f87171;
   --destructive-foreground: #1a0000;
-  --ring: #10b981;
+  --overlay: rgb(0 0 0 / 0.6);
+  --ring: #2dd4bf;
 
-  --status-pending: #94a3b8;
+  --status-pending: #8a97a6;
   --status-progress: #60a5fa;
-  --status-settled: #34d399;
+  --status-settled: #4ade80;
   --status-warning: #fbbf24;
   --status-danger: #f87171;
+
+  --shadow-float: 0 1px 3px rgb(0 0 0 / 0.6), 0 12px 32px -14px rgb(0 0 0 / 0.8);
 }
 
 :root {
