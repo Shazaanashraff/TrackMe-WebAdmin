@@ -3,24 +3,24 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Activity, Route as RouteIcon, Settings,
   Bus, MapPin, UserCog, GitPullRequest, Lock, LogOut,
-  ChevronLeft, ChevronRight, Menu, Sun, Moon, RefreshCw,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useColorMode } from '@/theme/ColorMode';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip, TooltipProvider, TooltipTrigger, TooltipContent,
 } from '@/components/ui/tooltip';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import {
   useManagerCustomRoutes,
   useRouteChangeRequests,
 } from '@/hooks/use-route-approvals';
+import { Topbar } from './Topbar';
 
 const SIDEBAR_KEY = 'webadmin-sidebar-collapsed';
 
-const SUPER_ADMIN_NAV = [
+export const SUPER_ADMIN_NAV = [
   { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { label: 'Managers', path: '/managers', icon: Users },
   { label: 'Operations', path: '/operations', icon: Activity },
@@ -28,7 +28,7 @@ const SUPER_ADMIN_NAV = [
   { label: 'Settings', path: '/settings', icon: Settings },
 ];
 
-const MANAGER_NAV = [
+export const MANAGER_NAV = [
   { label: 'Overview', path: '/manager/dashboard', icon: LayoutDashboard },
   { label: 'Buses', path: '/manager/buses', icon: Bus },
   { label: 'Live Tracking', path: '/manager/tracking', icon: MapPin },
@@ -144,7 +144,6 @@ export function AppShell({ user, onLogout, onRefresh }) {
   });
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const { mode, toggleColorMode } = useColorMode();
   const location = useLocation();
 
   const isSuperAdmin = user?.role === 'super-admin';
@@ -181,7 +180,6 @@ export function AppShell({ user, onLogout, onRefresh }) {
             collapsed ? 'w-14' : 'w-56',
           )}
         >
-          {/* Wordmark row */}
           <div className="flex items-center h-12 border-b border-border px-3 gap-2 shrink-0">
             <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
               <span className="text-primary-foreground text-xs font-bold font-heading">T</span>
@@ -213,63 +211,38 @@ export function AppShell({ user, onLogout, onRefresh }) {
           />
         </aside>
 
+        {/* Mobile nav sheet (trigger is the hamburger in Topbar) */}
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetContent side="left" className="w-56 p-0 flex flex-col">
+            <div className="flex items-center h-12 border-b border-border px-3 gap-2 shrink-0">
+              <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground text-xs font-bold font-heading">T</span>
+              </div>
+              <span className="font-heading text-sm font-semibold text-foreground truncate">
+                {wordmark}
+              </span>
+            </div>
+            <SidebarNav
+              navItems={navItems}
+              location={location}
+              collapsed={false}
+              onLogout={() => { setMobileOpen(false); onLogout(); }}
+              onNavigate={() => setMobileOpen(false)}
+              pendingCount={pendingCount}
+            />
+          </SheetContent>
+        </Sheet>
+
         {/* Content card */}
         <div className="flex-1 flex flex-col bg-surface border border-border rounded-2xl shadow-float overflow-hidden min-w-0">
+          <Topbar
+            user={user}
+            navItems={navItems}
+            onLogout={onLogout}
+            onRefresh={onRefresh}
+            onMobileMenuOpen={() => setMobileOpen(true)}
+          />
 
-          {/* Minimal topbar — CP 1.2 adds breadcrumb, ⌘K, user menu */}
-          <header className="h-14 border-b border-border flex items-center gap-3 px-4 shrink-0">
-
-            {/* Mobile: sheet trigger (hidden on md+) */}
-            <div className="md:hidden">
-              <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Open navigation">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-56 p-0 flex flex-col">
-                  <div className="flex items-center h-12 border-b border-border px-3 gap-2 shrink-0">
-                    <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
-                      <span className="text-primary-foreground text-xs font-bold font-heading">T</span>
-                    </div>
-                    <span className="font-heading text-sm font-semibold text-foreground truncate">
-                      {wordmark}
-                    </span>
-                  </div>
-                  <SidebarNav
-                    navItems={navItems}
-                    location={location}
-                    collapsed={false}
-                    onLogout={() => { setMobileOpen(false); onLogout(); }}
-                    onNavigate={() => setMobileOpen(false)}
-                    pendingCount={pendingCount}
-                  />
-                </SheetContent>
-              </Sheet>
-            </div>
-
-            <div className="flex-1" />
-
-            {/* Right cluster: refresh + theme toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onRefresh}
-              aria-label="Refresh data"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleColorMode}
-              aria-label={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {mode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </Button>
-          </header>
-
-          {/* Scrollable page content */}
           <main className="flex-1 overflow-y-auto">
             <div className="max-w-screen-2xl mx-auto px-6 py-6">
               <Outlet />

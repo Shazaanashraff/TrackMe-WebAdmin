@@ -1,11 +1,11 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** Phase 1 in progress. CP 1.1 done — Atlas floating AppShell live.
-> Both `SuperAdminLayout` and `ManagerLayout` replaced by unified `AppShell` with
-> tinted canvas (14 px padding), floating sidebar card (w-56 ↔ w-14, persisted),
-> floating content card, role-driven nav, pending-approval badge (manager), and
-> minimal topbar (refresh + theme toggle). 12 AppShell tests green.
-> **NEXT ACTION:** CP 1.2 — full Topbar (breadcrumb, ⌘K, user menu).
+> **CURRENT STATE:** Phase 1 in progress. CP 1.2 done — full Topbar live.
+> Breadcrumb (route-driven, no fallback bug), ⌘K command menu (nav group per role),
+> refresh button (spins while isFetching), theme toggle, user DropdownMenu
+> (avatar initial, name, role, sign-out). Dead bell/gear not carried over.
+> `command` primitive vendored (cmdk 1.1.1 installed). 12 Topbar tests written.
+> **NEXT ACTION:** CP 1.3 — ErrorBoundary + Toaster + AppLoading rebuild.
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
@@ -19,7 +19,7 @@ One checkpoint per run. Tests green before ticking.
 
 ## Phase 1 — App shell
 - [x] CP 1.1 AppShell + Sidebar (collapsible, role nav, badges) — done: 2026-07-16
-- [ ] CP 1.2 Topbar (breadcrumb, ⌘K, refresh, theme, user menu)
+- [x] CP 1.2 Topbar (breadcrumb, ⌘K, refresh, theme, user menu) — done: 2026-07-17
 - [ ] CP 1.3 ErrorBoundary + Toaster + AppLoading
 
 ## Phase 2 — Shared kit
