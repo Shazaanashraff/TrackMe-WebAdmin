@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
-import { Alert, Box, CircularProgress, Snackbar, Stack, Typography } from '@mui/material';
+import { toast } from 'sonner';
 import { LoginPage } from './pages/LoginPage';
 import { ForgotPasswordRequestPage } from './pages/ForgotPasswordRequestPage';
 import { ForgotPasswordVerifyPage } from './pages/ForgotPasswordVerifyPage';
 import { ForgotPasswordResetPage } from './pages/ForgotPasswordResetPage';
 import { AppShell } from './layout/AppShell';
+import { AppLoading } from './layout/AppLoading';
+import { ErrorBoundary } from './layout/ErrorBoundary';
+import { Toaster } from './components/ui/sonner';
 import { DashboardPage } from './pages/DashboardPage';
 import { ManagersPage } from './pages/ManagersPage';
 import { OperationsPage } from './pages/OperationsPage';
@@ -22,17 +25,6 @@ import { adminApi } from './api';
 import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
 import { useRefreshData } from './hooks/use-refresh';
 import { StyleGuidePage } from './pages/StyleGuidePage';
-
-function AppLoading() {
-  return (
-    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%)' }}>
-      <Stack spacing={1.5} alignItems="center">
-        <CircularProgress />
-        <Typography sx={{ color: '#6b7280', fontWeight: 600 }}>Restoring session...</Typography>
-      </Stack>
-    </Box>
-  );
-}
 
 function ProtectedShell({ auth, onLogout, refreshSignal, triggerRefresh }) {
   const authToken = auth?.token || auth?.accessToken;
@@ -132,7 +124,6 @@ export default function App() {
   const [auth, setAuth] = useState(() => readStoredAuth());
   const [hydrating, setHydrating] = useState(true);
   const [refreshCounter, setRefreshCounter] = useState(0);
-  const [toast, setToast] = useState('');
   const refreshSignal = refreshCounter;
   const refreshQueries = useRefreshData();
 
@@ -191,42 +182,41 @@ export default function App() {
   const handleLogout = () => {
     clearStoredAuth();
     setAuth(null);
-    setToast('Logged out successfully');
+    toast('Logged out successfully');
   };
 
   const triggerRefresh = () => {
     setRefreshCounter((prev) => prev + 1); // legacy signal for un-migrated pages
     refreshQueries(); // invalidate TanStack Query caches for migrated pages
-    setToast('Data refresh triggered');
+    toast('Data refreshed');
   };
 
   return (
     <>
+      <Toaster />
       {hydrating ? <AppLoading /> : null}
       {!hydrating ? (
-      <Routes>
-        {import.meta.env.DEV && <Route path="/styleguide" element={<StyleGuidePage />} />}
-        <Route path="/login" element={<LoginShell auth={auth} setAuth={setAuth} />} />
-        <Route path="/forgot-password" element={<ForgotPasswordRequestPage />} />
-        <Route path="/forgot-password/verify" element={<ForgotPasswordVerifyPage />} />
-        <Route path="/forgot-password/reset" element={<ForgotPasswordResetPage />} />
-        <Route
-          path="/*"
-          element={
-            <ProtectedShell
-              auth={auth}
-              onLogout={handleLogout}
-              refreshSignal={refreshSignal}
-              triggerRefresh={triggerRefresh}
-            />
-          }
-        />
-      </Routes>
+        <Routes>
+          {import.meta.env.DEV && <Route path="/styleguide" element={<StyleGuidePage />} />}
+          <Route path="/login" element={<LoginShell auth={auth} setAuth={setAuth} />} />
+          <Route path="/forgot-password" element={<ForgotPasswordRequestPage />} />
+          <Route path="/forgot-password/verify" element={<ForgotPasswordVerifyPage />} />
+          <Route path="/forgot-password/reset" element={<ForgotPasswordResetPage />} />
+          <Route
+            path="/*"
+            element={
+              <ErrorBoundary>
+                <ProtectedShell
+                  auth={auth}
+                  onLogout={handleLogout}
+                  refreshSignal={refreshSignal}
+                  triggerRefresh={triggerRefresh}
+                />
+              </ErrorBoundary>
+            }
+          />
+        </Routes>
       ) : null}
-
-      <Snackbar open={Boolean(toast)} autoHideDuration={2200} onClose={() => setToast('')}>
-        <Alert severity="info" variant="filled" onClose={() => setToast('')}>{toast}</Alert>
-      </Snackbar>
     </>
   );
 }

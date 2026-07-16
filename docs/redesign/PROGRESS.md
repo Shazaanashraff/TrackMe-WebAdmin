@@ -1,11 +1,10 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** Phase 1 in progress. CP 1.2 done — full Topbar live.
-> Breadcrumb (route-driven, no fallback bug), ⌘K command menu (nav group per role),
-> refresh button (spins while isFetching), theme toggle, user DropdownMenu
-> (avatar initial, name, role, sign-out). Dead bell/gear not carried over.
-> `command` primitive vendored (cmdk 1.1.1 installed). 12 Topbar tests written.
-> **NEXT ACTION:** CP 1.3 — ErrorBoundary + Toaster + AppLoading rebuild.
+> **CURRENT STATE:** Phase 1 COMPLETE. CP 1.3 done — ErrorBoundary + Toaster + AppLoading.
+> MUI Snackbar removed from App.jsx; sonner Toaster mounted once; setToast() replaced with
+> toast() from sonner; AppLoading rebuilt as Atlas wordmark + CSS spinner; ErrorBoundary
+> class component wraps ProtectedShell. Phase 1 shell is now fully migrated off MUI.
+> **NEXT ACTION:** CP 2.1 — PageHeader, StatCard, StatusBadge, EmptyState, ErrorState, skeletons.
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
@@ -20,7 +19,7 @@ One checkpoint per run. Tests green before ticking.
 ## Phase 1 — App shell
 - [x] CP 1.1 AppShell + Sidebar (collapsible, role nav, badges) — done: 2026-07-16
 - [x] CP 1.2 Topbar (breadcrumb, ⌘K, refresh, theme, user menu) — done: 2026-07-17
-- [ ] CP 1.3 ErrorBoundary + Toaster + AppLoading
+- [x] CP 1.3 ErrorBoundary + Toaster + AppLoading — done: 2026-07-17
 
 ## Phase 2 — Shared kit
 - [ ] CP 2.1 PageHeader, StatCard, StatusBadge, EmptyState, ErrorState, skeletons, AsyncSection
