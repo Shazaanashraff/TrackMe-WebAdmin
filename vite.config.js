@@ -4,6 +4,9 @@ import { fileURLToPath, URL } from 'node:url'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    port: process.env.PORT ? Number(process.env.PORT) : 5173,
+  },
   plugins: [react()],
   resolve: {
     alias: {

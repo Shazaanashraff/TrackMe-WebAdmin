@@ -1,12 +1,11 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** Direction **LOCKED = 05 ATLAS** (user, 2026-07-16) — petrol teal on a
-> tinted canvas, floating shell. Tokens re-skinned to Atlas and primitives realigned
-> (CP 0.1-R). Phase 0 complete except the styleguide: CP 0.1 (+R), 0.2, 0.3 committed on
-> `redesign/phase-0-foundation`. **No page renders differently yet — that is expected**;
-> the first visible change is CP 1.1 (AppShell), which implements the floating shell.
-> **NEXT ACTION:** CP 0.4 — dev-only `/styleguide` route rendering every primitive in both
-> themes (the Atlas sign-off surface before pages are touched). Then Phase 1.
+> **CURRENT STATE:** Phase 0 COMPLETE. Direction **LOCKED = 05 ATLAS**. All 5 CPs
+> (0.1 + 0.1-R + 0.2 + 0.3 + 0.4) committed on `redesign/phase-0-foundation`.
+> `/styleguide` route live (dev-only) — both light and dark themes verified in browser;
+> token values confirmed correct (bg #e8edf1 / surface #fff / primary #0f766e in light;
+> dark toggle confirmed via `.dark` class). **No app page renders differently yet** —
+> that is expected. **NEXT ACTION:** CP 1.1 — Atlas floating AppShell.
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
@@ -16,7 +15,7 @@ One checkpoint per run. Tests green before ticking.
 - [x] CP 0.1-R **Atlas re-skin** — token values → petrol/tinted-canvas, `--primary-soft`/`--overlay`/`--shadow-float` added, primitives realigned (Card flat `rounded-xl`, overlays `bg-overlay` + `shadow-float`, no backdrop-blur) — done: 2026-07-16
 - [x] CP 0.2 shadcn foundation (`components.json`, `@/` alias via vite+jsconfig) + 24 vendored token-based primitives (JSX) + orphan button/input/card replaced in place + Inter/Fira Code self-hosted + `tailwindcss-animate` — done: 2026-07-16
 - [x] CP 0.3 TanStack Query provider + `queryKeys` + 9 domain hook files wrapping every `adminApi.*` + refresh control also invalidates queries — done: 2026-07-16 (`refreshSignal` KEPT as bridge — removed per-page in Phases 3–4, final cleanup Phase 6; see Findings)
-- [ ] CP 0.4 /styleguide review route (both themes)
+- [x] CP 0.4 /styleguide review route (both themes) — done: 2026-07-16 (see next commit)
 
 ## Phase 1 — App shell
 - [ ] CP 1.1 AppShell + Sidebar (collapsible, role nav, badges)

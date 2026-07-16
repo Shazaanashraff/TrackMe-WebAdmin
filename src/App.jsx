@@ -22,6 +22,7 @@ import { ManagerPrivateRoutesPage } from './pages/ManagerPrivateRoutesPage';
 import { adminApi } from './api';
 import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
 import { useRefreshData } from './hooks/use-refresh';
+import { StyleGuidePage } from './pages/StyleGuidePage';
 
 function AppLoading() {
   return (
@@ -207,6 +208,7 @@ export default function App() {
       {hydrating ? <AppLoading /> : null}
       {!hydrating ? (
       <Routes>
+        {import.meta.env.DEV && <Route path="/styleguide" element={<StyleGuidePage />} />}
         <Route path="/login" element={<LoginShell auth={auth} setAuth={setAuth} />} />
         <Route path="/forgot-password" element={<ForgotPasswordRequestPage />} />
         <Route path="/forgot-password/verify" element={<ForgotPasswordVerifyPage />} />
