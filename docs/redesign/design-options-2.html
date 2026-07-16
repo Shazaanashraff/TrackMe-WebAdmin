@@ -1,0 +1,402 @@
+<title>TrackMe Admin — Directions 04 & 05</title>
+<style>
+  /* ═══════════════ PAGE CHROME (theme-aware) ═══════════════
+     Each design frame is namespaced .d4-/.d5- with its own scoped token
+     block, so the two worlds cannot collide in the cascade.            */
+  :root {
+    --pg-bg:#ffffff; --pg-ink:#101317; --pg-muted:#646b76;
+    --pg-rule:#e5e7eb; --pg-chip:#f3f4f6; --pg-accent:#111827;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --pg-bg:#0b0d10; --pg-ink:#e9edf2; --pg-muted:#8b95a3; --pg-rule:#232833; --pg-chip:#161a21; --pg-accent:#e9edf2; }
+  }
+  :root[data-theme="dark"] { --pg-bg:#0b0d10; --pg-ink:#e9edf2; --pg-muted:#8b95a3; --pg-rule:#232833; --pg-chip:#161a21; --pg-accent:#e9edf2; }
+  :root[data-theme="light"] { --pg-bg:#ffffff; --pg-ink:#101317; --pg-muted:#646b76; --pg-rule:#e5e7eb; --pg-chip:#f3f4f6; --pg-accent:#111827; }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--pg-bg); color: var(--pg-ink);
+    font: 400 15px/1.55 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  svg { flex-shrink: 0; }
+  button { font: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 28px 20px 64px; }
+  .masthead h1 { margin: 0; font-size: clamp(24px, 3vw, 34px); font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
+  .masthead p { margin: 8px 0 0; color: var(--pg-muted); max-width: 70ch; }
+  .switcher { display: flex; gap: 6px; margin: 24px 0 14px; flex-wrap: wrap; }
+  .sw { border: 1px solid var(--pg-rule); background: transparent; color: var(--pg-muted); border-radius: 999px; padding: 7px 14px; font-size: 13.5px; font-weight: 500; transition: background .15s, color .15s; }
+  .sw:hover { background: var(--pg-chip); color: var(--pg-ink); }
+  .sw[aria-selected="true"] { background: var(--pg-accent); color: var(--pg-bg); border-color: var(--pg-accent); }
+  .intent { border-left: 2px solid var(--pg-rule); padding: 2px 0 2px 14px; margin: 0 0 12px; color: var(--pg-muted); font-size: 13.5px; max-width: 88ch; }
+  .intent b { color: var(--pg-ink); font-weight: 600; }
+  .stackmeta { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 18px; padding: 0; list-style: none; }
+  .stackmeta li { font-size: 11.5px; font-weight: 500; color: var(--pg-muted); background: var(--pg-chip); border-radius: 4px; padding: 3px 8px; font-family: ui-monospace, Consolas, monospace; }
+  .view { display: none; } .view.on { display: block; }
+  .frame { border: 1px solid var(--pg-rule); border-radius: 14px; overflow: hidden; display: flex; min-height: 730px; }
+  .fnote { margin: 10px 2px 0; font-size: 12px; color: var(--pg-muted); }
+
+  /* ═══════════════════════════════════════════════════════════════
+     04 — BENTO   (shadcn/ui · Radix · Phosphor · amber on zinc)
+     Breaks the KPI-row+table formula: an asymmetric grid where panel
+     SIZE encodes importance. Big radii, soft depth, one amber accent.
+     ═══════════════════════════════════════════════════════════════ */
+  .d4 {
+    --canvas:#F4F4F5; --panel:#FFFFFF; --rule:#E4E4E7; --ink:#18181B; --mut:#71717A;
+    --acc:#F59E0B; --acc-ink:#1C1300; --acc-soft:#FEF3C7;
+    --ok:#15803D; --ok-soft:#DCFCE7; --bad:#B91C1C;
+    --sh: 0 1px 2px rgb(24 24 27 / .04), 0 8px 24px -12px rgb(24 24 27 / .12);
+    background: var(--canvas); color: var(--ink); width: 100%; display: flex;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    .d4 { --canvas:#09090B; --panel:#18181B; --rule:#27272A; --ink:#FAFAFA; --mut:#A1A1AA;
+          --acc:#FBBF24; --acc-ink:#1C1300; --acc-soft:#3A2C05;
+          --ok:#4ADE80; --ok-soft:#052E16; --bad:#F87171;
+          --sh: 0 1px 2px rgb(0 0 0 / .5), 0 8px 24px -12px rgb(0 0 0 / .7); }
+  }
+  :root[data-theme="dark"] .d4 { --canvas:#09090B; --panel:#18181B; --rule:#27272A; --ink:#FAFAFA; --mut:#A1A1AA; --acc:#FBBF24; --acc-ink:#1C1300; --acc-soft:#3A2C05; --ok:#4ADE80; --ok-soft:#052E16; --bad:#F87171; --sh: 0 1px 2px rgb(0 0 0 / .5), 0 8px 24px -12px rgb(0 0 0 / .7); }
+  :root[data-theme="light"] .d4 { --canvas:#F4F4F5; --panel:#FFFFFF; --rule:#E4E4E7; --ink:#18181B; --mut:#71717A; --acc:#F59E0B; --acc-ink:#1C1300; --acc-soft:#FEF3C7; --ok:#15803D; --ok-soft:#DCFCE7; --bad:#B91C1C; --sh: 0 1px 2px rgb(24 24 27 / .04), 0 8px 24px -12px rgb(24 24 27 / .12); }
+  .d4-m { font-family: "Geist Mono", ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .d4-side { width: 212px; padding: 16px 12px; display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  .d4-brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 14.5px; padding: 4px 8px 20px; letter-spacing: -.01em; }
+  .d4-logo { width: 28px; height: 28px; border-radius: 9px; background: var(--acc); color: var(--acc-ink); display: grid; place-items: center; }
+  .d4-i { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border: 0; border-radius: 10px; background: none; color: var(--mut); font-size: 13.5px; font-weight: 500; width: 100%; text-align: left; }
+  .d4-i:hover { background: var(--panel); color: var(--ink); }
+  .d4-i.on { background: var(--panel); color: var(--ink); font-weight: 600; box-shadow: var(--sh); }
+  .d4-i .n { margin-left: auto; font-size: 11px; background: var(--acc); color: var(--acc-ink); border-radius: 99px; padding: 0 6px; line-height: 17px; font-weight: 700; }
+  .d4-lbl { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); padding: 18px 10px 6px; font-weight: 600; }
+  .d4-main { flex: 1; padding: 16px 16px 16px 4px; display: flex; flex-direction: column; min-width: 0; }
+  .d4-top { display: flex; align-items: center; gap: 10px; padding: 0 4px 16px; }
+  .d4-h { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.025em; }
+  .d4-sub { margin: 2px 0 0; font-size: 13px; color: var(--mut); }
+  .d4-ib { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--rule); background: var(--panel); border-radius: 10px; color: var(--mut); }
+  .d4-ib:hover { color: var(--ink); }
+  .d4-av { width: 34px; height: 34px; border-radius: 10px; background: var(--ink); color: var(--canvas); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+  /* the bento grid — size = importance */
+  .d4-bento { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 152px; gap: 12px; min-height: 0; }
+  .d4-p { background: var(--panel); border: 1px solid var(--rule); border-radius: 18px; box-shadow: var(--sh); padding: 16px; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+  .d4-hero { grid-column: span 2; grid-row: span 2; padding: 0; position: relative; }
+  .d4-tall { grid-column: span 2; grid-row: span 2; }
+  .d4-wide { grid-column: span 2; }
+  .d4-ptitle { font-size: 12.5px; font-weight: 600; letter-spacing: -.01em; }
+  .d4-pmeta { font-size: 11.5px; color: var(--mut); margin-top: 1px; }
+  .d4-fig { font-size: 42px; font-weight: 700; letter-spacing: -.04em; line-height: 1; margin-top: auto; }
+  .d4-figk { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); font-weight: 600; margin-top: 7px; }
+  .d4-chipR { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; border-radius: 99px; padding: 3px 8px; background: var(--ok-soft); color: var(--ok); align-self: flex-start; }
+  .d4-chipA { background: var(--acc-soft); color: var(--acc); }
+  .d4-dot { width: 5px; height: 5px; border-radius: 99px; background: currentColor; }
+  /* hero map */
+  .d4-map { position: absolute; inset: 0; border-radius: 18px; overflow: hidden;
+    background: linear-gradient(var(--rule) 1px, transparent 1px) 0 0/46px 46px,
+                linear-gradient(90deg, var(--rule) 1px, transparent 1px) 0 0/46px 46px,
+                var(--canvas); }
+  .d4-road { position: absolute; background: var(--rule); border-radius: 99px; }
+  .d4-pin { position: absolute; width: 11px; height: 11px; border-radius: 99px; background: var(--acc); box-shadow: 0 0 0 4px color-mix(in srgb, var(--acc) 26%, transparent); }
+  .d4-heroOv { position: absolute; left: 16px; top: 16px; right: 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .d4-heroFt { position: absolute; left: 16px; bottom: 16px; right: 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+  .d4-glass { background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(8px); border: 1px solid var(--rule); border-radius: 12px; padding: 8px 11px; }
+  /* queue list */
+  .d4-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--rule); }
+  .d4-row:last-child { border-bottom: 0; }
+  .d4-sq { width: 32px; height: 32px; border-radius: 9px; background: var(--canvas); color: var(--mut); display: grid; place-items: center; flex-shrink: 0; }
+  .d4-btn { border: 0; border-radius: 8px; font-size: 12px; font-weight: 600; padding: 5px 10px; background: var(--acc); color: var(--acc-ink); }
+  .d4-btn.g { background: var(--canvas); color: var(--mut); }
+  .d4-bars { display: flex; align-items: flex-end; gap: 6px; flex: 1; margin-top: 10px; }
+  .d4-bars i { flex: 1; background: var(--acc); border-radius: 4px 4px 0 0; display: block; opacity: .35; }
+  .d4-bars i.max { opacity: 1; }
+  .d4-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; }
+  .d4-empty .t { font-size: 12.5px; font-weight: 600; }
+  .d4-empty .d { font-size: 11.5px; color: var(--mut); max-width: 26ch; }
+
+  /* ═══════════════════════════════════════════════════════════════
+     05 — ATLAS   (shadcn/ui · Radix · Lucide · petrol on tinted canvas)
+     The shell itself floats: inset rounded sidebar + inset content card
+     on a tinted canvas. Soft depth, premium restraint, petrol accent.
+     ═══════════════════════════════════════════════════════════════ */
+  .d5 {
+    --canvas:#E8EDF1; --panel:#FFFFFF; --sunk:#F6F8FA; --rule:#E3E8EE;
+    --ink:#0B1220; --mut:#5B6875; --acc:#0F766E; --acc-ink:#FFFFFF; --acc-soft:#D6F0EC;
+    --warn:#B45309; --warn-soft:#FEF3C7; --bad:#B91C1C; --neu:#EEF2F6;
+    --sh: 0 1px 3px rgb(11 18 32 / .06), 0 12px 32px -14px rgb(11 18 32 / .22);
+    background: var(--canvas); color: var(--ink); width: 100%; display: flex; gap: 0;
+    padding: 14px; font-family: "Inter", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    .d5 { --canvas:#080C11; --panel:#111820; --sunk:#0C1219; --rule:#1E2733;
+          --ink:#E8EEF4; --mut:#8A97A6; --acc:#2DD4BF; --acc-ink:#04211D; --acc-soft:#0C2E2A;
+          --warn:#FBBF24; --warn-soft:#3A2C05; --bad:#F87171; --neu:#161E27;
+          --sh: 0 1px 3px rgb(0 0 0 / .6), 0 12px 32px -14px rgb(0 0 0 / .8); }
+  }
+  :root[data-theme="dark"] .d5 { --canvas:#080C11; --panel:#111820; --sunk:#0C1219; --rule:#1E2733; --ink:#E8EEF4; --mut:#8A97A6; --acc:#2DD4BF; --acc-ink:#04211D; --acc-soft:#0C2E2A; --warn:#FBBF24; --warn-soft:#3A2C05; --bad:#F87171; --neu:#161E27; --sh: 0 1px 3px rgb(0 0 0 / .6), 0 12px 32px -14px rgb(0 0 0 / .8); }
+  :root[data-theme="light"] .d5 { --canvas:#E8EDF1; --panel:#FFFFFF; --sunk:#F6F8FA; --rule:#E3E8EE; --ink:#0B1220; --mut:#5B6875; --acc:#0F766E; --acc-ink:#FFFFFF; --acc-soft:#D6F0EC; --warn:#B45309; --warn-soft:#FEF3C7; --bad:#B91C1C; --neu:#EEF2F6; --sh: 0 1px 3px rgb(11 18 32 / .06), 0 12px 32px -14px rgb(11 18 32 / .22); }
+  .d5-m { font-family: "Geist Mono", ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .d5-side { width: 198px; background: var(--panel); border: 1px solid var(--rule); border-radius: 16px; box-shadow: var(--sh); padding: 12px 10px; display: flex; flex-direction: column; margin-right: 12px; flex-shrink: 0; }
+  .d5-brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 14px; padding: 4px 8px 16px; }
+  .d5-logo { width: 27px; height: 27px; border-radius: 8px; background: var(--acc); color: var(--acc-ink); display: grid; place-items: center; }
+  .d5-i { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0; border-radius: 9px; background: none; color: var(--mut); font-size: 13.5px; font-weight: 500; width: 100%; text-align: left; }
+  .d5-i:hover { background: var(--sunk); color: var(--ink); }
+  .d5-i.on { background: var(--acc); color: var(--acc-ink); font-weight: 600; }
+  .d5-i .n { margin-left: auto; font-size: 11px; border-radius: 99px; padding: 0 6px; line-height: 16px; font-weight: 700; background: color-mix(in srgb, var(--acc-ink) 22%, transparent); }
+  .d5-i:not(.on) .n { background: var(--acc-soft); color: var(--acc); }
+  .d5-lbl { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); padding: 16px 10px 5px; font-weight: 600; }
+  .d5-out { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0; border-radius: 9px; background: none; color: var(--mut); font-size: 13.5px; font-weight: 500; }
+  .d5-out:hover { color: var(--bad); background: var(--sunk); }
+  .d5-card { flex: 1; background: var(--panel); border: 1px solid var(--rule); border-radius: 16px; box-shadow: var(--sh); display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+  .d5-top { height: 56px; border-bottom: 1px solid var(--rule); display: flex; align-items: center; gap: 9px; padding: 0 16px; flex-shrink: 0; }
+  .d5-crumb { font-size: 13px; color: var(--mut); }
+  .d5-crumb b { color: var(--ink); font-weight: 600; }
+  .d5-k { margin-left: auto; display: flex; align-items: center; gap: 8px; background: var(--sunk); border: 1px solid var(--rule); border-radius: 9px; padding: 6px 10px; font-size: 12.5px; color: var(--mut); width: 200px; }
+  .d5-k kbd { margin-left: auto; font-size: 10px; border: 1px solid var(--rule); border-radius: 4px; padding: 0 4px; font-family: inherit; }
+  .d5-ib { width: 32px; height: 32px; display: grid; place-items: center; border: 0; background: none; border-radius: 8px; color: var(--mut); }
+  .d5-ib:hover { background: var(--sunk); color: var(--ink); }
+  .d5-av { width: 30px; height: 30px; border-radius: 99px; background: var(--acc); color: var(--acc-ink); display: grid; place-items: center; font-size: 11.5px; font-weight: 700; }
+  .d5-body { flex: 1; overflow: auto; padding: 22px; }
+  .d5-h { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+  .d5-sub { margin: 3px 0 20px; font-size: 13px; color: var(--mut); }
+  .d5-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+  .d5-stat { background: var(--sunk); border: 1px solid var(--rule); border-radius: 12px; padding: 14px; position: relative; overflow: hidden; }
+  .d5-stat::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 2px; border-radius: 2px; background: var(--rule); }
+  .d5-stat.hi::before { background: var(--acc); }
+  .d5-stat .k { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
+  .d5-stat .v { font-size: 26px; font-weight: 700; letter-spacing: -.03em; margin-top: 6px; }
+  .d5-stat .s { font-size: 11.5px; color: var(--mut); margin-top: 2px; }
+  .d5-split { display: grid; grid-template-columns: 1.3fr .7fr; gap: 12px; }
+  .d5-panel { border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+  .d5-ph { padding: 13px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--rule); }
+  .d5-ph h3 { margin: 0; font-size: 13px; font-weight: 600; }
+  .d5-ph p { margin: 1px 0 0; font-size: 11.5px; color: var(--mut); }
+  .d5-badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 99px; padding: 2px 8px; font-size: 11px; font-weight: 600; background: var(--acc-soft); color: var(--acc); }
+  .d5-dot { width: 5px; height: 5px; border-radius: 99px; background: currentColor; }
+  .d5 table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .d5 thead th { text-align: left; font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--mut); padding: 8px 14px; background: var(--sunk); border-bottom: 1px solid var(--rule); }
+  .d5 tbody td { padding: 11px 14px; border-bottom: 1px solid var(--rule); }
+  .d5 tbody tr:last-child td { border-bottom: 0; }
+  .d5 tbody tr:hover { background: var(--sunk); }
+  .d5-btn { border: 0; border-radius: 7px; font-size: 12px; font-weight: 600; padding: 5px 10px; background: var(--acc); color: var(--acc-ink); }
+  .d5-btn.g { background: var(--neu); color: var(--mut); }
+  .d5-bars { display: flex; align-items: flex-end; gap: 6px; height: 92px; padding: 12px 14px; }
+  .d5-bars i { flex: 1; background: var(--acc); border-radius: 3px 3px 0 0; display: block; opacity: .3; }
+  .d5-bars i.max { opacity: 1; }
+  .d5-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 24px 16px; gap: 5px; }
+  .d5-empty .t { font-size: 12.5px; font-weight: 600; }
+  .d5-empty .d { font-size: 11.5px; color: var(--mut); max-width: 28ch; }
+
+  @media (max-width: 900px) {
+    .d4-side, .d5-side { display: none; }
+    .d4-bento { grid-template-columns: 1fr 1fr; }
+    .d4-hero, .d4-tall, .d4-wide { grid-column: span 2; }
+    .d5-kpis { grid-template-columns: 1fr 1fr; }
+    .d5-split { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="wrap">
+  <div class="masthead">
+    <h1>Two more directions</h1>
+    <p>
+      The first three leaned austere. These two go the other way — richer and more contemporary,
+      while staying professional. Both still sit on shadcn&nbsp;+&nbsp;Tailwind, so the tokens,
+      primitives and data layer already committed (CP&nbsp;0.1–0.3) survive either choice.
+      Same Dashboard screen as before, so it's a like-for-like comparison.
+    </p>
+  </div>
+
+  <div class="switcher" role="tablist">
+    <button class="sw" role="tab" aria-selected="true" data-v="4">04 — Bento</button>
+    <button class="sw" role="tab" aria-selected="false" data-v="5">05 — Atlas</button>
+  </div>
+
+  <!-- ══════════════ 04 — BENTO ══════════════ -->
+  <section class="view on" id="v4">
+    <p class="intent">
+      <b>Throws out the "KPI row + table below" formula.</b> Panel <em>size</em> encodes
+      importance instead: the live map earns the biggest tile, the approval queue gets a tall
+      one because it's the thing you actually act on, and the vanity numbers shrink to small
+      tiles. Big radii and soft depth make it feel like a 2026 product rather than a bootstrap
+      admin. The accent is <em>amber</em> — signal-yellow is native to transit, and it dodges
+      the default SaaS emerald/indigo.
+    </p>
+    <ul class="stackmeta"><li>shadcn/ui + Radix</li><li>Tailwind</li><li>Phosphor icons</li><li>Inter + Geist Mono</li><li>light + dark</li></ul>
+
+    <div class="frame d4">
+      <aside class="d4-side">
+        <div class="d4-brand"><span class="d4-logo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6v6m8-6v6M2 12h19.6M4 18h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>TrackMe</div>
+        <button class="d4-i on"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect width="7" height="9" x="3" y="3" rx="2"/><rect width="7" height="5" x="14" y="3" rx="2"/><rect width="7" height="9" x="14" y="12" rx="2"/><rect width="7" height="5" x="3" y="16" rx="2"/></svg>Dashboard</button>
+        <button class="d4-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Managers</button>
+        <button class="d4-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Operations<span class="n">3</span></button>
+        <button class="d4-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>Routes</button>
+        <div class="d4-lbl">Account</div>
+        <button class="d4-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m18 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Settings</button>
+      </aside>
+
+      <div class="d4-main">
+        <div class="d4-top">
+          <div><h1 class="d4-h">Dashboard</h1><p class="d4-sub">Thursday, 16 July · 14 buses reporting</p></div>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <button class="d4-ib" aria-label="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
+            <button class="d4-ib" aria-label="Refresh"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg></button>
+            <span class="d4-av">SA</span>
+          </div>
+        </div>
+
+        <div class="d4-bento">
+          <!-- hero: live map, biggest tile -->
+          <div class="d4-p d4-hero">
+            <div class="d4-map">
+              <div class="d4-road" style="left:8%;top:64%;width:62%;height:5px;transform:rotate(-13deg)"></div>
+              <div class="d4-road" style="left:48%;top:20%;width:5px;height:56%"></div>
+              <div class="d4-road" style="left:20%;top:30%;width:46%;height:5px;transform:rotate(6deg)"></div>
+              <div class="d4-pin" style="left:47%;top:47%"></div>
+              <div class="d4-pin" style="left:26%;top:60%"></div>
+              <div class="d4-pin" style="left:64%;top:33%"></div>
+            </div>
+            <div class="d4-heroOv">
+              <div class="d4-glass"><div class="d4-ptitle">Live fleet</div><div class="d4-pmeta">14 of 22 reporting</div></div>
+              <span class="d4-chipR d4-glass" style="padding:5px 9px"><span class="d4-dot"></span>Live</span>
+            </div>
+            <div class="d4-heroFt">
+              <div class="d4-glass"><span class="d4-m" style="font-size:11.5px;color:var(--mut)">NC-7734 · 42 km/h · Route 138</span></div>
+              <button class="d4-btn">Open map</button>
+            </div>
+          </div>
+
+          <!-- tall: the queue you actually act on -->
+          <div class="d4-p d4-tall">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+              <div><div class="d4-ptitle">Needs your approval</div><div class="d4-pmeta">3 waiting · oldest 2 h</div></div>
+              <span class="d4-chipR d4-chipA"><span class="d4-dot"></span>3</span>
+            </div>
+            <div style="margin-top:10px;overflow:auto">
+              <div class="d4-row">
+                <span class="d4-sq"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 6v6m8-6v6M2 12h19.6M4 18h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>
+                <div style="min-width:0;flex:1"><div style="font-size:13px;font-weight:600">Shuttle 07</div><div class="d4-pmeta d4-m">ND-4471 · R. Fernando</div></div>
+                <button class="d4-btn">Approve</button><button class="d4-btn g">Reject</button>
+              </div>
+              <div class="d4-row">
+                <span class="d4-sq"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 6v6m8-6v6M2 12h19.6M4 18h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>
+                <div style="min-width:0;flex:1"><div style="font-size:13px;font-weight:600">Shuttle 08</div><div class="d4-pmeta d4-m">ND-4472 · R. Fernando</div></div>
+                <button class="d4-btn">Approve</button><button class="d4-btn g">Reject</button>
+              </div>
+              <div class="d4-row">
+                <span class="d4-sq"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 6v6m8-6v6M2 12h19.6M4 18h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>
+                <div style="min-width:0;flex:1"><div style="font-size:13px;font-weight:600">Campus Express</div><div class="d4-pmeta d4-m">WP-9210 · S. Perera</div></div>
+                <button class="d4-btn">Approve</button><button class="d4-btn g">Reject</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- small stats -->
+          <div class="d4-p"><span class="d4-chipR"><span class="d4-dot"></span>All active</span><div class="d4-fig d4-m">5</div><div class="d4-figk">Managers</div></div>
+          <div class="d4-p"><span class="d4-chipR d4-chipA"><span class="d4-dot"></span>14 online</span><div class="d4-fig d4-m">22</div><div class="d4-figk">Buses</div></div>
+
+          <!-- wide: activity -->
+          <div class="d4-p d4-wide">
+            <div style="display:flex;align-items:baseline;justify-content:space-between"><div class="d4-ptitle">Fleet activity</div><div class="d4-pmeta d4-m">peak 22 · Sun</div></div>
+            <div class="d4-bars">
+              <i style="height:45%"></i><i style="height:62%"></i><i style="height:70%"></i><i style="height:58%"></i><i style="height:78%"></i><i style="height:40%"></i><i class="max" style="height:100%"></i>
+            </div>
+          </div>
+
+          <!-- wide: honest empty -->
+          <div class="d4-p d4-wide">
+            <div class="d4-ptitle">Booking trend</div>
+            <div class="d4-empty">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--mut)" stroke-width="1.7" stroke-linecap="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m7 13 3-3 4 4 5-5"/></svg>
+              <div class="t">Not enough data yet</div>
+              <div class="d">Appears after 30 days of confirmed bookings.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="fnote">Theme-aware — follows your light/dark setting.</p>
+  </section>
+
+  <!-- ══════════════ 05 — ATLAS ══════════════ -->
+  <section class="view" id="v5">
+    <p class="intent">
+      <b>Same familiar layout as 01 — but the shell itself floats.</b> The sidebar and the
+      content are separate rounded cards inset on a tinted canvas, so the app reads as a
+      considered object rather than four flat regions butted together. That one structural
+      move plus a petrol-teal accent does most of the work: it stays calm and utterly
+      conventional to operate, but it looks expensive. The safest of the five to build,
+      because it's 01's bones with a better suit.
+    </p>
+    <ul class="stackmeta"><li>shadcn/ui + Radix</li><li>Tailwind</li><li>Lucide icons</li><li>Inter + Geist Mono</li><li>light + dark</li></ul>
+
+    <div class="frame d5">
+      <aside class="d5-side">
+        <div class="d5-brand"><span class="d5-logo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6v6m8-6v6M2 12h19.6M4 18h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>TrackMe</div>
+        <button class="d5-i on"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>Dashboard</button>
+        <button class="d5-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Managers</button>
+        <button class="d5-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Operations<span class="n">3</span></button>
+        <button class="d5-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>Routes</button>
+        <div class="d5-lbl">Account</div>
+        <button class="d5-i"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m18 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Settings</button>
+        <button class="d5-out"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>Sign out</button>
+      </aside>
+
+      <div class="d5-card">
+        <div class="d5-top">
+          <div class="d5-crumb">Pages / <b>Dashboard</b></div>
+          <div class="d5-k"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>Search…<kbd>⌘K</kbd></div>
+          <button class="d5-ib" aria-label="Refresh"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg></button>
+          <button class="d5-ib" aria-label="Theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"/></svg></button>
+          <span class="d5-av">SA</span>
+        </div>
+        <div class="d5-body">
+          <h1 class="d5-h">Dashboard</h1>
+          <p class="d5-sub">Fleet operations at a glance.</p>
+
+          <div class="d5-kpis">
+            <div class="d5-stat"><div class="k">Managers</div><div class="v d5-m">5</div><div class="s">across 3 organisations</div></div>
+            <div class="d5-stat hi"><div class="k">Active buses</div><div class="v d5-m">22</div><div class="s">14 online now</div></div>
+            <div class="d5-stat hi"><div class="k">Pending</div><div class="v d5-m">3</div><div class="s">oldest 2 h ago</div></div>
+            <div class="d5-stat"><div class="k">Routes</div><div class="v d5-m">18</div><div class="s">2 added this month</div></div>
+          </div>
+
+          <div class="d5-split">
+            <div class="d5-panel">
+              <div class="d5-ph"><div><h3>Pending bus requests</h3><p>Newest first — approve or reject with a note.</p></div><button class="d5-btn g">View all</button></div>
+              <table>
+                <thead><tr><th>Bus</th><th>Manager</th><th>Requested</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td><b>Shuttle 07</b> <span class="d5-m" style="color:var(--mut);font-size:11.5px">ND-4471</span></td><td>R. Fernando</td><td class="d5-m" style="color:var(--mut)">2 h</td><td style="text-align:right;white-space:nowrap"><button class="d5-btn">Approve</button> <button class="d5-btn g">Reject</button></td></tr>
+                  <tr><td><b>Shuttle 08</b> <span class="d5-m" style="color:var(--mut);font-size:11.5px">ND-4472</span></td><td>R. Fernando</td><td class="d5-m" style="color:var(--mut)">5 h</td><td style="text-align:right;white-space:nowrap"><button class="d5-btn">Approve</button> <button class="d5-btn g">Reject</button></td></tr>
+                  <tr><td><b>Campus Express</b> <span class="d5-m" style="color:var(--mut);font-size:11.5px">WP-9210</span></td><td>S. Perera</td><td class="d5-m" style="color:var(--mut)">1 d</td><td style="text-align:right;white-space:nowrap"><button class="d5-btn">Approve</button> <button class="d5-btn g">Reject</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div class="d5-panel">
+                <div class="d5-ph"><div><h3>Fleet activity</h3><p>Buses online per day</p></div><span class="d5-badge"><span class="d5-dot"></span>Live</span></div>
+                <div class="d5-bars"><i style="height:45%"></i><i style="height:62%"></i><i style="height:70%"></i><i style="height:58%"></i><i style="height:78%"></i><i style="height:40%"></i><i class="max" style="height:100%"></i></div>
+              </div>
+              <div class="d5-panel">
+                <div class="d5-ph"><div><h3>Booking trend</h3></div></div>
+                <div class="d5-empty">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--mut)" stroke-width="1.5" stroke-linecap="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m7 13 3-3 4 4 5-5"/></svg>
+                  <div class="t">Not enough data yet</div>
+                  <div class="d">Appears after 30 days of confirmed bookings.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="fnote">Theme-aware — follows your light/dark setting.</p>
+  </section>
+</div>
+
+<script>
+  const tabs = document.querySelectorAll('.sw');
+  tabs.forEach((t) => {
+    t.addEventListener('click', () => {
+      tabs.forEach((o) => o.setAttribute('aria-selected', String(o === t)));
+      document.querySelectorAll('.view').forEach((v) => v.classList.toggle('on', v.id === 'v' + t.dataset.v));
+    });
+  });
+</script>
