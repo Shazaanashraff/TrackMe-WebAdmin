@@ -1,10 +1,10 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** Phase 1 COMPLETE. CP 1.3 done — ErrorBoundary + Toaster + AppLoading.
-> MUI Snackbar removed from App.jsx; sonner Toaster mounted once; setToast() replaced with
-> toast() from sonner; AppLoading rebuilt as Atlas wordmark + CSS spinner; ErrorBoundary
-> class component wraps ProtectedShell. Phase 1 shell is now fully migrated off MUI.
-> **NEXT ACTION:** CP 2.1 — PageHeader, StatCard, StatusBadge, EmptyState, ErrorState, skeletons.
+> **CURRENT STATE:** CP 2.1 done — 8 shared kit components (PageHeader, StatCard, StatusBadge,
+> EmptyState, ErrorState, TableSkeleton, CardSkeleton, AsyncSection) in src/components/shared/.
+> StatusBadge has central STATUS_MAP for all domains. humanizeError exported for unit tests.
+> AsyncSection is the decision-tree wrapper (loading→skeleton, error→ErrorState, empty→EmptyState).
+> **NEXT ACTION:** CP 2.2 — DataTable (TanStack React Table wrapper).
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
@@ -22,7 +22,7 @@ One checkpoint per run. Tests green before ticking.
 - [x] CP 1.3 ErrorBoundary + Toaster + AppLoading — done: 2026-07-17
 
 ## Phase 2 — Shared kit
-- [ ] CP 2.1 PageHeader, StatCard, StatusBadge, EmptyState, ErrorState, skeletons, AsyncSection
+- [x] CP 2.1 PageHeader, StatCard, StatusBadge, EmptyState, ErrorState, skeletons, AsyncSection — done: 2026-07-17
 - [ ] CP 2.2 DataTable
 - [ ] CP 2.3 ConfirmDialog, FormDialog, ExportMenu, CopyField, LiveIndicator, RelativeTime, Money
 
