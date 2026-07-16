@@ -1,0 +1,595 @@
+<title>TrackMe Admin — 3 Design Directions</title>
+<style>
+  /* ═══════════════════════════════════════════════════════════════════
+     PAGE CHROME (theme-aware). Each design frame below renders its own
+     committed visual world and is namespaced .d1-/.d2-/.d3- so the three
+     token sets can never collide in the cascade.
+     ═══════════════════════════════════════════════════════════════════ */
+  :root {
+    --pg-bg: #ffffff; --pg-ink: #101317; --pg-muted: #646b76;
+    --pg-rule: #e5e7eb; --pg-chip: #f3f4f6; --pg-accent: #111827;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --pg-bg: #0b0d10; --pg-ink: #e9edf2; --pg-muted: #8b95a3;
+      --pg-rule: #232833; --pg-chip: #161a21; --pg-accent: #e9edf2;
+    }
+  }
+  :root[data-theme="dark"] {
+    --pg-bg: #0b0d10; --pg-ink: #e9edf2; --pg-muted: #8b95a3;
+    --pg-rule: #232833; --pg-chip: #161a21; --pg-accent: #e9edf2;
+  }
+  :root[data-theme="light"] {
+    --pg-bg: #ffffff; --pg-ink: #101317; --pg-muted: #646b76;
+    --pg-rule: #e5e7eb; --pg-chip: #f3f4f6; --pg-accent: #111827;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--pg-bg); color: var(--pg-ink);
+    font: 400 15px/1.55 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  svg { flex-shrink: 0; }
+  button { font: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 28px 20px 64px; }
+  .masthead h1 {
+    margin: 0; font-size: clamp(24px, 3vw, 34px); font-weight: 700;
+    letter-spacing: -0.02em; text-wrap: balance;
+  }
+  .masthead p { margin: 8px 0 0; color: var(--pg-muted); max-width: 68ch; }
+
+  .switcher { display: flex; gap: 6px; margin: 24px 0 14px; flex-wrap: wrap; }
+  .sw {
+    border: 1px solid var(--pg-rule); background: transparent; color: var(--pg-muted);
+    border-radius: 999px; padding: 7px 14px; font-size: 13.5px; font-weight: 500;
+    transition: background .15s, color .15s;
+  }
+  .sw:hover { background: var(--pg-chip); color: var(--pg-ink); }
+  .sw[aria-selected="true"] { background: var(--pg-accent); color: var(--pg-bg); border-color: var(--pg-accent); }
+
+  .intent {
+    border-left: 2px solid var(--pg-rule); padding: 2px 0 2px 14px; margin: 0 0 18px;
+    color: var(--pg-muted); font-size: 13.5px; max-width: 86ch;
+  }
+  .intent b { color: var(--pg-ink); font-weight: 600; }
+  .stackmeta {
+    display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 0; padding: 0; list-style: none;
+  }
+  .stackmeta li {
+    font-size: 11.5px; font-weight: 500; color: var(--pg-muted);
+    background: var(--pg-chip); border-radius: 4px; padding: 3px 8px;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  }
+  .view { display: none; }
+  .view.on { display: block; }
+  .frame {
+    border: 1px solid var(--pg-rule); border-radius: 14px; overflow: hidden;
+    display: flex; min-height: 720px;
+  }
+  .fnote { margin: 10px 2px 0; font-size: 12px; color: var(--pg-muted); }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     DESIGN 1 — REFINED MINIMAL  (shadcn/ui · Radix · Lucide)
+     Slate ground, single emerald accent. Theme-aware (light + dark).
+     ═══════════════════════════════════════════════════════════════════ */
+  .d1 {
+    --bg:#F8FAFC; --surface:#FFFFFF; --smuted:#F1F5F9; --border:#E2E8F0;
+    --fg:#0F172A; --mut:#64748B; --pri:#059669; --pri-fg:#FFFFFF;
+    --ok:#059669; --warn:#D97706; --bad:#DC2626; --info:#2563EB;
+    --ok-bg:#ECFDF5; --warn-bg:#FFFBEB; --bad-bg:#FEF2F2; --info-bg:#EFF6FF; --neu-bg:#F1F5F9;
+    background: var(--bg); color: var(--fg); width: 100%; display: flex;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    .d1 {
+      --bg:#0B1120; --surface:#0F172A; --smuted:#1E293B; --border:#1E293B;
+      --fg:#E2E8F0; --mut:#94A3B8; --pri:#10B981; --pri-fg:#022C22;
+      --ok:#34D399; --warn:#FBBF24; --bad:#F87171; --info:#60A5FA;
+      --ok-bg:#052e23; --warn-bg:#3d2a06; --bad-bg:#3d1417; --info-bg:#11224a; --neu-bg:#1E293B;
+    }
+  }
+  :root[data-theme="dark"] .d1 {
+    --bg:#0B1120; --surface:#0F172A; --smuted:#1E293B; --border:#1E293B;
+    --fg:#E2E8F0; --mut:#94A3B8; --pri:#10B981; --pri-fg:#022C22;
+    --ok:#34D399; --warn:#FBBF24; --bad:#F87171; --info:#60A5FA;
+    --ok-bg:#052e23; --warn-bg:#3d2a06; --bad-bg:#3d1417; --info-bg:#11224a; --neu-bg:#1E293B;
+  }
+  :root[data-theme="light"] .d1 {
+    --bg:#F8FAFC; --surface:#FFFFFF; --smuted:#F1F5F9; --border:#E2E8F0;
+    --fg:#0F172A; --mut:#64748B; --pri:#059669; --pri-fg:#FFFFFF;
+    --ok:#059669; --warn:#D97706; --bad:#DC2626; --info:#2563EB;
+    --ok-bg:#ECFDF5; --warn-bg:#FFFBEB; --bad-bg:#FEF2F2; --info-bg:#EFF6FF; --neu-bg:#F1F5F9;
+  }
+  .d1-mono { font-family: "Fira Code", ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .d1-side { width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .d1-brand { height: 52px; display: flex; align-items: center; gap: 9px; padding: 0 14px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 14px; }
+  .d1-logo { width: 26px; height: 26px; border-radius: 7px; background: var(--pri); color: var(--pri-fg); display: grid; place-items: center; }
+  .d1-nav { flex: 1; padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; }
+  .d1-navlabel { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--mut); padding: 14px 10px 5px; font-weight: 600; }
+  .d1-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0; border-radius: 7px; background: none; color: var(--mut); font-weight: 500; font-size: 13.5px; width: 100%; text-align: left; position: relative; }
+  .d1-item:hover { background: var(--smuted); color: var(--fg); }
+  .d1-item.on { background: color-mix(in srgb, var(--pri) 11%, transparent); color: var(--pri); }
+  .d1-item.on::before { content: ""; position: absolute; left: -8px; top: 7px; bottom: 7px; width: 2px; border-radius: 2px; background: var(--pri); }
+  .d1-count { margin-left: auto; font-size: 11px; background: var(--pri); color: var(--pri-fg); border-radius: 99px; padding: 0 6px; line-height: 16px; font-weight: 600; }
+  .d1-out { margin: 10px; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 0; border-radius: 7px; background: none; color: var(--mut); font-size: 13.5px; font-weight: 500; }
+  .d1-out:hover { color: var(--bad); background: var(--smuted); }
+  .d1-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .d1-top { height: 54px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; padding: 0 16px; }
+  .d1-crumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mut); }
+  .d1-crumb b { color: var(--fg); font-weight: 600; }
+  .d1-k { margin-left: auto; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 13px; color: var(--mut); width: 210px; background: var(--bg); }
+  .d1-k kbd { margin-left: auto; font-size: 10.5px; border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; font-family: inherit; }
+  .d1-ib { width: 32px; height: 32px; display: grid; place-items: center; border: 0; background: none; border-radius: 7px; color: var(--mut); }
+  .d1-ib:hover { background: var(--smuted); color: var(--fg); }
+  .d1-av { width: 30px; height: 30px; border-radius: 99px; background: var(--pri); color: var(--pri-fg); display: grid; place-items: center; font-size: 11.5px; font-weight: 700; }
+  .d1-body { flex: 1; overflow: auto; padding: 24px; }
+  .d1-h1 { margin: 0; font-size: 23px; font-weight: 700; letter-spacing: -.01em; }
+  .d1-sub { margin: 4px 0 22px; color: var(--mut); font-size: 13.5px; }
+  .d1-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .d1-card { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; }
+  .d1-stat { padding: 15px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .d1-lbl { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--mut); font-weight: 600; }
+  .d1-val { font-size: 27px; font-weight: 600; margin-top: 6px; letter-spacing: -.02em; }
+  .d1-hint { font-size: 12px; color: var(--mut); margin-top: 3px; }
+  .d1-ic { width: 34px; height: 34px; border-radius: 8px; background: var(--smuted); color: var(--mut); display: grid; place-items: center; }
+  .d1-grid { display: grid; grid-template-columns: 1.25fr .75fr; gap: 14px; }
+  .d1-ch { padding: 14px 16px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .d1-ch h3 { margin: 0; font-size: 14px; font-weight: 600; }
+  .d1-ch p { margin: 2px 0 0; font-size: 12px; color: var(--mut); }
+  .d1-badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 99px; padding: 2px 9px; font-size: 11.5px; font-weight: 500; }
+  .d1-dot { width: 6px; height: 6px; border-radius: 99px; background: currentColor; }
+  .d1-ok { color: var(--ok); background: var(--ok-bg); }
+  .d1-warn { color: var(--warn); background: var(--warn-bg); }
+  .d1-neu { color: var(--mut); background: var(--neu-bg); }
+  .d1 table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .d1 thead th { text-align: left; font-size: 11px; font-weight: 600; color: var(--mut); border-bottom: 1px solid var(--border); padding: 9px 16px; background: color-mix(in srgb, var(--smuted) 50%, transparent); }
+  .d1 tbody td { padding: 11px 16px; border-bottom: 1px solid var(--border); }
+  .d1 tbody tr:last-child td { border-bottom: 0; }
+  .d1 tbody tr:hover { background: color-mix(in srgb, var(--smuted) 60%, transparent); }
+  .d1-btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; font-size: 12.5px; font-weight: 500; padding: 5px 10px; border: 1px solid transparent; }
+  .d1-pri { background: var(--pri); color: var(--pri-fg); }
+  .d1-outline { background: var(--surface); border-color: var(--border); color: var(--fg); }
+  .d1-ghost { background: none; color: var(--mut); }
+  .d1-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 30px 22px; }
+  .d1-empty .t { font-weight: 600; margin-top: 11px; font-size: 13.5px; }
+  .d1-empty .dsc { color: var(--mut); font-size: 12.5px; margin-top: 4px; max-width: 30ch; }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     DESIGN 2 — CONTROL ROOM  (Mantine · Tabler Icons · JetBrains Mono)
+     Committed dark. Mono-forward telemetry console. No sidebar — icon
+     rail + live bus strip + map-dominant split + terminal status bar.
+     ═══════════════════════════════════════════════════════════════════ */
+  .d2 {
+    --ground:#0A0E14; --panel:#111720; --panel2:#0D131B; --hair:#1C2531;
+    --ink:#E6EDF5; --mut:#7D8DA1; --dim:#4A5768;
+    --live:#22D3EE; --warn:#F5A524; --fault:#FB7185; --idle:#5B6B80;
+    background: var(--ground); color: var(--ink); width: 100%; display: flex;
+    font-family: "Inter Tight", "Inter", system-ui, sans-serif;
+  }
+  .d2-m { font-family: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .d2-rail { width: 54px; background: var(--panel2); border-right: 1px solid var(--hair); display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 4px; }
+  .d2-mark { width: 30px; height: 30px; border-radius: 6px; background: var(--live); color: var(--ground); display: grid; place-items: center; margin-bottom: 12px; }
+  .d2-r { width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: none; color: var(--dim); border-radius: 7px; position: relative; }
+  .d2-r:hover { color: var(--ink); background: var(--panel); }
+  .d2-r.on { color: var(--live); background: color-mix(in srgb, var(--live) 12%, transparent); }
+  .d2-r.on::before { content: ""; position: absolute; left: -10px; top: 8px; bottom: 8px; width: 2px; background: var(--live); border-radius: 2px; }
+  .d2-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .d2-strip { border-bottom: 1px solid var(--hair); background: var(--panel2); padding: 8px 12px; display: flex; align-items: center; gap: 8px; overflow-x: auto; }
+  .d2-striplbl { font-size: 9.5px; letter-spacing: .14em; color: var(--dim); flex-shrink: 0; padding-right: 4px; }
+  .d2-chip { display: inline-flex; align-items: center; gap: 7px; background: var(--panel); border: 1px solid var(--hair); border-radius: 5px; padding: 5px 9px; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+  .d2-chip .id { color: var(--mut); }
+  .d2-chip .sp { color: var(--ink); }
+  .d2-d { width: 6px; height: 6px; border-radius: 99px; }
+  .d2-d.live { background: var(--live); }
+  .d2-d.warn { background: var(--warn); }
+  .d2-d.idle { background: var(--idle); }
+  .d2-d.fault { background: var(--fault); }
+  @media (prefers-reduced-motion: no-preference) { .d2-d.live { animation: d2pulse 1.8s ease-in-out infinite; } }
+  @keyframes d2pulse { 50% { opacity: .3; } }
+  .d2-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 16px 18px 12px; flex-wrap: wrap; }
+  .d2-title { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+  .d2-eyebrow { font-size: 9.5px; letter-spacing: .16em; color: var(--dim); }
+  .d2-readouts { display: flex; gap: 22px; flex-wrap: wrap; }
+  .d2-ro .k { font-size: 9.5px; letter-spacing: .12em; color: var(--dim); }
+  .d2-ro .v { font-size: 19px; margin-top: 2px; }
+  .d2-split { flex: 1; display: grid; grid-template-columns: 1.55fr .45fr; gap: 1px; background: var(--hair); min-height: 0; }
+  .d2-map { background: var(--panel2); position: relative; overflow: hidden; }
+  .d2-grid {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(var(--hair) 1px, transparent 1px) 0 0/54px 54px,
+      linear-gradient(90deg, var(--hair) 1px, transparent 1px) 0 0/54px 54px;
+    opacity: .5;
+  }
+  .d2-road { position: absolute; background: #1F2A38; border-radius: 99px; }
+  .d2-pin { position: absolute; width: 10px; height: 10px; border-radius: 99px; background: var(--live); box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 22%, transparent); }
+  .d2-pin.w { background: var(--warn); box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 22%, transparent); }
+  .d2-tag { position: absolute; transform: translate(14px, -7px); font-size: 9.5px; color: var(--mut); background: color-mix(in srgb, var(--ground) 82%, transparent); padding: 1px 4px; border-radius: 3px; white-space: nowrap; }
+  .d2-tele { background: var(--panel2); padding: 14px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+  .d2-sec { font-size: 9.5px; letter-spacing: .14em; color: var(--dim); padding-bottom: 7px; border-bottom: 1px solid var(--hair); }
+  .d2-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 12px; }
+  .d2-row .k { color: var(--mut); }
+  .d2-big { font-size: 30px; letter-spacing: -.02em; }
+  .d2-unit { font-size: 11px; color: var(--mut); }
+  .d2-q { border: 1px solid var(--hair); border-left: 2px solid var(--warn); background: var(--panel); border-radius: 0 5px 5px 0; padding: 9px 11px; font-size: 11.5px; }
+  .d2-q .t { color: var(--warn); font-size: 9.5px; letter-spacing: .12em; }
+  .d2-q .b { margin-top: 4px; color: var(--mut); line-height: 1.45; }
+  .d2-bar { border-top: 1px solid var(--hair); background: var(--panel2); padding: 7px 14px; display: flex; align-items: center; gap: 18px; font-size: 10.5px; color: var(--mut); flex-wrap: wrap; }
+  .d2-bar b { color: var(--ink); font-weight: 500; }
+  .d2-bar .sep { color: var(--dim); }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     DESIGN 3 — THE LINE  (headless Base UI/Ark · custom SVG · grotesk)
+     Committed paper. Transit-signage + departure-board grammar.
+     NO cards, NO boxes, NO shadows. Rules, type, and one transit red.
+     ═══════════════════════════════════════════════════════════════════ */
+  .d3 {
+    --paper:#FCFCFD; --ink:#14161A; --rule:#E1E2E6; --mut:#6E7178; --red:#E4002B;
+    background: var(--paper); color: var(--ink); width: 100%; display: flex;
+    font-family: "Söhne", "General Sans", "Helvetica Neue", Inter, system-ui, sans-serif;
+  }
+  .d3-m { font-family: "Fira Code", ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  /* the route line + stops = navigation */
+  .d3-line { width: 216px; padding: 30px 0 24px 30px; position: relative; flex-shrink: 0; }
+  .d3-line::before { content: ""; position: absolute; left: 36px; top: 74px; bottom: 74px; width: 2px; background: var(--ink); }
+  .d3-mark { font-size: 11px; letter-spacing: .16em; font-weight: 600; margin-bottom: 34px; }
+  .d3-mark s { color: var(--red); text-decoration: none; }
+  .d3-stop { display: flex; align-items: center; gap: 16px; border: 0; background: none; padding: 11px 0; width: 100%; text-align: left; color: var(--mut); font-size: 14px; position: relative; }
+  .d3-stop .pip { width: 12px; height: 12px; border-radius: 99px; border: 2px solid var(--ink); background: var(--paper); flex-shrink: 0; margin-left: 0; z-index: 1; }
+  .d3-stop:hover { color: var(--ink); }
+  .d3-stop.on { color: var(--ink); font-weight: 600; }
+  .d3-stop.on .pip { background: var(--red); border-color: var(--red); }
+  .d3-stop .n { margin-left: auto; padding-right: 8px; font-size: 11px; color: var(--red); }
+  .d3-term { margin-top: 34px; display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--mut); }
+  .d3-term .bar { width: 12px; height: 2px; background: var(--mut); }
+  .d3-sheet { flex: 1; padding: 30px 34px 40px; min-width: 0; border-left: 1px solid var(--rule); overflow: auto; }
+  .d3-mast { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; border-bottom: 2px solid var(--ink); padding-bottom: 10px; flex-wrap: wrap; }
+  .d3-mast h1 { margin: 0; font-size: clamp(26px, 3.4vw, 40px); font-weight: 700; letter-spacing: -.035em; line-height: 1; }
+  .d3-mast .meta { font-size: 10.5px; letter-spacing: .12em; color: var(--mut); text-align: right; }
+  /* KPI run — a typographic masthead, not tiles */
+  .d3-run { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--rule); }
+  .d3-fig { padding: 20px 0 18px 18px; border-left: 1px solid var(--rule); }
+  .d3-fig:first-child { border-left: 0; padding-left: 0; }
+  .d3-fig .n { font-size: 46px; font-weight: 700; letter-spacing: -.04em; line-height: 1; }
+  .d3-fig .n.flag { color: var(--red); }
+  .d3-fig .k { font-size: 10px; letter-spacing: .14em; color: var(--mut); margin-top: 9px; }
+  .d3-fig .s { font-size: 11.5px; color: var(--mut); margin-top: 3px; }
+  .d3-sect { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 30px 0 0; }
+  .d3-sect h2 { margin: 0; font-size: 11px; letter-spacing: .16em; font-weight: 600; }
+  .d3-sect .r { font-size: 11px; color: var(--mut); }
+  /* departure board */
+  .d3-board { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  .d3-board th { text-align: left; font-size: 9.5px; letter-spacing: .12em; color: var(--mut); font-weight: 500; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--rule); }
+  .d3-board td { padding: 14px 10px 14px 0; border-bottom: 1px solid var(--rule); font-size: 14px; vertical-align: baseline; }
+  .d3-board tr:hover td { background: #F5F5F7; }
+  .d3-board .t { font-size: 13px; color: var(--mut); }
+  .d3-board .nm { font-weight: 600; }
+  .d3-flag { color: var(--red); font-size: 11px; letter-spacing: .1em; white-space: nowrap; }
+  .d3-act { border: 0; background: none; font-size: 12px; color: var(--ink); border-bottom: 1px solid var(--ink); padding: 0 0 1px; margin-left: 16px; }
+  .d3-act.no { color: var(--mut); border-color: var(--rule); }
+  .d3-act:hover { color: var(--red); border-color: var(--red); }
+  /* sparkline sitting on a rule — no card */
+  .d3-spark { margin-top: 12px; border-bottom: 1px solid var(--rule); padding-bottom: 2px; }
+  .d3-days { display: flex; margin-top: 7px; }
+  .d3-days span { flex: 1; font-size: 9.5px; color: var(--mut); letter-spacing: .1em; }
+  .d3-days span:last-child { color: var(--red); }
+  /* honest empty — a printed note, not a widget */
+  .d3-note { margin-top: 30px; border-top: 1px solid var(--rule); padding-top: 14px; display: flex; gap: 16px; align-items: baseline; }
+  .d3-note .bar { width: 26px; height: 2px; background: var(--red); flex-shrink: 0; transform: translateY(-3px); }
+  .d3-note h3 { margin: 0; font-size: 11px; letter-spacing: .16em; font-weight: 600; }
+  .d3-note p { margin: 5px 0 0; font-size: 13px; color: var(--mut); max-width: 52ch; }
+
+  @media (max-width: 900px) {
+    .d1-kpis { grid-template-columns: 1fr 1fr; }
+    .d1-grid, .d2-split { grid-template-columns: 1fr; }
+    .d1-side, .d3-line { display: none; }
+    .d3-run { grid-template-columns: 1fr 1fr; }
+    .d3-fig:nth-child(3) { border-left: 0; padding-left: 0; }
+  }
+</style>
+
+<div class="wrap">
+  <div class="masthead">
+    <h1>Three directions for the TrackMe admin</h1>
+    <p>
+      All three render the same screen — the super-admin Dashboard — so they're comparable.
+      Every number is illustrative, but the <em>behaviour</em> is honest: where a real series
+      doesn't exist, each design shows its own version of an empty state rather than a fake curve.
+      Fonts are approximated with system stacks (the artifact sandbox blocks font CDNs); the
+      intended faces are named on each tab.
+    </p>
+  </div>
+
+  <div class="switcher" role="tablist">
+    <button class="sw" role="tab" aria-selected="true" data-v="1">01 — Refined Minimal</button>
+    <button class="sw" role="tab" aria-selected="false" data-v="2">02 — Control Room</button>
+    <button class="sw" role="tab" aria-selected="false" data-v="3">03 — The Line</button>
+  </div>
+
+  <!-- ══════════════ DESIGN 1 ══════════════ -->
+  <section class="view on" id="v1">
+    <p class="intent">
+      <b>The safe, professional one — and what's already committed in code.</b>
+      Linear/Stripe register: calm slate ground, one emerald accent, generous page-level
+      whitespace with efficient density inside tables. Best when the job is "operators scan it
+      all day and never think about it."
+    </p>
+    <ul class="stackmeta">
+      <li>shadcn/ui + Radix</li><li>Tailwind</li><li>Lucide icons</li>
+      <li>Uber Move / Inter / Fira Code</li><li>light + dark</li>
+    </ul>
+
+    <div class="frame d1">
+      <aside class="d1-side">
+        <div class="d1-brand">
+          <span class="d1-logo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6v6m8-6v6M2 12h19.6M4 18h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>
+          TrackMe Admin
+        </div>
+        <nav class="d1-nav">
+          <button class="d1-item on"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>Dashboard</button>
+          <button class="d1-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>Managers</button>
+          <button class="d1-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Operations<span class="d1-count">3</span></button>
+          <button class="d1-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>Routes</button>
+          <div class="d1-navlabel">Account</div>
+          <button class="d1-item"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M2 12h2m18 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Settings</button>
+        </nav>
+        <button class="d1-out"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>Sign out</button>
+      </aside>
+      <div class="d1-main">
+        <div class="d1-top">
+          <div class="d1-crumb"><span>Pages</span><span>/</span><b>Dashboard</b></div>
+          <div class="d1-k"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>Search or jump to…<kbd>⌘K</kbd></div>
+          <button class="d1-ib" aria-label="Refresh"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></svg></button>
+          <button class="d1-ib" aria-label="Theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"/></svg></button>
+          <span class="d1-av">SA</span>
+        </div>
+        <div class="d1-body">
+          <h1 class="d1-h1">Dashboard</h1>
+          <p class="d1-sub">Fleet operations at a glance.</p>
+          <div class="d1-kpis">
+            <div class="d1-card d1-stat"><div><div class="d1-lbl">Total managers</div><div class="d1-val d1-mono">5</div><div class="d1-hint">across 3 organisations</div></div><span class="d1-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span></div>
+            <div class="d1-card d1-stat"><div><div class="d1-lbl">Active buses</div><div class="d1-val d1-mono">22</div><div class="d1-hint">14 online now</div></div><span class="d1-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 6v6m8-6v6M2 12h19.6M4 18h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span></div>
+            <div class="d1-card d1-stat"><div><div class="d1-lbl">Pending requests</div><div class="d1-val d1-mono">3</div><div class="d1-hint">oldest 2 h ago</div></div><span class="d1-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span></div>
+            <div class="d1-card d1-stat"><div><div class="d1-lbl">System routes</div><div class="d1-val d1-mono">18</div><div class="d1-hint">2 added this month</div></div><span class="d1-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg></span></div>
+          </div>
+          <div class="d1-grid">
+            <div class="d1-card">
+              <div class="d1-ch"><div><h3>Pending bus requests</h3><p>Newest first — approve or reject with a note.</p></div><button class="d1-btn d1-ghost">View all</button></div>
+              <table>
+                <thead><tr><th>Bus</th><th>Manager</th><th>Requested</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td><b>Shuttle 07</b> <span class="d1-mono" style="color:var(--mut);font-size:12px">ND-4471</span></td><td>R. Fernando</td><td>2 h ago</td><td style="text-align:right;white-space:nowrap"><button class="d1-btn d1-pri">Approve</button> <button class="d1-btn d1-outline">Reject</button></td></tr>
+                  <tr><td><b>Shuttle 08</b> <span class="d1-mono" style="color:var(--mut);font-size:12px">ND-4472</span></td><td>R. Fernando</td><td>5 h ago</td><td style="text-align:right;white-space:nowrap"><button class="d1-btn d1-pri">Approve</button> <button class="d1-btn d1-outline">Reject</button></td></tr>
+                  <tr><td><b>Campus Express</b> <span class="d1-mono" style="color:var(--mut);font-size:12px">WP-9210</span></td><td>S. Perera</td><td>Yesterday</td><td style="text-align:right;white-space:nowrap"><button class="d1-btn d1-pri">Approve</button> <button class="d1-btn d1-outline">Reject</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div class="d1-card">
+                <div class="d1-ch"><div><h3>Fleet activity</h3><p>Buses online per day</p></div><span class="d1-badge d1-ok"><span class="d1-dot"></span>Live</span></div>
+                <div style="display:flex;align-items:flex-end;gap:8px;height:104px;padding:0 16px 10px;">
+                  <div style="flex:1;height:45%;background:var(--pri);opacity:.3;border-radius:3px 3px 0 0"></div>
+                  <div style="flex:1;height:62%;background:var(--pri);opacity:.42;border-radius:3px 3px 0 0"></div>
+                  <div style="flex:1;height:70%;background:var(--pri);opacity:.54;border-radius:3px 3px 0 0"></div>
+                  <div style="flex:1;height:58%;background:var(--pri);opacity:.46;border-radius:3px 3px 0 0"></div>
+                  <div style="flex:1;height:78%;background:var(--pri);opacity:.7;border-radius:3px 3px 0 0"></div>
+                  <div style="flex:1;height:40%;background:var(--pri);opacity:.3;border-radius:3px 3px 0 0"></div>
+                  <div style="flex:1;height:88%;background:var(--pri);border-radius:3px 3px 0 0"></div>
+                </div>
+              </div>
+              <div class="d1-card">
+                <div class="d1-ch" style="padding-bottom:0"><div><h3>Booking trend</h3></div></div>
+                <div class="d1-empty">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--mut)" stroke-width="1.5" stroke-linecap="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m7 13 3-3 4 4 5-5"/></svg>
+                  <div class="t">Not enough data yet</div>
+                  <div class="dsc">Trends appear after 30 days of confirmed bookings.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="fnote">Follows the viewer's light/dark theme — toggle your OS or the artifact theme to see both.</p>
+  </section>
+
+  <!-- ══════════════ DESIGN 2 ══════════════ -->
+  <section class="view" id="v2">
+    <p class="intent">
+      <b>The one that admits this is a live operations product, not a CRM.</b>
+      Borrowed from air-traffic control and telemetry consoles: monospace-forward, dark by
+      commitment, and organised around <em>what is happening right now</em> — a live bus strip
+      across the top, the map given the most pixels, and a terminal status bar that never lies
+      about sync age. Density is the point; there are no decorative tiles.
+    </p>
+    <ul class="stackmeta">
+      <li>Mantine v7</li><li>Tabler Icons</li><li>JetBrains Mono / Inter Tight</li>
+      <li>cyan · amber · rose signals</li><li>dark by commitment</li>
+    </ul>
+
+    <div class="frame d2">
+      <nav class="d2-rail">
+        <span class="d2-mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6v6m8-6v6M2 12h19.6M4 18h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>
+        <button class="d2-r on" aria-label="Overview"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></button>
+        <button class="d2-r" aria-label="Live map"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></button>
+        <button class="d2-r" aria-label="Fleet"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 6v6m8-6v6M2 12h19.6M4 18h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2Z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></button>
+        <button class="d2-r" aria-label="Managers"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></button>
+        <button class="d2-r" aria-label="Alerts"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4m0 4h.01"/></svg></button>
+      </nav>
+      <div class="d2-main">
+        <div class="d2-strip">
+          <span class="d2-striplbl d2-m">LIVE</span>
+          <span class="d2-chip d2-m"><i class="d2-d live"></i><span class="id">NC-7734</span><span class="sp">42</span></span>
+          <span class="d2-chip d2-m"><i class="d2-d live"></i><span class="id">ND-4471</span><span class="sp">28</span></span>
+          <span class="d2-chip d2-m"><i class="d2-d warn"></i><span class="id">WP-9210</span><span class="sp">--</span></span>
+          <span class="d2-chip d2-m"><i class="d2-d live"></i><span class="id">NC-1180</span><span class="sp">55</span></span>
+          <span class="d2-chip d2-m"><i class="d2-d idle"></i><span class="id">SP-3320</span><span class="sp">00</span></span>
+          <span class="d2-chip d2-m"><i class="d2-d live"></i><span class="id">NW-8802</span><span class="sp">37</span></span>
+          <span class="d2-chip d2-m"><i class="d2-d fault"></i><span class="id">CP-4415</span><span class="sp">ERR</span></span>
+          <span class="d2-chip d2-m"><i class="d2-d live"></i><span class="id">UV-2091</span><span class="sp">19</span></span>
+        </div>
+        <div class="d2-head">
+          <div>
+            <div class="d2-eyebrow d2-m">SUPER-ADMIN / OPERATIONS</div>
+            <h1 class="d2-title">Fleet control</h1>
+          </div>
+          <div class="d2-readouts">
+            <div class="d2-ro"><div class="k d2-m">FLEET</div><div class="v d2-m">22</div></div>
+            <div class="d2-ro"><div class="k d2-m">ONLINE</div><div class="v d2-m" style="color:var(--live)">14</div></div>
+            <div class="d2-ro"><div class="k d2-m">STALE</div><div class="v d2-m" style="color:var(--warn)">02</div></div>
+            <div class="d2-ro"><div class="k d2-m">PENDING</div><div class="v d2-m">03</div></div>
+          </div>
+        </div>
+        <div class="d2-split">
+          <div class="d2-map">
+            <div class="d2-grid"></div>
+            <div class="d2-road" style="left:6%;top:62%;width:64%;height:6px;transform:rotate(-13deg)"></div>
+            <div class="d2-road" style="left:46%;top:18%;width:6px;height:58%"></div>
+            <div class="d2-road" style="left:18%;top:28%;width:48%;height:6px;transform:rotate(5deg)"></div>
+            <div class="d2-road" style="left:60%;top:40%;width:34%;height:6px;transform:rotate(28deg)"></div>
+            <div class="d2-pin" style="left:45%;top:45%"></div><span class="d2-tag d2-m" style="left:45%;top:45%">NC-7734 · 42km/h</span>
+            <div class="d2-pin" style="left:24%;top:60%"></div><span class="d2-tag d2-m" style="left:24%;top:60%">ND-4471 · 28</span>
+            <div class="d2-pin w" style="left:69%;top:33%"></div><span class="d2-tag d2-m" style="left:69%;top:33%">WP-9210 · STALE 12m</span>
+            <div class="d2-pin" style="left:58%;top:66%"></div><span class="d2-tag d2-m" style="left:58%;top:66%">NC-1180 · 55</span>
+          </div>
+          <div class="d2-tele">
+            <div>
+              <div class="d2-sec d2-m">SELECTED · NC-7734</div>
+              <div class="d2-row"><span class="k d2-m">SPEED</span><span class="d2-m d2-big">42<span class="d2-unit"> km/h</span></span></div>
+              <div class="d2-row"><span class="k d2-m">HEADING</span><span class="d2-m">SE 138°</span></div>
+              <div class="d2-row"><span class="k d2-m">ROUTE</span><span class="d2-m">138 CMB–HMG</span></div>
+              <div class="d2-row"><span class="k d2-m">LAST FIX</span><span class="d2-m" style="color:var(--live)">8s</span></div>
+              <div class="d2-row"><span class="k d2-m">NEXT STOP</span><span class="d2-m">MAHARAGAMA</span></div>
+            </div>
+            <div>
+              <div class="d2-sec d2-m">ATTENTION</div>
+              <div class="d2-q d2-m" style="margin-top:10px">
+                <div class="t">STALE GPS</div>
+                <div class="b">WP-9210 last fix 12m ago. Rendered at last known position — not interpolated.</div>
+              </div>
+              <div class="d2-q d2-m" style="margin-top:8px;border-left-color:var(--fault)">
+                <div class="t" style="color:var(--fault)">DEVICE FAULT</div>
+                <div class="b">CP-4415 reporting ERR. No telemetry since 04:12.</div>
+              </div>
+            </div>
+            <div>
+              <div class="d2-sec d2-m">QUEUE · 3 PENDING</div>
+              <div class="d2-row"><span class="k d2-m">ND-4471</span><span class="d2-m" style="color:var(--mut)">2h</span></div>
+              <div class="d2-row"><span class="k d2-m">ND-4472</span><span class="d2-m" style="color:var(--mut)">5h</span></div>
+              <div class="d2-row"><span class="k d2-m">WP-9210</span><span class="d2-m" style="color:var(--mut)">1d</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="d2-bar d2-m">
+          <span>FLEET <b>22</b></span><span class="sep">·</span>
+          <span>ONLINE <b style="color:var(--live)">14</b></span><span class="sep">·</span>
+          <span>STALE <b style="color:var(--warn)">2</b></span><span class="sep">·</span>
+          <span>FAULT <b style="color:var(--fault)">1</b></span><span class="sep">·</span>
+          <span>PENDING <b>3</b></span>
+          <span style="margin-left:auto">SYNC <b>00:00:04</b> AGO</span>
+        </div>
+      </div>
+    </div>
+    <p class="fnote">Committed to a single dark world — a control room isn't a light-mode surface. A light counterpart would be designed only if operators ask for one.</p>
+  </section>
+
+  <!-- ══════════════ DESIGN 3 ══════════════ -->
+  <section class="view" id="v3">
+    <p class="intent">
+      <b>The unusual one — and the argument is that a bus company already has a design language.</b>
+      Timetables, departure boards, route diagrams, Swiss transit signage. So the interface stops
+      pretending to be a SaaS dashboard: <em>no cards, no boxes, no shadows, no widgets.</em>
+      Navigation <em>is</em> a route line and the pages are its stops. The KPIs are a printed
+      masthead, the approval queue is a departure board, and the only colour in the entire screen
+      is one transit red — spent exclusively on "this needs a human."
+    </p>
+    <ul class="stackmeta">
+      <li>Base UI / Ark UI (headless)</li><li>Tailwind</li><li>custom SVG marks</li>
+      <li>Söhne / General Sans + Fira Code</li><li>paper by commitment</li>
+    </ul>
+
+    <div class="frame d3">
+      <nav class="d3-line">
+        <div class="d3-mark">TRACKME<s>.</s></div>
+        <button class="d3-stop on"><span class="pip"></span>Dashboard</button>
+        <button class="d3-stop"><span class="pip"></span>Managers</button>
+        <button class="d3-stop"><span class="pip"></span>Operations<span class="n d3-m">3</span></button>
+        <button class="d3-stop"><span class="pip"></span>Routes</button>
+        <button class="d3-stop"><span class="pip"></span>Settings</button>
+        <div class="d3-term"><span class="bar"></span>Sign out</div>
+      </nav>
+      <div class="d3-sheet">
+        <div class="d3-mast">
+          <h1>Operations</h1>
+          <div class="meta d3-m">SHEET 01 · THU 16 JUL 2026<br>ASIA/COLOMBO · 20:41</div>
+        </div>
+
+        <div class="d3-run">
+          <div class="d3-fig"><div class="n d3-m">05</div><div class="k">MANAGERS</div><div class="s">across 3 organisations</div></div>
+          <div class="d3-fig"><div class="n d3-m">22</div><div class="k">BUSES IN SERVICE</div><div class="s">14 reporting now</div></div>
+          <div class="d3-fig"><div class="n d3-m flag">03</div><div class="k">AWAITING YOU</div><div class="s">oldest 2 hours</div></div>
+          <div class="d3-fig"><div class="n d3-m">18</div><div class="k">ROUTES</div><div class="s">2 added this month</div></div>
+        </div>
+
+        <div class="d3-sect">
+          <h2>DEPARTURES — BUS REQUESTS</h2>
+          <span class="r d3-m">3 WAITING</span>
+        </div>
+        <table class="d3-board">
+          <thead><tr><th>WAITING</th><th>BUS</th><th>MANAGER</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="t d3-m">02:14</td>
+              <td><span class="nm">Shuttle 07</span> <span class="d3-m" style="color:var(--mut);font-size:12px">ND-4471</span></td>
+              <td>R. Fernando</td>
+              <td style="text-align:right;white-space:nowrap"><span class="d3-flag">▲ HOLDING</span><button class="d3-act">Approve</button><button class="d3-act no">Reject</button></td>
+            </tr>
+            <tr>
+              <td class="t d3-m">05:02</td>
+              <td><span class="nm">Shuttle 08</span> <span class="d3-m" style="color:var(--mut);font-size:12px">ND-4472</span></td>
+              <td>R. Fernando</td>
+              <td style="text-align:right;white-space:nowrap"><span class="d3-flag">▲ HOLDING</span><button class="d3-act">Approve</button><button class="d3-act no">Reject</button></td>
+            </tr>
+            <tr>
+              <td class="t d3-m">28:40</td>
+              <td><span class="nm">Campus Express</span> <span class="d3-m" style="color:var(--mut);font-size:12px">WP-9210</span></td>
+              <td>S. Perera</td>
+              <td style="text-align:right;white-space:nowrap"><span class="d3-flag">▲ DELAYED</span><button class="d3-act">Approve</button><button class="d3-act no">Reject</button></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="d3-sect"><h2>FLEET ACTIVITY — 7 DAYS</h2><span class="r d3-m">PEAK 22 · SUN</span></div>
+        <div class="d3-spark">
+          <svg viewBox="0 0 700 90" width="100%" height="86" preserveAspectRatio="none" aria-label="Buses online per day, peaking Sunday at 22">
+            <polyline points="0,58 116,44 233,36 350,48 466,26 583,64 700,10" fill="none" stroke="#14161A" stroke-width="2" vector-effect="non-scaling-stroke"/>
+            <circle cx="700" cy="10" r="4" fill="#E4002B"/>
+          </svg>
+        </div>
+        <div class="d3-days d3-m"><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span style="text-align:right">SUN 22</span></div>
+
+        <div class="d3-note">
+          <span class="bar"></span>
+          <div>
+            <h3>BOOKING TREND — NOT PRINTED</h3>
+            <p>This series needs 30 days of confirmed bookings before it means anything. Nothing is drawn until then.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="fnote">Committed to paper — a departure board has one world. The trade-off is honest: this is the least conventional and the most opinionated of the three.</p>
+  </section>
+</div>
+
+<script>
+  const tabs = document.querySelectorAll('.sw');
+  tabs.forEach((t) => {
+    t.addEventListener('click', () => {
+      tabs.forEach((o) => o.setAttribute('aria-selected', String(o === t)));
+      document.querySelectorAll('.view').forEach((v) => v.classList.toggle('on', v.id === 'v' + t.dataset.v));
+    });
+  });
+</script>
