@@ -1,9 +1,10 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** Phase 3 complete. CP 3.5 done — Settings page honest rebuild:
-> Removed fabricated stat cards (no API). Retained planned-feature suggestions as informational text.
-> Under-development Alert. 3 feature sections (Access & Security, Ops Alerts, Governance). 5 tests.
-> **NEXT ACTION:** CP 4.1 — Manager Dashboard page migration.
+> **CURRENT STATE:** Phase 4 in progress. CP 4.1 done — Manager Dashboard page migrated:
+> useManagerDashboard hook, 4 StatCards (Total/Active Buses, Pending Requests, Revenue),
+> Booking Summary AsyncSection, analytics placeholder (no fabricated trend chart). Removed
+> framer-motion + @mui/x-charts + MUI icons (fixes pre-existing EMFILE JSDOM crash). 8 tests.
+> **NEXT ACTION:** CP 4.2 — Manager Buses page migration.
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
@@ -33,7 +34,7 @@ One checkpoint per run. Tests green before ticking.
 - [x] CP 3.5 Settings (honest rebuild) — done: 2026-07-17
 
 ## Phase 4 — Manager pages
-- [ ] CP 4.1 Dashboard
+- [x] CP 4.1 Dashboard — done: 2026-07-17
 - [ ] CP 4.2 Buses
 - [ ] CP 4.3 Tracking
 - [ ] CP 4.4 Accounts

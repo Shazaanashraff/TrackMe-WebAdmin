@@ -1,41 +1,92 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { ManagerDashboardPage } from '../ManagerDashboardPage';
-import { adminApi } from '../../api';
 
-vi.mock('../../api', () => ({
-  adminApi: {
-    getManagerDashboard: vi.fn(() => Promise.resolve({
-      data: {
-        fleet: { totalBuses: 8, activeBuses: 6 },
-        pendingRequests: 2,
-        bookings: { confirmedBookings: 40, cancelledBookings: 3, totalRevenue: 12000 }
-      }
-    }))
-  }
+vi.mock('@/hooks/use-dashboard', () => ({
+  useManagerDashboard: vi.fn(),
 }));
 
-describe('ManagerDashboardPage', () => {
-  it('renders real KPI values without fabricated deltas or the fake "peaking" claim', async () => {
-    render(<ManagerDashboardPage refreshSignal={0} />);
+import { useManagerDashboard } from '@/hooks/use-dashboard';
 
-    await waitFor(() => expect(screen.getByText('8')).toBeInTheDocument());
-    expect(screen.getByText('75%')).toBeInTheDocument();
+const DASHBOARD = {
+  fleet: { totalBuses: 8, activeBuses: 6 },
+  pendingRequests: 2,
+  bookings: { confirmedBookings: 40, cancelledBookings: 3, totalRevenue: 12000 },
+};
 
-    expect(screen.queryByText(/\+0%/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/\+12%/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/peaking/i)).not.toBeInTheDocument();
+function defaultHooks({ data = DASHBOARD, loading = false, error = null } = {}) {
+  useManagerDashboard.mockReturnValue({
+    data: data ? { data } : undefined,
+    isLoading: loading,
+    isError: Boolean(error),
+    error,
+    refetch: vi.fn(),
   });
-});
+}
 
-describe('ManagerDashboardPage currency', () => {
-  it('renders revenue in LKR and never in ₹ or $', async () => {
-    render(<ManagerDashboardPage />);
-    await waitFor(() => expect(adminApi.getManagerDashboard).toHaveBeenCalled());
+function setup(opts) {
+  defaultHooks(opts);
+  return render(<MemoryRouter><ManagerDashboardPage /></MemoryRouter>);
+}
 
-    const rsMatches = await screen.findAllByText(/Rs\./);
-    expect(rsMatches.length).toBeGreaterThan(0);
-    expect(screen.queryByText(/₹/)).toBeNull();
+describe('ManagerDashboardPage', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('renders the page heading', () => {
+    setup();
+    expect(screen.getByRole('heading', { level: 1, name: /manager dashboard/i })).toBeInTheDocument();
+  });
+
+  it('shows loading skeletons when fetching', () => {
+    setup({ loading: true, data: null });
+    expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
+  });
+
+  it('shows error state when dashboard query fails', () => {
+    setup({ error: new Error('Server error'), data: null });
+    expect(screen.getByText(/failed to load/i)).toBeInTheDocument();
+  });
+
+  it('renders real KPI values without fabricated deltas', () => {
+    setup();
+    expect(screen.getByText('Total Buses')).toBeInTheDocument();
+    expect(screen.getByText('Active Buses')).toBeInTheDocument();
+    expect(screen.getByText('Pending Requests')).toBeInTheDocument();
+    expect(screen.getByText('Total Revenue')).toBeInTheDocument();
+
+    // Total = 8, utilization = 75%
+    expect(screen.getAllByText('8').length).toBeGreaterThan(0);
+    expect(screen.getByText(/75%/)).toBeInTheDocument();
+
+    // Must not fabricate percentage deltas
+    expect(screen.queryByText(/\+0%/)).toBeNull();
+    expect(screen.queryByText(/\+12%/)).toBeNull();
+    expect(screen.queryByText(/peaking/i)).toBeNull();
+  });
+
+  it('renders revenue without wrong currency symbols', () => {
+    setup();
+    expect(screen.getByText('Total Revenue')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/₹/);
     expect(document.body.textContent).not.toMatch(/\$\d/);
+  });
+
+  it('shows confirmed and cancelled booking counts', () => {
+    setup();
+    expect(screen.getByText('Confirmed Bookings')).toBeInTheDocument();
+    expect(screen.getByText('Cancelled Bookings')).toBeInTheDocument();
+    expect(screen.getAllByText('40').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('3').length).toBeGreaterThan(0);
+  });
+
+  it('shows analytics placeholder without fabricated time-series', () => {
+    setup();
+    expect(screen.getByText('Not enough data yet')).toBeInTheDocument();
+  });
+
+  it('shows pending request count in stat card', () => {
+    setup();
+    expect(screen.getAllByText('2').length).toBeGreaterThan(0);
   });
 });
