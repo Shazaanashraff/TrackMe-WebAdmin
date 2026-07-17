@@ -1,11 +1,9 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** Phase 3 in progress. CP 3.4 done — Routes page migrated to Atlas/shadcn:
-> useSystemRoutes + useCreateSystemRoute hooks. PageHeader + province list (9 provinces + unassigned),
-> DataTable for per-province drill-down, inline create-route form with dynamic stops (add/remove/reorder),
-> shadcn Select for serviceType. Custom validateForm() replaces native required attributes for testability.
-> 14 tests.
-> **NEXT ACTION:** CP 3.5 — Settings page (honest rebuild).
+> **CURRENT STATE:** Phase 3 complete. CP 3.5 done — Settings page honest rebuild:
+> Removed fabricated stat cards (no API). Retained planned-feature suggestions as informational text.
+> Under-development Alert. 3 feature sections (Access & Security, Ops Alerts, Governance). 5 tests.
+> **NEXT ACTION:** CP 4.1 — Manager Dashboard page migration.
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
@@ -32,7 +30,7 @@ One checkpoint per run. Tests green before ticking.
 - [x] CP 3.2 Managers — done: 2026-07-17
 - [x] CP 3.3 Operations (+ detail sheet) — done: 2026-07-17
 - [x] CP 3.4 Routes — done: 2026-07-17
-- [ ] CP 3.5 Settings (honest rebuild)
+- [x] CP 3.5 Settings (honest rebuild) — done: 2026-07-17
 
 ## Phase 4 — Manager pages
 - [ ] CP 4.1 Dashboard
