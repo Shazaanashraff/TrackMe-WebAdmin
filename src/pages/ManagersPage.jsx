@@ -1,257 +1,245 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Card, CardContent, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography, useTheme } from '@mui/material';
-import Grid from '@mui/material/Grid';
-import { DataGrid } from '@mui/x-data-grid';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { adminApi } from '../api';
-
-const defaultForm = { managerId: null, name: '', email: '', password: '' };
+import { useMemo, useState } from 'react';
+import { Plus, Users, UserCheck, UserX } from 'lucide-react';
+import { toast } from 'sonner';
+import { PageHeader } from '@/components/shared/page-header';
+import { StatCard } from '@/components/shared/stat-card';
+import { DataTable } from '@/components/shared/data-table';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  useManagers,
+  useCreateManager,
+  useUpdateManager,
+  useUpdateManagerStatus,
+  useResetManagerPassword,
+} from '@/hooks/use-managers';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function ManagersPage({ refreshSignal }) {
-  const theme = useTheme();
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [form, setForm] = useState(defaultForm);
-  const [formDialogOpen, setFormDialogOpen] = useState(false);
+function validate(form, isEdit) {
+  const errors = [];
+  if (!form.name.trim()) errors.push('Name is required.');
+  if (!form.email.trim()) {
+    errors.push('Email is required.');
+  } else if (!emailRegex.test(form.email)) {
+    errors.push('Enter a valid email address.');
+  }
+  if (!isEdit && !form.password.trim()) errors.push('Password is required for a new manager.');
+  if (form.password && form.password.length < 8) errors.push('Password must be at least 8 characters.');
+  return errors;
+}
 
-  const loadManagers = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await adminApi.getManagers();
-      setRows(response.data || []);
-    } catch (err) {
-      setError(err.message || 'Unable to load managers');
-    } finally {
-      setLoading(false);
-    }
+const EMPTY_FORM = { name: '', email: '', password: '' };
+
+export function ManagersPage() {
+  const managersQ = useManagers();
+  const createM = useCreateManager();
+  const updateM = useUpdateManager();
+  const resetPwM = useResetManagerPassword();
+  const statusM = useUpdateManagerStatus();
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [serverError, setServerError] = useState(null);
+
+  const rows = managersQ.data?.data || [];
+
+  const stats = useMemo(() => {
+    const total = rows.length;
+    const active = rows.filter((r) => r.isActive !== false).length;
+    return { total, active, inactive: total - active };
+  }, [rows]);
+
+  const submitting = createM.isPending || updateM.isPending || resetPwM.isPending;
+
+  const openCreate = () => {
+    setEditTarget(null);
+    setForm(EMPTY_FORM);
+    setServerError(null);
+    setDialogOpen(true);
   };
 
-  useEffect(() => {
-    loadManagers();
-  }, [refreshSignal]);
-
-  const validation = useMemo(() => {
-    const errors = {};
-    if (!form.name.trim()) errors.name = 'Name is required';
-    if (!form.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!emailRegex.test(form.email)) {
-      errors.email = 'Enter a valid email address';
-    }
-    if (!form.managerId && !form.password.trim()) {
-      errors.password = 'Password is required for new manager';
-    }
-    if (form.password && form.password.length < 8) {
-      errors.password = 'Password must be at least 8 characters';
-    }
-    return errors;
-  }, [form]);
-
-  const onField = (field) => (event) => {
-    setForm((prev) => ({ ...prev, [field]: event.target.value }));
+  const openEdit = (row) => {
+    setEditTarget(row);
+    setForm({ name: row.name, email: row.email, password: '' });
+    setServerError(null);
+    setDialogOpen(true);
   };
 
-  const resetForm = () => {
-    setForm(defaultForm);
-  };
-
-  const openCreateDialog = () => {
-    setForm(defaultForm);
-    setFormDialogOpen(true);
-  };
-
-  const openEditDialog = (row) => {
-    setForm({ managerId: row._id, name: row.name, email: row.email, password: '' });
-    setFormDialogOpen(true);
-  };
-
-  const handleSave = async (event) => {
-    event.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (Object.keys(validation).length > 0) {
-      setError('Please correct highlighted validation errors before submitting.');
+  const handleSave = async () => {
+    setServerError(null);
+    const errs = validate(form, Boolean(editTarget));
+    if (errs.length > 0) {
+      setServerError(errs.join(' '));
       return;
     }
-
-    setSubmitting(true);
     try {
-      if (form.managerId) {
-        await adminApi.updateManager(form.managerId, { name: form.name, email: form.email });
+      if (editTarget) {
+        await updateM.mutateAsync({
+          managerId: editTarget._id,
+          payload: { name: form.name, email: form.email },
+        });
         if (form.password) {
-          await adminApi.resetManagerPassword(form.managerId, { password: form.password });
+          await resetPwM.mutateAsync({
+            managerId: editTarget._id,
+            payload: { password: form.password },
+          });
         }
-        setSuccess('Manager updated successfully');
+        toast('Manager updated successfully');
       } else {
-        await adminApi.createManager({ name: form.name, email: form.email, password: form.password });
-        setSuccess('Manager created successfully');
+        await createM.mutateAsync({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+        });
+        toast('Manager created successfully');
       }
-      resetForm();
-      setFormDialogOpen(false);
-      await loadManagers();
+      setDialogOpen(false);
     } catch (err) {
-      setError(err.message || 'Failed to save manager');
-    } finally {
-      setSubmitting(false);
+      setServerError(err);
     }
   };
 
   const handleToggleStatus = async (row) => {
-    setError('');
-    setSuccess('');
     try {
-      await adminApi.updateManagerStatus(row._id, { isActive: !(row.isActive !== false) });
-      setSuccess('Manager status updated');
-      await loadManagers();
+      await statusM.mutateAsync({
+        managerId: row._id,
+        payload: { isActive: row.isActive === false },
+      });
+      toast(`Manager ${row.isActive === false ? 'activated' : 'deactivated'}`);
     } catch (err) {
-      setError(err.message || 'Failed to update manager status');
+      toast(`Failed: ${err?.message || 'Unknown error'}`);
     }
   };
 
-  const columns = [
-    { field: 'name', headerName: 'Manager', flex: 1, minWidth: 180 },
-    { field: 'email', headerName: 'Email', flex: 1.2, minWidth: 220 },
+  const columns = useMemo(() => [
     {
-      field: 'isActive',
-      headerName: 'Status',
-      width: 140,
-      renderCell: (params) => (
-        <Chip
-          label={params.row.isActive !== false ? 'Active' : 'Inactive'}
-          color={params.row.isActive !== false ? 'success' : 'warning'}
-          size="small"
-        />
-      )
+      id: 'name',
+      header: 'Manager',
+      accessorKey: 'name',
+      cell: (info) => <span className="font-medium text-foreground">{info.getValue()}</span>,
     },
     {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 280,
-      sortable: false,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1} sx={{ py: 1 }}>
-          <Button size="sm" variant="outline" onClick={() => openEditDialog(params.row)}>
-            Edit
-          </Button>
-          <Button size="sm" variant="secondary" onClick={() => handleToggleStatus(params.row)}>
-            {params.row.isActive !== false ? 'Deactivate' : 'Activate'}
-          </Button>
-        </Stack>
-      )
-    }
-  ];
-
-  const summary = useMemo(() => {
-    const total = rows.length;
-    const active = rows.filter((row) => row.isActive !== false).length;
-    const inactive = total - active;
-    const editing = form.managerId ? 1 : 0;
-    return { total, active, inactive, editing };
-  }, [rows, form.managerId]);
+      id: 'email',
+      header: 'Email',
+      accessorKey: 'email',
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      accessorKey: 'isActive',
+      cell: (info) => (
+        <StatusBadge status={info.getValue() !== false ? 'active' : 'suspended'} />
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      accessorKey: '_id',
+      enableSorting: false,
+      cell: (info) => {
+        const row = info.row.original;
+        const toggling = statusM.isPending && statusM.variables?.managerId === row._id;
+        return (
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={toggling}
+              onClick={() => handleToggleStatus(row)}
+            >
+              {row.isActive === false ? 'Activate' : 'Deactivate'}
+            </Button>
+          </div>
+        );
+      },
+    },
+  ], [statusM.isPending, statusM.variables]);
 
   return (
-    <Box sx={{ display: 'grid', gap: 2.5 }}>
-      <Box sx={{ display: 'grid', gap: 0.8 }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: theme.palette.text.primary }}>
-          Managers
-        </Typography>
-        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-          Maintain manager accounts, update access status, and rotate credentials securely.
-        </Typography>
-      </Box>
-
-      <Grid container spacing={2}>
-        {[
-          { label: 'Total Managers', value: summary.total },
-          { label: 'Active', value: summary.active },
-          { label: 'Inactive', value: summary.inactive },
-          { label: 'Editing Mode', value: summary.editing ? 'On' : 'Off' },
-        ].map((item) => (
-          <Grid key={item.label} size={{ xs: 6, md: 3 }}>
-            <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.2)' }}>
-              <CardContent sx={{ py: 2 }}>
-                <Typography variant="caption" sx={{ color: theme.palette.text.secondary, textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>
-                  {item.label}
-                </Typography>
-                <Typography variant="h6" sx={{ color: theme.palette.text.primary, fontWeight: 800, mt: 0.8 }}>
-                  {item.value}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      {error ? <Alert severity="error">{error}</Alert> : null}
-      {success ? <Alert severity="success">{success}</Alert> : null}
-
-      <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.24)' }}>
-        <CardContent sx={{ p: 2.5 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>Managers Directory</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Primary roster for manager-level users and status control.
-              </Typography>
-            </Box>
-            <Button onClick={openCreateDialog}>Add Manager</Button>
-          </Stack>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            getRowId={(row) => row._id}
-            loading={loading}
-            autoHeight
-            pageSizeOptions={[5, 10, 20]}
-            initialState={{ pagination: { paginationModel: { pageSize: 10, page: 0 } } }}
-            disableRowSelectionOnClick
-            sx={{
-              border: '1px solid rgba(148, 163, 184, 0.25)',
-              borderRadius: 2,
-              '& .MuiDataGrid-columnHeaders': { backgroundColor: 'rgba(148, 163, 184, 0.08)' },
-            }}
-          />
-        </CardContent>
-      </Card>
-
-      <Dialog open={formDialogOpen} onClose={() => !submitting && setFormDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{form.managerId ? 'Update Manager' : 'Add Manager'}</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          <form id="manager-form" onSubmit={handleSave} className="space-y-3">
-            <div>
-              <label className="text-sm text-slate-600 font-semibold block mb-2">Manager Name</label>
-              <Input value={form.name} onChange={onField('name')} placeholder="Enter full name" />
-              {validation.name ? <p className="text-xs text-red-400 mt-1">{validation.name}</p> : null}
-            </div>
-
-            <div>
-              <label className="text-sm text-slate-600 font-semibold block mb-2">Email</label>
-              <Input type="email" value={form.email} onChange={onField('email')} placeholder="manager@company.com" />
-              {validation.email ? <p className="text-xs text-red-400 mt-1">{validation.email}</p> : null}
-            </div>
-
-            <div>
-              <label className="text-sm text-slate-600 font-semibold block mb-2">Password {form.managerId ? '(optional reset)' : ''}</label>
-              <Input type="password" value={form.password} onChange={onField('password')} placeholder="Minimum 8 characters" />
-              {validation.password ? <p className="text-xs text-red-400 mt-1">{validation.password}</p> : null}
-            </div>
-          </form>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button type="button" variant="outline" onClick={() => { resetForm(); setFormDialogOpen(false); }} disabled={submitting}>Cancel</Button>
-          <Button type="submit" form="manager-form" disabled={submitting}>
-            {submitting ? <CircularProgress color="inherit" size={16} /> : form.managerId ? 'Update Manager' : 'Create Manager'}
+    <div className="space-y-6">
+      <PageHeader
+        title="Managers"
+        description="Maintain manager accounts, update access status, and rotate credentials securely."
+        actions={
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Add Manager
           </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        }
+      />
+
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatCard label="Total Managers" value={stats.total} icon={Users} isLoading={managersQ.isLoading} />
+        <StatCard label="Active Managers" value={stats.active} icon={UserCheck} isLoading={managersQ.isLoading} />
+        <StatCard label="Inactive Managers" value={stats.inactive} icon={UserX} isLoading={managersQ.isLoading} />
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={rows}
+        isLoading={managersQ.isLoading}
+        error={managersQ.error}
+        onRetry={managersQ.refetch}
+        emptyTitle="No managers yet"
+        emptyDescription="Add the first manager to get started."
+        totalCount={rows.length}
+      />
+
+      <FormDialog
+        open={dialogOpen}
+        onOpenChange={(open) => { if (!submitting) setDialogOpen(open); }}
+        title={editTarget ? 'Update Manager' : 'Add Manager'}
+        submitLabel={editTarget ? 'Update Manager' : 'Create Manager'}
+        onSubmit={handleSave}
+        pending={submitting}
+        error={serverError}
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="mgr-name">Manager Name</Label>
+            <Input
+              id="mgr-name"
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              placeholder="Enter full name"
+              autoComplete="off"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="mgr-email">Email</Label>
+            <Input
+              id="mgr-email"
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+              placeholder="manager@company.com"
+              autoComplete="off"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="mgr-pw">
+              Password
+              {editTarget && <span className="text-muted-foreground font-normal ml-1">(optional reset)</span>}
+            </Label>
+            <Input
+              id="mgr-pw"
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+              placeholder="Minimum 8 characters"
+              autoComplete="new-password"
+            />
+          </div>
+        </div>
+      </FormDialog>
+    </div>
   );
 }

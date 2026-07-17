@@ -1,10 +1,10 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** Phase 3 in progress. CP 3.1 done — Super-admin Dashboard migrated to
-> Atlas/shadcn: useSuperAdminDashboard + useOperationsOverview + usePendingBusRequests hooks,
-> PageHeader + StatCard KPIs (4 cards), AsyncSection for loading/error/empty, mini operations table
-> with StatusBadge, Fleet Snapshot sidebar, Analytics placeholder (no fabricated time-series data).
-> **NEXT ACTION:** CP 3.2 — Managers page migration.
+> **CURRENT STATE:** Phase 3 in progress. CP 3.2 done — Managers page migrated to Atlas/shadcn:
+> useManagers + useCreateManager + useUpdateManager + useUpdateManagerStatus + useResetManagerPassword
+> hooks, PageHeader + StatCard ×3 (total/active/inactive), DataTable with StatusBadge, FormDialog
+> with client-side validation + chained password reset mutation, toast notifications. 13 tests.
+> **NEXT ACTION:** CP 3.3 — Operations page migration.
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
@@ -28,7 +28,7 @@ One checkpoint per run. Tests green before ticking.
 
 ## Phase 3 — Super-admin pages
 - [x] CP 3.1 Dashboard — done: 2026-07-17
-- [ ] CP 3.2 Managers
+- [x] CP 3.2 Managers — done: 2026-07-17
 - [ ] CP 3.3 Operations (+ detail sheet)
 - [ ] CP 3.4 Routes
 - [ ] CP 3.5 Settings (honest rebuild)
