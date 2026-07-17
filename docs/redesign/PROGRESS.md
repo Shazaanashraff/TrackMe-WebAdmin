@@ -1,10 +1,12 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** CP 2.2 done — DataTable (@tanstack/react-table v8) in src/components/shared/.
-> Client-side sort, pagination (PAGE_SIZE=10), column-visibility Popover, onRowClick, mobile-card
-> slot, totalCount prop for server-side count display. State machine: loading→TableSkeleton,
-> error→ErrorState, empty→EmptyState, data→table.
-> **NEXT ACTION:** CP 2.3 — ConfirmDialog, FormDialog, ExportMenu, CopyField, LiveIndicator, RelativeTime, Money.
+> **CURRENT STATE:** Phase 2 COMPLETE. CP 2.3 done — ConfirmDialog (AlertDialog + optional reason
+> textarea + destructive variant + pending spinner), FormDialog (Dialog + server-error slot + pending
+> spinner), ExportMenu (DropdownMenu → Blob CSV download, toCsv exported for tests), CopyField
+> (masked/reveal + clipboard + toast), LiveIndicator (live/stale/offline states + ping animation),
+> RelativeTime (getRelative/getAbsolute exported, Tooltip wrapper, Asia/Colombo TZ), Money
+> (formatLKR exported). Phase 2 batch tests ran — see Findings.
+> **NEXT ACTION:** CP 3.1 — Super-admin Dashboard page migration.
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
@@ -24,7 +26,7 @@ One checkpoint per run. Tests green before ticking.
 ## Phase 2 — Shared kit
 - [x] CP 2.1 PageHeader, StatCard, StatusBadge, EmptyState, ErrorState, skeletons, AsyncSection — done: 2026-07-17
 - [x] CP 2.2 DataTable — done: 2026-07-17
-- [ ] CP 2.3 ConfirmDialog, FormDialog, ExportMenu, CopyField, LiveIndicator, RelativeTime, Money
+- [x] CP 2.3 ConfirmDialog, FormDialog, ExportMenu, CopyField, LiveIndicator, RelativeTime, Money — done: 2026-07-17
 
 ## Phase 3 — Super-admin pages
 - [ ] CP 3.1 Dashboard

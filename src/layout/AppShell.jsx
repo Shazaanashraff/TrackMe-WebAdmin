@@ -211,26 +211,28 @@ export function AppShell({ user, onLogout, onRefresh }) {
           />
         </aside>
 
-        {/* Mobile nav sheet (trigger is the hamburger in Topbar) */}
+        {/* Mobile nav sheet — only mount content when open (avoids duplicate nav in JSDOM) */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent side="left" className="w-56 p-0 flex flex-col">
-            <div className="flex items-center h-12 border-b border-border px-3 gap-2 shrink-0">
-              <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground text-xs font-bold font-heading">T</span>
+          {mobileOpen && (
+            <SheetContent side="left" className="w-56 p-0 flex flex-col">
+              <div className="flex items-center h-12 border-b border-border px-3 gap-2 shrink-0">
+                <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
+                  <span className="text-primary-foreground text-xs font-bold font-heading">T</span>
+                </div>
+                <span className="font-heading text-sm font-semibold text-foreground truncate">
+                  {wordmark}
+                </span>
               </div>
-              <span className="font-heading text-sm font-semibold text-foreground truncate">
-                {wordmark}
-              </span>
-            </div>
-            <SidebarNav
-              navItems={navItems}
-              location={location}
-              collapsed={false}
-              onLogout={() => { setMobileOpen(false); onLogout(); }}
-              onNavigate={() => setMobileOpen(false)}
-              pendingCount={pendingCount}
-            />
-          </SheetContent>
+              <SidebarNav
+                navItems={navItems}
+                location={location}
+                collapsed={false}
+                onLogout={() => { setMobileOpen(false); onLogout(); }}
+                onNavigate={() => setMobileOpen(false)}
+                pendingCount={pendingCount}
+              />
+            </SheetContent>
+          )}
         </Sheet>
 
         {/* Content card */}
