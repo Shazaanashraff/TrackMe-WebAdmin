@@ -1,12 +1,11 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** Phase 3 in progress. CP 3.3 done — Operations page migrated to Atlas/shadcn:
-> useOperationsOverview + useOperationManagerDetail + usePendingBusRequests + useAuditLogs +
-> useReviewBusRequest + useUpdateBus hooks. PageHeader + StatCard ×4, DataTable ×4, split
-> overview/detail panel layout, ConfirmDialog for approve/reject (reject requireReason=true),
-> FormDialog with shadcn Select for bus serviceType, TooltipProvider wrapper in tests (RelativeTime).
-> 18 tests. window.prompt replaced with ConfirmDialog. MUI ToggleButtonGroup replaced with Select.
-> **NEXT ACTION:** CP 3.4 — Routes page migration.
+> **CURRENT STATE:** Phase 3 in progress. CP 3.4 done — Routes page migrated to Atlas/shadcn:
+> useSystemRoutes + useCreateSystemRoute hooks. PageHeader + province list (9 provinces + unassigned),
+> DataTable for per-province drill-down, inline create-route form with dynamic stops (add/remove/reorder),
+> shadcn Select for serviceType. Custom validateForm() replaces native required attributes for testability.
+> 14 tests.
+> **NEXT ACTION:** CP 3.5 — Settings page (honest rebuild).
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
@@ -32,7 +31,7 @@ One checkpoint per run. Tests green before ticking.
 - [x] CP 3.1 Dashboard — done: 2026-07-17
 - [x] CP 3.2 Managers — done: 2026-07-17
 - [x] CP 3.3 Operations (+ detail sheet) — done: 2026-07-17
-- [ ] CP 3.4 Routes
+- [x] CP 3.4 Routes — done: 2026-07-17
 - [ ] CP 3.5 Settings (honest rebuild)
 
 ## Phase 4 — Manager pages
