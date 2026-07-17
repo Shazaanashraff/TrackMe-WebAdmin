@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Card, CardContent, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography, useTheme } from '@mui/material';
+import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography, useTheme } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { DataGrid } from '@mui/x-data-grid';
-import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { adminApi } from '../api';
 
@@ -138,10 +137,10 @@ export function ManagersPage({ refreshSignal }) {
       sortable: false,
       renderCell: (params) => (
         <Stack direction="row" spacing={1} sx={{ py: 1 }}>
-          <Button size="sm" variant="outline" onClick={() => openEditDialog(params.row)}>
+          <Button size="small" variant="outlined" onClick={() => openEditDialog(params.row)}>
             Edit
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => handleToggleStatus(params.row)}>
+          <Button size="small" variant="contained" color="secondary" onClick={() => handleToggleStatus(params.row)}>
             {params.row.isActive !== false ? 'Deactivate' : 'Activate'}
           </Button>
         </Stack>
@@ -202,7 +201,7 @@ export function ManagersPage({ refreshSignal }) {
                 Primary roster for manager-level users and status control.
               </Typography>
             </Box>
-            <Button onClick={openCreateDialog}>Add Manager</Button>
+            <Button variant="contained" onClick={openCreateDialog}>Add Manager</Button>
           </Stack>
           <DataGrid
             rows={rows}
@@ -246,8 +245,8 @@ export function ManagersPage({ refreshSignal }) {
           </form>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button type="button" variant="outline" onClick={() => { resetForm(); setFormDialogOpen(false); }} disabled={submitting}>Cancel</Button>
-          <Button type="submit" form="manager-form" disabled={submitting}>
+          <Button type="button" variant="outlined" onClick={() => { resetForm(); setFormDialogOpen(false); }} disabled={submitting}>Cancel</Button>
+          <Button type="submit" form="manager-form" variant="contained" disabled={submitting}>
             {submitting ? <CircularProgress color="inherit" size={16} /> : form.managerId ? 'Update Manager' : 'Create Manager'}
           </Button>
         </DialogActions>
