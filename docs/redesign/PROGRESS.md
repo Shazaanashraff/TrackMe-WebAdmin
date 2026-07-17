@@ -1,12 +1,10 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** Phase 2 COMPLETE. CP 2.3 done — ConfirmDialog (AlertDialog + optional reason
-> textarea + destructive variant + pending spinner), FormDialog (Dialog + server-error slot + pending
-> spinner), ExportMenu (DropdownMenu → Blob CSV download, toCsv exported for tests), CopyField
-> (masked/reveal + clipboard + toast), LiveIndicator (live/stale/offline states + ping animation),
-> RelativeTime (getRelative/getAbsolute exported, Tooltip wrapper, Asia/Colombo TZ), Money
-> (formatLKR exported). Phase 2 batch tests ran — see Findings.
-> **NEXT ACTION:** CP 3.1 — Super-admin Dashboard page migration.
+> **CURRENT STATE:** Phase 3 in progress. CP 3.1 done — Super-admin Dashboard migrated to
+> Atlas/shadcn: useSuperAdminDashboard + useOperationsOverview + usePendingBusRequests hooks,
+> PageHeader + StatCard KPIs (4 cards), AsyncSection for loading/error/empty, mini operations table
+> with StatusBadge, Fleet Snapshot sidebar, Analytics placeholder (no fabricated time-series data).
+> **NEXT ACTION:** CP 3.2 — Managers page migration.
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
@@ -29,7 +27,7 @@ One checkpoint per run. Tests green before ticking.
 - [x] CP 2.3 ConfirmDialog, FormDialog, ExportMenu, CopyField, LiveIndicator, RelativeTime, Money — done: 2026-07-17
 
 ## Phase 3 — Super-admin pages
-- [ ] CP 3.1 Dashboard
+- [x] CP 3.1 Dashboard — done: 2026-07-17
 - [ ] CP 3.2 Managers
 - [ ] CP 3.3 Operations (+ detail sheet)
 - [ ] CP 3.4 Routes
