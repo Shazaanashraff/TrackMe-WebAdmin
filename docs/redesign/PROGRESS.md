@@ -1,10 +1,10 @@
 # Redesign Progress Tracker
 
-> **CURRENT STATE:** CP 2.1 done — 8 shared kit components (PageHeader, StatCard, StatusBadge,
-> EmptyState, ErrorState, TableSkeleton, CardSkeleton, AsyncSection) in src/components/shared/.
-> StatusBadge has central STATUS_MAP for all domains. humanizeError exported for unit tests.
-> AsyncSection is the decision-tree wrapper (loading→skeleton, error→ErrorState, empty→EmptyState).
-> **NEXT ACTION:** CP 2.2 — DataTable (TanStack React Table wrapper).
+> **CURRENT STATE:** CP 2.2 done — DataTable (@tanstack/react-table v8) in src/components/shared/.
+> Client-side sort, pagination (PAGE_SIZE=10), column-visibility Popover, onRowClick, mobile-card
+> slot, totalCount prop for server-side count display. State machine: loading→TableSkeleton,
+> error→ErrorState, empty→EmptyState, data→table.
+> **NEXT ACTION:** CP 2.3 — ConfirmDialog, FormDialog, ExportMenu, CopyField, LiveIndicator, RelativeTime, Money.
 
 Update the block above + tick checkpoints (`[x] … — done: DATE sha`) after every checkpoint.
 One checkpoint per run. Tests green before ticking.
@@ -23,7 +23,7 @@ One checkpoint per run. Tests green before ticking.
 
 ## Phase 2 — Shared kit
 - [x] CP 2.1 PageHeader, StatCard, StatusBadge, EmptyState, ErrorState, skeletons, AsyncSection — done: 2026-07-17
-- [ ] CP 2.2 DataTable
+- [x] CP 2.2 DataTable — done: 2026-07-17
 - [ ] CP 2.3 ConfirmDialog, FormDialog, ExportMenu, CopyField, LiveIndicator, RelativeTime, Money
 
 ## Phase 3 — Super-admin pages
