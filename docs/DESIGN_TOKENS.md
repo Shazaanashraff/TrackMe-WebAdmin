@@ -1,5 +1,23 @@
 # Design Tokens
 
+## Button system decision (todo 002)
+
+Standardized on MUI `Button` (themed via `theme.components.MuiButton` in `src/theme.js`) as the
+single button system. The app already ran two in parallel: MUI `Button` everywhere except
+`ManagersPage`, which used a bespoke shadcn/CVA-style `src/components/ui/button.jsx`. MUI wins
+because every other page, dialog and data-grid action already depends on it and the rest of the
+app is not Tailwind-first; keeping the shadcn component would mean migrating the majority MUI
+usage instead of the one holdout page. `src/components/ui/button.jsx` is deleted.
+
+Variant/size mapping applied to the migrated usages: shadcn `variant="outline"` → MUI
+`variant="outlined"`; shadcn `variant="secondary"` → MUI `variant="contained" color="secondary"`;
+shadcn `size="sm"` → MUI `size="small"`; the shadcn default (solid primary) variant → MUI
+`variant="contained"` (primary), which already renders with the gradient CTA styling via the
+`containedPrimary` style override.
+
+`src/components/ui/input.jsx` still has a live consumer (`ManagersPage`'s form fields) so it was
+left in place — retiring it is a separate, larger restyle out of this todo's scope.
+
 Single source of truth: `src/theme.js`, exported as `darkTheme` and wired into the app via
 `<ThemeProvider theme={darkTheme}>` + `<CssBaseline />` in `src/main.jsx`.
 
