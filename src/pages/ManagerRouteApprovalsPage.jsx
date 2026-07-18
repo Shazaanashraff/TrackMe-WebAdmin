@@ -1,200 +1,169 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, Box, Button, Card, CardContent, Chip, Stack, Typography } from '@mui/material';
-import Grid from '@mui/material/Grid';
-import { adminApi } from '../api';
+import { useState } from 'react';
+import { PageHeader } from '@/components/shared/page-header';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { CustomRoutePreviewModal } from '../components/CustomRoutePreviewModal';
 import { RouteComparisonPanel } from '../components/RouteComparisonPanel';
+import {
+  useManagerCustomRoutes,
+  useRouteChangeRequests,
+  useNameCustomRoute,
+  useResolveRouteChangeRequest,
+} from '@/hooks/use-route-approvals';
 
-export function ManagerRouteApprovalsPage({ refreshSignal }) {
-  const [routes, setRoutes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
+export function ManagerRouteApprovalsPage() {
   const [previewRoute, setPreviewRoute] = useState(null);
-  const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
-
-  const [changeRequests, setChangeRequests] = useState([]);
   const [selectedChangeRequest, setSelectedChangeRequest] = useState(null);
-  const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState('');
 
-  const loadRoutes = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await adminApi.getManagerCustomRoutes({ status: 'PENDING_NAMING' });
-      setRoutes(response.data || []);
-    } catch (err) {
-      setError(err.message || 'Failed to load pending routes');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const routesQ = useManagerCustomRoutes({ status: 'PENDING_NAMING' });
+  const changeRequestsQ = useRouteChangeRequests({ status: 'PENDING' });
+  const nameRouteMut = useNameCustomRoute();
+  const resolveM = useResolveRouteChangeRequest();
 
-  const loadChangeRequests = useCallback(async () => {
-    try {
-      const response = await adminApi.getRouteChangeRequests({ status: 'PENDING' });
-      setChangeRequests(response.data || []);
-    } catch (err) {
-      setError((prev) => prev || err.message || 'Failed to load route change requests');
-    }
-  }, []);
+  const routes = routesQ.data?.data || [];
+  const changeRequests = changeRequestsQ.data?.data || [];
 
-  useEffect(() => {
-    loadRoutes();
-    loadChangeRequests();
-  }, [loadRoutes, loadChangeRequests, refreshSignal]);
+  const recordedRoutes = routes.filter((r) => r.pathPolyline);
+  const awaitingDriverRoutes = routes.filter((r) => !r.pathPolyline);
 
-  const recordedRoutes = routes.filter((route) => route.pathPolyline);
-  const awaitingDriverRoutes = routes.filter((route) => !route.pathPolyline);
+  const queryError = routesQ.error?.message || changeRequestsQ.error?.message;
+  const isEmpty =
+    !routesQ.isLoading &&
+    !changeRequestsQ.isLoading &&
+    recordedRoutes.length === 0 &&
+    awaitingDriverRoutes.length === 0 &&
+    changeRequests.length === 0;
 
-  const openPreview = (route) => {
-    setSaveError('');
-    setPreviewRoute(route);
-  };
-
-  const closePreview = () => {
-    setPreviewRoute(null);
-    setSaveError('');
-  };
+  const openPreview = (route) => { setSaveError(''); setPreviewRoute(route); };
+  const closePreview = () => { setPreviewRoute(null); setSaveError(''); };
 
   const handleNameRoute = async (routeName) => {
     if (!previewRoute) return;
-    setSaving(true);
     setSaveError('');
     try {
-      await adminApi.nameCustomRoute(previewRoute.routeId, { routeName });
+      await nameRouteMut.mutateAsync({ routeId: previewRoute.routeId, payload: { routeName } });
       setPreviewRoute(null);
-      await loadRoutes();
     } catch (err) {
-      setSaveError(err.message || 'Failed to name route');
-    } finally {
-      setSaving(false);
+      setSaveError(err?.message || 'Failed to name route');
     }
   };
 
-  const openComparison = (changeRequest) => {
-    setResolveError('');
-    setSelectedChangeRequest(changeRequest);
-  };
-
-  const closeComparison = () => {
-    setSelectedChangeRequest(null);
-    setResolveError('');
-  };
+  const openComparison = (cr) => { setResolveError(''); setSelectedChangeRequest(cr); };
+  const closeComparison = () => { setSelectedChangeRequest(null); setResolveError(''); };
 
   const handleResolve = async (resolution) => {
     if (!selectedChangeRequest) return;
-    setResolving(true);
     setResolveError('');
     try {
-      await adminApi.resolveRouteChangeRequest(selectedChangeRequest._id, { resolution });
+      await resolveM.mutateAsync({ id: selectedChangeRequest._id, payload: { resolution } });
       setSelectedChangeRequest(null);
-      await loadChangeRequests();
     } catch (err) {
-      setResolveError(err.message || 'Failed to resolve route change request');
-    } finally {
-      setResolving(false);
+      setResolveError(err?.message || 'Failed to resolve route change request');
     }
   };
 
   return (
-    <Box sx={{ display: 'grid', gap: 2.5 }}>
-      <Box sx={{ display: 'grid', gap: 1 }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: '#344767' }}>
-          Route Approvals
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#67748e' }}>
-          Recorded custom routes from your drivers, waiting to be named and activated.
-        </Typography>
-      </Box>
+    <div className="space-y-6">
+      <PageHeader
+        title="Route Approvals"
+        description="Recorded custom routes from your drivers, waiting to be named and activated."
+      />
 
-      {error ? <Alert severity="error">{error}</Alert> : null}
-
-      {!loading && recordedRoutes.length === 0 && awaitingDriverRoutes.length === 0 && changeRequests.length === 0 ? (
-        <Alert severity="info">No custom routes are pending right now.</Alert>
-      ) : null}
-
-      {changeRequests.length > 0 && (
-        <Box sx={{ display: 'grid', gap: 1 }}>
-          <Typography variant="subtitle2" sx={{ color: '#67748e', fontWeight: 800 }}>
-            Route Change Requests
-          </Typography>
-          <Grid container spacing={2}>
-            {changeRequests.map((cr) => (
-              <Grid key={cr._id} size={{ xs: 12, md: 6, lg: 4 }}>
-                <Card sx={{ border: '1px solid rgba(234, 179, 8, 0.4)' }}>
-                  <CardContent sx={{ display: 'grid', gap: 1 }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography variant="subtitle1" fontWeight={800}>
-                        {cr.currentRouteId?.routeName || cr.currentRouteId?.routeId || 'Route'}
-                      </Typography>
-                      <Chip label="Off-route" color="warning" size="small" />
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary">
-                      Max deviation {Math.round(cr.deviation?.maxMeters || 0)} m &middot; {Math.round((cr.deviation?.fractionOff || 0) * 100)}% off-route
-                    </Typography>
-                    <Button variant="contained" size="small" onClick={() => openComparison(cr)}>
-                      Review Diff
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
+      {queryError && (
+        <Alert variant="destructive">
+          <AlertDescription>{queryError}</AlertDescription>
+        </Alert>
       )}
 
-      {recordedRoutes.length > 0 && (
-        <Grid container spacing={2}>
-          {recordedRoutes.map((route) => (
-            <Grid key={route.routeId} size={{ xs: 12, md: 6, lg: 4 }}>
-              <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.24)' }}>
-                <CardContent sx={{ display: 'grid', gap: 1 }}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Typography variant="subtitle1" fontWeight={800}>{route.routeId}</Typography>
-                    <Chip label="Recorded" color="success" size="small" />
-                  </Stack>
-                  <Typography variant="body2" color="text.secondary">
-                    {route.distance ?? 0} km &middot; {route.stopsCount ?? 0} stops
-                  </Typography>
-                  <Button variant="contained" size="small" onClick={() => openPreview(route)}>
-                    Review & Name
+      {isEmpty && (
+        <Alert>
+          <AlertDescription>No custom routes are pending right now.</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Change requests */}
+      {changeRequests.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+            Route Change Requests
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {changeRequests.map((cr) => (
+              <Card key={cr._id} className="border-yellow-400/40">
+                <CardContent className="pt-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-sm">
+                      {cr.currentRouteId?.routeName || cr.currentRouteId?.routeId || 'Route'}
+                    </span>
+                    <Badge variant="outline" className="text-yellow-600 border-yellow-400">Off-route</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Max deviation {Math.round(cr.deviation?.maxMeters || 0)} m &middot;{' '}
+                    {Math.round((cr.deviation?.fractionOff || 0) * 100)}% off-route
+                  </p>
+                  <Button size="sm" className="w-full" onClick={() => openComparison(cr)}>
+                    Review Diff
                   </Button>
                 </CardContent>
               </Card>
-            </Grid>
-          ))}
-        </Grid>
+            ))}
+          </div>
+        </div>
       )}
 
+      {/* Recorded routes ready to name */}
+      {recordedRoutes.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {recordedRoutes.map((route) => (
+            <Card key={route.routeId}>
+              <CardContent className="pt-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-sm">{route.routeId}</span>
+                  <Badge className="bg-status-settled/10 text-status-settled border-status-settled/30">
+                    Recorded
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {route.distance ?? 0} km &middot; {route.stopsCount ?? 0} stops
+                </p>
+                <Button size="sm" className="w-full" onClick={() => openPreview(route)}>
+                  Review &amp; Name
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Awaiting driver recording */}
       {awaitingDriverRoutes.length > 0 && (
-        <Box sx={{ display: 'grid', gap: 1 }}>
-          <Typography variant="subtitle2" sx={{ color: '#67748e', fontWeight: 800 }}>
+        <div className="space-y-3">
+          <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
             Awaiting driver recording
-          </Typography>
-          <Grid container spacing={2}>
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {awaitingDriverRoutes.map((route) => (
-              <Grid key={route.routeId} size={{ xs: 12, md: 6, lg: 4 }}>
-                <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.18)', boxShadow: 'none' }}>
-                  <CardContent sx={{ display: 'grid', gap: 0.5 }}>
-                    <Typography variant="subtitle1" fontWeight={800}>{route.routeId}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      The assigned driver hasn't recorded this route yet.
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
+              <Card key={route.routeId} className="opacity-70">
+                <CardContent className="pt-4 space-y-1">
+                  <span className="font-semibold text-sm">{route.routeId}</span>
+                  <p className="text-xs text-muted-foreground">
+                    The assigned driver hasn&apos;t recorded this route yet.
+                  </p>
+                </CardContent>
+              </Card>
             ))}
-          </Grid>
-        </Box>
+          </div>
+        </div>
       )}
 
       <CustomRoutePreviewModal
         open={Boolean(previewRoute)}
         route={previewRoute}
-        saving={saving}
+        saving={nameRouteMut.isPending}
         error={saveError}
         onClose={closePreview}
         onSubmit={handleNameRoute}
@@ -203,11 +172,11 @@ export function ManagerRouteApprovalsPage({ refreshSignal }) {
       <RouteComparisonPanel
         open={Boolean(selectedChangeRequest)}
         changeRequest={selectedChangeRequest}
-        resolving={resolving}
+        resolving={resolveM.isPending}
         error={resolveError}
         onClose={closeComparison}
         onResolve={handleResolve}
       />
-    </Box>
+    </div>
   );
 }

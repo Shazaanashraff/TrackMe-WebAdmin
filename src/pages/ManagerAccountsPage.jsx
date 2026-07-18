@@ -1,161 +1,148 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, Box, Button, Card, CardContent, MenuItem, TextField, Typography } from '@mui/material';
-import Grid from '@mui/material/Grid';
-import { adminApi } from '../api';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { PageHeader } from '@/components/shared/page-header';
+import { StatCard } from '@/components/shared/stat-card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useManagerBuses } from '@/hooks/use-buses';
+import { useResetBusAccountPassword } from '@/hooks/use-buses';
 
-export function ManagerAccountsPage({ refreshSignal }) {
-  const [buses, setBuses] = useState([]);
+export function ManagerAccountsPage() {
   const [selectedBusId, setSelectedBusId] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [formError, setFormError] = useState(null);
 
-  const loadBuses = useCallback(async () => {
-    try {
-      const response = await adminApi.getManagerBuses();
-      const rows = response.data || [];
-      setBuses(rows);
-      if (rows.length > 0 && !selectedBusId) {
-        setSelectedBusId(rows[0].busId);
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to load buses');
-    }
-  }, [selectedBusId]);
+  const busesQ = useManagerBuses();
+  const resetM = useResetBusAccountPassword();
 
+  const buses = busesQ.data?.data || [];
+
+  // Auto-select first bus
   useEffect(() => {
-    loadBuses();
-  }, [loadBuses, refreshSignal]);
+    if (buses.length > 0 && !selectedBusId) {
+      setSelectedBusId(buses[0].busId);
+    }
+  }, [buses, selectedBusId]);
 
-  const handleReset = async (event) => {
-    event.preventDefault();
-    if (!selectedBusId) return;
+  const selectedBus = buses.find((b) => b.busId === selectedBusId);
 
-    setLoading(true);
-    setError('');
-    setSuccess('');
+  const handleReset = async (e) => {
+    e.preventDefault();
+    setFormError(null);
+    if (!selectedBusId) { setFormError('Please select a bus.'); return; }
+    if (!password.trim()) { setFormError('New password is required.'); return; }
+    if (password.length < 8) { setFormError('Password must be at least 8 characters.'); return; }
+
     try {
-      await adminApi.resetManagerBusAccountPassword(selectedBusId, { password });
+      await resetM.mutateAsync({ busId: selectedBusId, payload: { password } });
       setPassword('');
-      setSuccess('Bus account password updated successfully');
+      toast('Bus account password updated successfully');
     } catch (err) {
-      setError(err.message || 'Failed to update password');
-    } finally {
-      setLoading(false);
+      setFormError(err?.message || 'Failed to update password');
     }
   };
 
-  const selectedBus = buses.find((bus) => bus.busId === selectedBusId);
-
   return (
-    <Box sx={{ display: 'grid', gap: 2.5 }}>
-      <Box sx={{ display: 'grid', gap: 0.8 }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: '#344767' }}>
-          Account Management
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#67748e' }}>
-          Rotate bus account credentials securely when driver assignments change.
-        </Typography>
-      </Box>
+    <div className="space-y-6">
+      <PageHeader
+        title="Account Management"
+        description="Rotate bus account credentials securely when driver assignments change."
+      />
 
-      <Grid container spacing={2}>
-        {[
-          { label: 'Managed Buses', value: buses.length },
-          { label: 'Selected Bus', value: selectedBusId || 'None' },
-          { label: 'Password Policy', value: 'Min 8 chars' },
-        ].map((item) => (
-          <Grid key={item.label} size={{ xs: 12, sm: 4 }}>
-            <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.2)' }}>
-              <CardContent sx={{ py: 2 }}>
-                <Typography variant="caption" sx={{ color: '#67748e', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>
-                  {item.label}
-                </Typography>
-                <Typography variant="h6" sx={{ color: '#344767', fontWeight: 800, mt: 0.8 }}>
-                  {item.value}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard label="Managed Buses" value={buses.length} isLoading={busesQ.isLoading} />
+        <StatCard label="Selected Bus" value={selectedBusId || 'None'} isLoading={busesQ.isLoading} />
+        <StatCard label="Password Policy" value="Min 8 chars" />
+      </div>
 
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, lg: 7 }}>
-          <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.24)' }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.6 }}>
-                Reset Bus Account Password
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Reset form */}
+        <div className="lg:col-span-3">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Reset Bus Account Password</CardTitle>
+              <CardDescription>
                 Select a bus account and set a new credential for the assigned operator.
-              </Typography>
-
-              {error ? <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert> : null}
-              {success ? <Alert severity="success" sx={{ mb: 1.5 }}>{success}</Alert> : null}
-
-              <Box component="form" onSubmit={handleReset} sx={{ display: 'grid', gap: 1.5, maxWidth: 520 }}>
-                <TextField
-                  select
-                  label="Bus"
-                  size="small"
-                  value={selectedBusId}
-                  onChange={(e) => setSelectedBusId(e.target.value)}
-                  required
-                >
-                  {buses.map((bus) => (
-                    <MenuItem key={bus._id} value={bus.busId}>{bus.busName} ({bus.busId})</MenuItem>
-                  ))}
-                </TextField>
-
-                <TextField
-                  label="New Password"
-                  type="password"
-                  size="small"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  helperText="Use at least 8 characters."
-                  required
-                />
-
-                <Button type="submit" variant="contained" disabled={loading}>
-                  {loading ? 'Updating...' : 'Update Password'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {formError && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{formError}</AlertDescription>
+                </Alert>
+              )}
+              <form onSubmit={handleReset} className="space-y-4 max-w-md">
+                <div className="space-y-1.5">
+                  <Label htmlFor="acc-bus">Bus</Label>
+                  <Select value={selectedBusId} onValueChange={setSelectedBusId}>
+                    <SelectTrigger id="acc-bus">
+                      <SelectValue placeholder="Select a bus" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {buses.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">No buses found</div>
+                      ) : (
+                        buses.map((bus) => (
+                          <SelectItem key={bus._id || bus.busId} value={bus.busId}>
+                            {bus.busName} ({bus.busId})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="acc-pw">New Password</Label>
+                  <Input
+                    id="acc-pw"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Min 8 characters"
+                  />
+                </div>
+                <Button type="submit" disabled={resetM.isPending}>
+                  {resetM.isPending ? 'Updating…' : 'Update Password'}
                 </Button>
-              </Box>
+              </form>
             </CardContent>
           </Card>
-        </Grid>
+        </div>
 
-        <Grid size={{ xs: 12, lg: 5 }}>
-          <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.24)', height: '100%' }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#344767', mb: 1 }}>
-                Selected Account Context
-              </Typography>
-              <Box sx={{ display: 'grid', gap: 1.1 }}>
-                <Typography variant="body2" sx={{ color: '#344767' }}>
-                  <strong>Bus:</strong> {selectedBus?.busName || 'Not selected'}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#344767' }}>
-                  <strong>Bus ID:</strong> {selectedBusId || 'N/A'}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#344767' }}>
-                  <strong>Number Plate:</strong> {selectedBus?.numberPlate || 'N/A'}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#344767' }}>
-                  <strong>Route:</strong> {selectedBus?.routeId || 'N/A'}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#344767' }}>
-                  <strong>Driver Email:</strong> {selectedBus?.driverId?.email || 'N/A'}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#67748e', mt: 1 }}>
-                  Tip: update this password immediately when a driver handover happens.
-                </Typography>
-              </Box>
+        {/* Context panel */}
+        <div className="lg:col-span-2">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="text-base">Selected Account Context</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="space-y-2 text-sm">
+                {[
+                  { label: 'Bus', value: selectedBus?.busName || 'Not selected' },
+                  { label: 'Bus ID', value: selectedBusId || 'N/A' },
+                  { label: 'Number Plate', value: selectedBus?.numberPlate || 'N/A' },
+                  { label: 'Route', value: selectedBus?.routeId || 'N/A' },
+                  { label: 'Driver Email', value: selectedBus?.driverId?.email || 'N/A' },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex gap-1.5">
+                    <dt className="font-semibold shrink-0">{label}:</dt>
+                    <dd className="text-muted-foreground">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="text-xs text-muted-foreground mt-4">
+                Tip: update this password immediately when a driver handover happens.
+              </p>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
-    </Box>
+        </div>
+      </div>
+    </div>
   );
 }

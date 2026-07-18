@@ -1,25 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { ManagerRouteApprovalsPage } from '../ManagerRouteApprovalsPage';
-import { adminApi } from '../../api';
 
-vi.mock('../../api', () => ({
-  adminApi: {
-    getManagerCustomRoutes: vi.fn(),
-    nameCustomRoute: vi.fn(() => Promise.resolve({ success: true, data: { status: 'ACTIVE' } })),
-    getRouteChangeRequests: vi.fn(() => Promise.resolve({ data: [] })),
-    resolveRouteChangeRequest: vi.fn(() => Promise.resolve({ success: true }))
-  }
-}));
-
-// react-leaflet needs real layout/ResizeObserver to render a tile map — that's
-// not the behavior under test here, so stub it with plain divs.
+// react-leaflet needs real layout/ResizeObserver — stub with plain divs
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }) => <div data-testid="map-container">{children}</div>,
   TileLayer: () => null,
   Polyline: () => null,
-  Marker: () => null
+  Marker: () => null,
 }));
+
+vi.mock('@/hooks/use-route-approvals', () => ({
+  useManagerCustomRoutes: vi.fn(),
+  useRouteChangeRequests: vi.fn(),
+  useNameCustomRoute: vi.fn(),
+  useResolveRouteChangeRequest: vi.fn(),
+}));
+
+import {
+  useManagerCustomRoutes,
+  useRouteChangeRequests,
+  useNameCustomRoute,
+  useResolveRouteChangeRequest,
+} from '@/hooks/use-route-approvals';
 
 const RECORDED_ROUTE = {
   routeId: 'CUST-ABC123-1',
@@ -27,34 +31,64 @@ const RECORDED_ROUTE = {
   stopsCount: 3,
   pathPolyline: '_p~iF~ps|U_ulLnnqC',
   stops: [{ lat: 6.9271, lng: 79.8612, stopName: 'Stop 1' }],
-  recordedMeta: { snapped: true }
+  recordedMeta: { snapped: true },
 };
 
 const PENDING_UNRECORDED_ROUTE = {
   routeId: 'CUST-ABC123-2',
   distance: 0,
   stopsCount: 0,
-  pathPolyline: ''
+  pathPolyline: '',
 };
 
 const CHANGE_REQUEST = {
   _id: 'crq-1',
-  currentRouteId: { routeId: 'CUST-ABC123-1', routeName: 'Morning School Run', pathPolyline: '_p~iF~ps|U_ulLnnqC', stops: [], distance: 4.2 },
+  currentRouteId: {
+    routeId: 'CUST-ABC123-1',
+    routeName: 'Morning School Run',
+    pathPolyline: '_p~iF~ps|U_ulLnnqC',
+    stops: [],
+    distance: 4.2,
+  },
   candidate: { pathPolyline: '_ulLnnqC_mqNvxq`@', stops: [], distance: 4.6, snapped: true },
   deviation: { maxMeters: 220, fractionOff: 0.5, sampleCount: 10 },
-  status: 'PENDING'
+  status: 'PENDING',
 };
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  adminApi.getManagerCustomRoutes.mockResolvedValue({ data: [] });
-  adminApi.getRouteChangeRequests.mockResolvedValue({ data: [] });
-});
+function makeMutation(overrides = {}) {
+  return { mutateAsync: vi.fn().mockResolvedValue({}), isPending: false, ...overrides };
+}
+
+function defaultHooks({
+  routes = [], changeRequests = [], routesError = null, crError = null,
+  nameMut, resolveMut,
+} = {}) {
+  useManagerCustomRoutes.mockReturnValue({
+    data: { data: routes },
+    isLoading: false,
+    isError: Boolean(routesError),
+    error: routesError,
+  });
+  useRouteChangeRequests.mockReturnValue({
+    data: { data: changeRequests },
+    isLoading: false,
+    isError: Boolean(crError),
+    error: crError,
+  });
+  useNameCustomRoute.mockReturnValue(nameMut || makeMutation());
+  useResolveRouteChangeRequest.mockReturnValue(resolveMut || makeMutation());
+}
+
+function setup(opts) {
+  defaultHooks(opts);
+  render(<MemoryRouter><ManagerRouteApprovalsPage /></MemoryRouter>);
+}
 
 describe('ManagerRouteApprovalsPage', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
   it('renders recorded routes as reviewable and unrecorded ones separately', async () => {
-    adminApi.getManagerCustomRoutes.mockResolvedValue({ data: [RECORDED_ROUTE, PENDING_UNRECORDED_ROUTE] });
-    render(<ManagerRouteApprovalsPage />);
+    setup({ routes: [RECORDED_ROUTE, PENDING_UNRECORDED_ROUTE] });
 
     await waitFor(() => expect(screen.getByText('CUST-ABC123-1')).toBeTruthy());
     expect(screen.getByText('CUST-ABC123-2')).toBeTruthy();
@@ -63,15 +97,14 @@ describe('ManagerRouteApprovalsPage', () => {
   });
 
   it('shows an empty state when there are no pending routes', async () => {
-    adminApi.getManagerCustomRoutes.mockResolvedValue({ data: [] });
-    render(<ManagerRouteApprovalsPage />);
+    setup({ routes: [], changeRequests: [] });
 
     await waitFor(() => expect(screen.getByText(/no custom routes are pending/i)).toBeTruthy());
   });
 
   it('opens the preview modal, validates the name field, and calls nameCustomRoute on submit', async () => {
-    adminApi.getManagerCustomRoutes.mockResolvedValue({ data: [RECORDED_ROUTE] });
-    render(<ManagerRouteApprovalsPage />);
+    const nameMut = makeMutation();
+    setup({ routes: [RECORDED_ROUTE], nameMut });
 
     await waitFor(() => expect(screen.getByText('CUST-ABC123-1')).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: /review & name/i }));
@@ -80,7 +113,7 @@ describe('ManagerRouteApprovalsPage', () => {
     const nameField = dialog.getByTestId('route-name-input');
     const activateButton = dialog.getByRole('button', { name: /name & activate/i });
 
-    // Empty name — the activate action stays disabled.
+    // Empty name — the activate button stays disabled
     expect(activateButton).toBeDisabled();
 
     fireEvent.change(nameField, { target: { value: 'Morning School Run' } });
@@ -88,14 +121,20 @@ describe('ManagerRouteApprovalsPage', () => {
 
     fireEvent.click(activateButton);
 
-    await waitFor(() => expect(adminApi.nameCustomRoute).toHaveBeenCalledWith('CUST-ABC123-1', { routeName: 'Morning School Run' }));
+    await waitFor(() =>
+      expect(nameMut.mutateAsync).toHaveBeenCalledWith({
+        routeId: 'CUST-ABC123-1',
+        payload: { routeName: 'Morning School Run' },
+      })
+    );
   });
 });
 
-describe('ManagerRouteApprovalsPage — route change requests (Phase 2)', () => {
+describe('ManagerRouteApprovalsPage — route change requests', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
   it('lists pending route change requests', async () => {
-    adminApi.getRouteChangeRequests.mockResolvedValue({ data: [CHANGE_REQUEST] });
-    render(<ManagerRouteApprovalsPage />);
+    setup({ changeRequests: [CHANGE_REQUEST] });
 
     await waitFor(() => expect(screen.getByText('Morning School Run')).toBeTruthy());
     expect(screen.getByText(/220 m/)).toBeTruthy();
@@ -103,8 +142,7 @@ describe('ManagerRouteApprovalsPage — route change requests (Phase 2)', () => 
   });
 
   it('opens the comparison panel showing both routes and deviation stats', async () => {
-    adminApi.getRouteChangeRequests.mockResolvedValue({ data: [CHANGE_REQUEST] });
-    render(<ManagerRouteApprovalsPage />);
+    setup({ changeRequests: [CHANGE_REQUEST] });
 
     await waitFor(() => expect(screen.getByText('Morning School Run')).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: /review diff/i }));
@@ -115,9 +153,9 @@ describe('ManagerRouteApprovalsPage — route change requests (Phase 2)', () => 
     expect(dialog.getByText(/50% of points off-route/)).toBeTruthy();
   });
 
-  it('calls resolveRouteChangeRequest with ADOPT_NEW and refreshes the list', async () => {
-    adminApi.getRouteChangeRequests.mockResolvedValueOnce({ data: [CHANGE_REQUEST] }).mockResolvedValue({ data: [] });
-    render(<ManagerRouteApprovalsPage />);
+  it('calls resolveRouteChangeRequest with ADOPT_NEW', async () => {
+    const resolveMut = makeMutation();
+    setup({ changeRequests: [CHANGE_REQUEST], resolveMut });
 
     await waitFor(() => expect(screen.getByText('Morning School Run')).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: /review diff/i }));
@@ -125,12 +163,17 @@ describe('ManagerRouteApprovalsPage — route change requests (Phase 2)', () => 
     const dialog = within(screen.getByRole('dialog'));
     fireEvent.click(dialog.getByRole('button', { name: /adopt new/i }));
 
-    await waitFor(() => expect(adminApi.resolveRouteChangeRequest).toHaveBeenCalledWith('crq-1', { resolution: 'ADOPT_NEW' }));
+    await waitFor(() =>
+      expect(resolveMut.mutateAsync).toHaveBeenCalledWith({
+        id: 'crq-1',
+        payload: { resolution: 'ADOPT_NEW' },
+      })
+    );
   });
 
   it('calls resolveRouteChangeRequest with KEEP_OLD', async () => {
-    adminApi.getRouteChangeRequests.mockResolvedValueOnce({ data: [CHANGE_REQUEST] }).mockResolvedValue({ data: [] });
-    render(<ManagerRouteApprovalsPage />);
+    const resolveMut = makeMutation();
+    setup({ changeRequests: [CHANGE_REQUEST], resolveMut });
 
     await waitFor(() => expect(screen.getByText('Morning School Run')).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: /review diff/i }));
@@ -138,6 +181,11 @@ describe('ManagerRouteApprovalsPage — route change requests (Phase 2)', () => 
     const dialog = within(screen.getByRole('dialog'));
     fireEvent.click(dialog.getByRole('button', { name: /keep current/i }));
 
-    await waitFor(() => expect(adminApi.resolveRouteChangeRequest).toHaveBeenCalledWith('crq-1', { resolution: 'KEEP_OLD' }));
+    await waitFor(() =>
+      expect(resolveMut.mutateAsync).toHaveBeenCalledWith({
+        id: 'crq-1',
+        payload: { resolution: 'KEEP_OLD' },
+      })
+    );
   });
 });

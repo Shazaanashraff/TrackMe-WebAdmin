@@ -90,7 +90,7 @@ function NavItem({ item, active, collapsed, badge, onNavigate }) {
 function SidebarNav({ navItems, location, collapsed, onLogout, onNavigate, pendingCount }) {
   return (
     <>
-      <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
+      <nav aria-label="Main navigation" className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
         {navItems.map((item) => (
           <NavItem
             key={item.path}
@@ -175,6 +175,7 @@ export function AppShell({ user, onLogout, onRefresh }) {
 
         {/* Desktop sidebar card */}
         <aside
+          aria-label="Sidebar"
           className={cn(
             'hidden md:flex flex-col bg-surface border border-border rounded-2xl shadow-float shrink-0 overflow-hidden transition-all duration-200',
             collapsed ? 'w-14' : 'w-56',

@@ -1,458 +1,469 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { Plus, Bus, CheckCircle, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { PageHeader } from '@/components/shared/page-header';
+import { StatCard } from '@/components/shared/stat-card';
+import { DataTable } from '@/components/shared/data-table';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  MenuItem,
-  Step,
-  StepLabel,
-  Stepper,
-  Stack,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-  Typography
-} from '@mui/material';
-import Grid from '@mui/material/Grid';
-import { DataGrid } from '@mui/x-data-grid';
-import { adminApi } from '../api';
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  useManagerBuses,
+  useManagerAssignableRoutes,
+  useCreateBusAccountRequest,
+  useUpdateManagerBus,
+  useRequestDeleteBus,
+} from '@/hooks/use-buses';
 
 const SERVICE_TYPES = ['PUBLIC', 'SCHOOL', 'UNIVERSITY', 'OFFICE'];
 const BUS_TYPES = ['AC', 'NON-AC', 'DELUXE', 'SLEEPER'];
+const MAINTENANCE_STATUSES = ['ACTIVE', 'MAINTENANCE', 'OUT_OF_SERVICE'];
 const CREATE_STEPS = ['Bus Details', 'Driver & Access', 'Review & Submit'];
 
-const emptyCreateForm = {
-  busId: '',
-  busName: '',
-  numberPlate: '',
-  routeMode: 'EXISTING',
-  routeId: '',
-  seatCapacity: 40,
-  busType: 'AC',
-  serviceType: 'PUBLIC',
-  bookingEnabled: true,
-  driverName: '',
-  driverEmail: '',
-  driverPhoneNumber: '',
-  driverNicNumber: '',
-  driverLicenseCardNumber: '',
-  password: '',
-  reason: ''
+const EMPTY_CREATE = {
+  busId: '', busName: '', numberPlate: '',
+  routeMode: 'EXISTING', routeId: '',
+  seatCapacity: 40, busType: 'AC', serviceType: 'PUBLIC',
+  driverName: '', driverEmail: '', driverPhoneNumber: '',
+  driverNicNumber: '', driverLicenseCardNumber: '',
+  password: '', reason: '',
 };
 
-export function ManagerBusesPage({ refreshSignal }) {
-  const [buses, setBuses] = useState([]);
-  const [routes, setRoutes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+function validateStep(form, step) {
+  if (step === 0) {
+    if (!form.busId.trim() || !form.busName.trim() || !form.numberPlate.trim()) {
+      return form.routeMode === 'CUSTOM'
+        ? 'Please complete Bus ID, Bus Name, and Number Plate.'
+        : 'Please complete Bus ID, Bus Name, Number Plate, and Route.';
+    }
+    if (form.routeMode !== 'CUSTOM' && !form.routeId) {
+      return 'Please select a route.';
+    }
+    if (!Number(form.seatCapacity) || Number(form.seatCapacity) <= 0) {
+      return 'Seat capacity must be a positive number.';
+    }
+  }
+  if (step === 1) {
+    if (!form.password.trim()) return 'Initial password is required.';
+    if (form.driverEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.driverEmail)) {
+      return 'Driver email format looks invalid.';
+    }
+  }
+  return null;
+}
 
-  const [createForm, setCreateForm] = useState(emptyCreateForm);
-  const [creating, setCreating] = useState(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [activeCreateStep, setActiveCreateStep] = useState(0);
-  const [createFormError, setCreateFormError] = useState('');
+export function ManagerBusesPage() {
+  const busesQ = useManagerBuses();
+  const routesQ = useManagerAssignableRoutes();
+  const createM = useCreateBusAccountRequest();
+  const updateBusM = useUpdateManagerBus();
+  const deleteReqM = useRequestDeleteBus();
 
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createStep, setCreateStep] = useState(0);
+  const [createForm, setCreateForm] = useState(EMPTY_CREATE);
+  const [createError, setCreateError] = useState(null);
+
   const [editBus, setEditBus] = useState(null);
   const [editForm, setEditForm] = useState({});
-  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState(null);
 
-  const loadBuses = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const [deleteTarget, setDeleteTarget] = useState(null); // bus object
+
+  const buses = busesQ.data?.data || [];
+  const routes = routesQ.data?.data || [];
+
+  const summary = useMemo(() => {
+    const total = buses.length;
+    const active = buses.filter((b) => b.isActive !== false).length;
+    return { total, active, inactive: total - active };
+  }, [buses]);
+
+  const setCreate = (key) => (e) => setCreateForm((p) => ({ ...p, [key]: e.target.value }));
+
+  const openCreate = () => {
+    setCreateForm(EMPTY_CREATE);
+    setCreateStep(0);
+    setCreateError(null);
+    setCreateOpen(true);
+  };
+
+  const closeCreate = () => {
+    if (createM.isPending) return;
+    setCreateOpen(false);
+    setCreateForm(EMPTY_CREATE);
+    setCreateStep(0);
+    setCreateError(null);
+  };
+
+  const handleNext = () => {
+    const err = validateStep(createForm, createStep);
+    if (err) { setCreateError(err); return; }
+    setCreateError(null);
+    setCreateStep((s) => Math.min(s + 1, 2));
+  };
+
+  const handleBack = () => {
+    setCreateError(null);
+    setCreateStep((s) => Math.max(s - 1, 0));
+  };
+
+  const handleSubmit = async () => {
     try {
-      const response = await adminApi.getManagerBuses();
-      setBuses(response.data || []);
+      await createM.mutateAsync({ ...createForm, seatCapacity: Number(createForm.seatCapacity) });
+      toast('Bus account request submitted');
+      closeCreate();
     } catch (err) {
-      setError(err.message || 'Failed to load buses');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const loadRoutes = useCallback(async () => {
-    try {
-      // Includes public routes + this manager's own named private custom routes.
-      const response = await adminApi.getManagerAssignableRoutes();
-      setRoutes(response.data || []);
-    } catch (err) {
-      setError(err.message || 'Failed to load available routes');
-    }
-  }, []);
-
-  useEffect(() => {
-    loadBuses();
-  }, [loadBuses, refreshSignal]);
-
-  useEffect(() => {
-    loadRoutes();
-  }, [loadRoutes, refreshSignal]);
-
-  const handleCreateRequest = async (event) => {
-    if (event) event.preventDefault();
-    setCreating(true);
-    setError('');
-    setCreateFormError('');
-    try {
-      await adminApi.createBusAccountRequest({
-        ...createForm,
-        seatCapacity: Number(createForm.seatCapacity)
-      });
-      setCreateForm(emptyCreateForm);
-      setActiveCreateStep(0);
-      setCreateDialogOpen(false);
-      await loadBuses();
-    } catch (err) {
-      setError(err.message || 'Failed to submit bus account request');
-    } finally {
-      setCreating(false);
+      setCreateError(err);
     }
   };
 
-  const openEditDialog = (bus) => {
+  const openEdit = (bus) => {
     setEditBus(bus);
     setEditForm({
-      busName: bus.busName,
-      numberPlate: bus.numberPlate,
-      registrationNumber: bus.registrationNumber,
-      routeId: bus.routeId,
-      seatCapacity: bus.seatCapacity,
-      busType: bus.busType,
-      serviceType: bus.serviceType,
-      isActive: bus.isActive,
-      maintenanceStatus: bus.maintenanceStatus
+      busName: bus.busName || '',
+      numberPlate: bus.numberPlate || '',
+      routeId: bus.routeId || '',
+      seatCapacity: bus.seatCapacity || 40,
+      busType: bus.busType || 'AC',
+      serviceType: bus.serviceType || 'PUBLIC',
+      isActive: bus.isActive !== false,
+      maintenanceStatus: bus.maintenanceStatus || 'ACTIVE',
     });
-    setEditDialogOpen(true);
+    setEditError(null);
   };
 
   const handleSaveEdit = async () => {
     if (!editBus) return;
-    setSavingEdit(true);
-    setError('');
+    setEditError(null);
     try {
-      await adminApi.updateManagerBus(editBus.busId, {
-        ...editForm,
-        seatCapacity: Number(editForm.seatCapacity)
+      await updateBusM.mutateAsync({
+        busId: editBus.busId,
+        payload: { ...editForm, seatCapacity: Number(editForm.seatCapacity) },
       });
-      setEditDialogOpen(false);
+      toast('Bus updated');
       setEditBus(null);
-      await loadBuses();
     } catch (err) {
-      setError(err.message || 'Failed to update bus');
-    } finally {
-      setSavingEdit(false);
+      setEditError(err);
     }
   };
 
-  const handleDeleteRequest = async (busId) => {
-    const reason = window.prompt('Reason for deletion request (optional):') || '';
-    setError('');
+  const handleDeleteConfirm = async (reason) => {
+    if (!deleteTarget) return;
     try {
-      await adminApi.requestDeleteBus(busId, { reason });
-      await loadBuses();
+      await deleteReqM.mutateAsync({ busId: deleteTarget.busId, payload: { reason: reason || '' } });
+      toast('Delete request submitted');
+      setDeleteTarget(null);
     } catch (err) {
-      setError(err.message || 'Failed to submit delete request');
+      toast(`Failed: ${err?.message || 'Unknown error'}`);
+      setDeleteTarget(null);
     }
   };
 
   const columns = useMemo(() => [
-    { field: 'busId', headerName: 'Bus ID', width: 120 },
-    { field: 'busName', headerName: 'Bus Name', flex: 1, minWidth: 160 },
-    { field: 'numberPlate', headerName: 'Number Plate', width: 150 },
-    { field: 'routeId', headerName: 'Route', width: 120 },
-    { field: 'serviceType', headerName: 'Service', width: 120 },
-    { field: 'isActive', headerName: 'State', width: 100, valueGetter: (_v, row) => row.isActive ? 'Active' : 'Inactive' },
+    { id: 'busId', header: 'Bus ID', accessorKey: 'busId' },
+    { id: 'busName', header: 'Bus Name', accessorKey: 'busName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
+    { id: 'plate', header: 'Plate', accessorKey: 'numberPlate' },
+    { id: 'route', header: 'Route', accessorKey: 'routeId' },
+    { id: 'service', header: 'Service', accessorKey: 'serviceType' },
+    { id: 'state', header: 'Status', accessorKey: 'isActive', enableSorting: false, cell: (i) => <StatusBadge status={i.getValue() !== false ? 'active' : 'inactive'} /> },
     {
-      field: 'actions',
-      headerName: 'Actions',
-      width: 210,
-      sortable: false,
-      filterable: false,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1}>
-          <Button size="small" variant="outlined" onClick={() => openEditDialog(params.row)}>Edit</Button>
-          <Button size="small" color="warning" variant="outlined" onClick={() => handleDeleteRequest(params.row.busId)}>Delete Req</Button>
-        </Stack>
-      )
-    }
+      id: 'actions', header: '', accessorKey: '_id', enableSorting: false,
+      cell: (i) => {
+        const bus = i.row.original;
+        return (
+          <div className="flex gap-1.5">
+            <Button size="sm" variant="outline" onClick={() => openEdit(bus)}>Edit</Button>
+            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(bus)}>Delete Req</Button>
+          </div>
+        );
+      },
+    },
   ], []);
 
-  const summary = useMemo(() => {
-    const total = buses.length;
-    const active = buses.filter((bus) => bus.isActive).length;
-    const inactive = total - active;
-    return { total, active, inactive };
-  }, [buses]);
-
-  const validateCreateStep = (step) => {
-    if (step === 0) {
-      const isCustomRoute = createForm.routeMode === 'CUSTOM';
-      if (!createForm.busId || !createForm.busName || !createForm.numberPlate || (!isCustomRoute && !createForm.routeId)) {
-        return isCustomRoute
-          ? 'Please complete Bus ID, Bus Name, and Number Plate.'
-          : 'Please complete Bus ID, Bus Name, Number Plate, and Route.';
-      }
-      if (!Number(createForm.seatCapacity) || Number(createForm.seatCapacity) <= 0) {
-        return 'Seat capacity should be a valid positive number.';
-      }
-    }
-    if (step === 1) {
-      if (!createForm.password) {
-        return 'Initial password is required before submitting the request.';
-      }
-      if (createForm.driverEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(createForm.driverEmail)) {
-        return 'Driver email format looks invalid.';
-      }
-    }
-    return '';
-  };
-
-  const handleNextStep = () => {
-    const validationMessage = validateCreateStep(activeCreateStep);
-    if (validationMessage) {
-      setCreateFormError(validationMessage);
-      return;
-    }
-    setCreateFormError('');
-    setActiveCreateStep((prev) => Math.min(prev + 1, CREATE_STEPS.length - 1));
-  };
-
-  const handleBackStep = () => {
-    setCreateFormError('');
-    setActiveCreateStep((prev) => Math.max(prev - 1, 0));
-  };
-
-  const handleOpenCreateDialog = () => {
-    setCreateFormError('');
-    setCreateDialogOpen(true);
-  };
-
-  const handleCloseCreateDialog = () => {
-    if (creating) return;
-    setCreateDialogOpen(false);
-    setCreateForm(emptyCreateForm);
-    setActiveCreateStep(0);
-    setCreateFormError('');
-  };
-
   return (
-    <Box sx={{ display: 'grid', gap: 2.5 }}>
-      <Box sx={{ display: 'grid', gap: 1 }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: '#344767' }}>
-          Bus Management
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#67748e' }}>
-          Review managed buses, monitor availability, and submit new bus account requests.
-        </Typography>
-      </Box>
+    <div className="space-y-6">
+      <PageHeader
+        title="Bus Management"
+        description="Review managed buses, monitor availability, and submit new bus account requests."
+        actions={
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Add Bus Request
+          </Button>
+        }
+      />
 
-      <Grid container spacing={2}>
-        {[
-          { label: 'Total Buses', value: summary.total },
-          { label: 'Active Fleet', value: summary.active },
-          { label: 'Inactive Fleet', value: summary.inactive },
-        ].map((item) => (
-          <Grid key={item.label} size={{ xs: 6, md: 3 }}>
-            <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.2)' }}>
-              <CardContent sx={{ py: 2 }}>
-                <Typography variant="caption" sx={{ color: '#67748e', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>
-                  {item.label}
-                </Typography>
-                <Typography variant="h5" sx={{ color: '#344767', fontWeight: 800, mt: 0.8 }}>
-                  {item.value}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatCard label="Total Buses" value={summary.total} icon={Bus} isLoading={busesQ.isLoading} />
+        <StatCard label="Active Fleet" value={summary.active} icon={CheckCircle} isLoading={busesQ.isLoading} />
+        <StatCard label="Inactive Fleet" value={summary.inactive} icon={XCircle} isLoading={busesQ.isLoading} />
+      </div>
 
-      {error ? <Alert severity="error">{error}</Alert> : null}
+      <DataTable
+        columns={columns}
+        data={buses}
+        isLoading={busesQ.isLoading}
+        error={busesQ.error}
+        onRetry={busesQ.refetch}
+        emptyTitle="No buses yet"
+        emptyDescription="Submit a bus account request to get started."
+      />
 
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12 }}>
-          <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.24)' }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-                <Box>
-                  <Typography variant="h6" fontWeight={800}>Managed Buses</Typography>
-                  <Typography variant="body2" color="text.secondary">Primary fleet registry and current operational status.</Typography>
-                </Box>
-                <Button variant="contained" onClick={handleOpenCreateDialog}>
-                  Add Bus Request
-                </Button>
-              </Stack>
-              <DataGrid
-                rows={buses}
-                getRowId={(row) => row._id}
-                loading={loading}
-                columns={columns}
-                autoHeight
-                hideFooter
-                sx={{
-                  border: '1px solid rgba(148, 163, 184, 0.25)',
-                  borderRadius: 2,
-                  '& .MuiDataGrid-columnHeaders': {
-                    backgroundColor: 'rgba(148, 163, 184, 0.08)',
-                  },
-                }}
-              />
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* Multi-step create dialog */}
+      <Dialog open={createOpen} onOpenChange={(v) => { if (!v) closeCreate(); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add Bus Request</DialogTitle>
+            <DialogDescription>
+              Step {createStep + 1} of {CREATE_STEPS.length}: {CREATE_STEPS[createStep]}
+            </DialogDescription>
+          </DialogHeader>
 
-      <Dialog open={createDialogOpen} onClose={handleCloseCreateDialog} fullWidth maxWidth="md">
-        <Box component="form" onSubmit={handleCreateRequest}>
-          <DialogTitle>Add Bus Request</DialogTitle>
-          <DialogContent dividers sx={{ display: 'grid', gap: 1.5, pt: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              Complete each step and submit for superAdmin approval.
-            </Typography>
+          {createError && (
+            <Alert variant="destructive">
+              <AlertDescription>{typeof createError === 'string' ? createError : (createError?.message || 'An error occurred')}</AlertDescription>
+            </Alert>
+          )}
 
-            <Stepper activeStep={activeCreateStep} alternativeLabel sx={{ mb: 0.5 }}>
-              {CREATE_STEPS.map((label) => (
-                <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
+          {/* Step 0: Bus Details */}
+          {createStep === 0 && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-busid">Bus ID</Label>
+                  <Input id="cb-busid" value={createForm.busId} onChange={setCreate('busId')} placeholder="BUS-001" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-busname">Bus Name</Label>
+                  <Input id="cb-busname" value={createForm.busName} onChange={setCreate('busName')} placeholder="Express Kandy" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cb-plate">Number Plate</Label>
+                <Input id="cb-plate" value={createForm.numberPlate} onChange={(e) => setCreateForm((p) => ({ ...p, numberPlate: e.target.value.toUpperCase() }))} placeholder="ABC-1234" />
+              </div>
 
-            {createFormError ? <Alert severity="warning">{createFormError}</Alert> : null}
+              <div className="space-y-2">
+                <Label>Route Assignment</Label>
+                <RadioGroup
+                  value={createForm.routeMode}
+                  onValueChange={(v) => setCreateForm((p) => ({ ...p, routeMode: v, routeId: v === 'CUSTOM' ? '' : p.routeId }))}
+                  className="space-y-1"
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="EXISTING" id="rm-existing" />
+                    <Label htmlFor="rm-existing" className="font-normal cursor-pointer">Existing route</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="CUSTOM" id="rm-custom" />
+                    <Label htmlFor="rm-custom" className="font-normal cursor-pointer">Custom route (driver records)</Label>
+                  </div>
+                </RadioGroup>
+              </div>
 
-            {activeCreateStep === 0 && (
-              <Box sx={{ display: 'grid', gap: 1.2 }}>
-                <TextField size="small" label="Bus ID" value={createForm.busId} onChange={(e) => setCreateForm((p) => ({ ...p, busId: e.target.value }))} required />
-                <TextField size="small" label="Bus Name" value={createForm.busName} onChange={(e) => setCreateForm((p) => ({ ...p, busName: e.target.value }))} required />
-                <TextField size="small" label="Number Plate" value={createForm.numberPlate} onChange={(e) => setCreateForm((p) => ({ ...p, numberPlate: e.target.value.toUpperCase() }))} required />
+              {createForm.routeMode === 'CUSTOM' ? (
+                <Alert>
+                  <AlertDescription>No route needed yet — the driver will record the route by driving it.</AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-route">Route</Label>
+                  <Select value={createForm.routeId} onValueChange={(v) => setCreateForm((p) => ({ ...p, routeId: v }))}>
+                    <SelectTrigger id="cb-route">
+                      <SelectValue placeholder="Select a route" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {routes.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">No routes found</div>
+                      ) : (
+                        routes.map((r) => (
+                          <SelectItem key={r.routeId} value={r.routeId}>
+                            {r.routeName || r.routeId} ({r.routeId}){r.visibility === 'PRIVATE' ? ' — Custom' : ''}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
-                <Box>
-                  <Typography variant="caption" sx={{ color: '#67748e', fontWeight: 700, display: 'block', mb: 0.5 }}>
-                    Route Assignment
-                  </Typography>
-                  <ToggleButtonGroup
-                    exclusive
-                    size="small"
-                    fullWidth
-                    value={createForm.routeMode}
-                    onChange={(_e, value) => value && setCreateForm((p) => ({ ...p, routeMode: value, routeId: value === 'CUSTOM' ? '' : p.routeId }))}
-                  >
-                    <ToggleButton value="EXISTING">Existing route</ToggleButton>
-                    <ToggleButton value="CUSTOM">Custom route (driver records)</ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-seats">Seat Capacity</Label>
+                  <Input id="cb-seats" type="number" min="1" value={createForm.seatCapacity} onChange={setCreate('seatCapacity')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-bustype">Bus Type</Label>
+                  <Select value={createForm.busType} onValueChange={(v) => setCreateForm((p) => ({ ...p, busType: v }))}>
+                    <SelectTrigger id="cb-bustype"><SelectValue /></SelectTrigger>
+                    <SelectContent>{BUS_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-service">Service Type</Label>
+                  <Select value={createForm.serviceType} onValueChange={(v) => setCreateForm((p) => ({ ...p, serviceType: v }))}>
+                    <SelectTrigger id="cb-service"><SelectValue /></SelectTrigger>
+                    <SelectContent>{SERVICE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
 
-                {createForm.routeMode === 'CUSTOM' ? (
-                  <Alert severity="info">
-                    No route needed yet — the driver will record the route by driving it. You'll name it once it's submitted.
-                  </Alert>
-                ) : (
-                  <TextField
-                    select
-                    size="small"
-                    label="Route"
-                    value={createForm.routeId}
-                    onChange={(e) => setCreateForm((p) => ({ ...p, routeId: e.target.value }))}
-                    required
-                    helperText={routes.length === 0 ? 'No active routes found. Create routes first.' : 'Select a valid route ID'}
-                  >
-                    {routes.map((route) => (
-                      <MenuItem key={route.routeId} value={route.routeId}>
-                        {route.routeName || route.routeId} ({route.routeId}){route.visibility === 'PRIVATE' ? ' — Custom' : ''}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                )}
+          {/* Step 1: Driver & Access */}
+          {createStep === 1 && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-dname">Driver Name</Label>
+                  <Input id="cb-dname" value={createForm.driverName} onChange={setCreate('driverName')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-demail">Driver Email</Label>
+                  <Input id="cb-demail" type="email" value={createForm.driverEmail} onChange={setCreate('driverEmail')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-dphone">Driver Phone</Label>
+                  <Input id="cb-dphone" value={createForm.driverPhoneNumber} onChange={setCreate('driverPhoneNumber')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-dnic">Driver NIC</Label>
+                  <Input id="cb-dnic" value={createForm.driverNicNumber} onChange={setCreate('driverNicNumber')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-dlicense">Driver License</Label>
+                  <Input id="cb-dlicense" value={createForm.driverLicenseCardNumber} onChange={setCreate('driverLicenseCardNumber')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-pw">Initial Password</Label>
+                  <Input id="cb-pw" type="password" value={createForm.password} onChange={setCreate('password')} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cb-reason">Reason (optional)</Label>
+                <Input id="cb-reason" value={createForm.reason} onChange={setCreate('reason')} />
+              </div>
+            </div>
+          )}
 
-                <TextField size="small" label="Seat Capacity" type="number" value={createForm.seatCapacity} onChange={(e) => setCreateForm((p) => ({ ...p, seatCapacity: e.target.value }))} required />
-                <TextField select size="small" label="Bus Type" value={createForm.busType} onChange={(e) => setCreateForm((p) => ({ ...p, busType: e.target.value }))}>
-                  {BUS_TYPES.map((option) => <MenuItem key={option} value={option}>{option}</MenuItem>)}
-                </TextField>
-                <TextField select size="small" label="Service Type" value={createForm.serviceType} onChange={(e) => setCreateForm((p) => ({ ...p, serviceType: e.target.value }))}>
-                  {SERVICE_TYPES.map((option) => <MenuItem key={option} value={option}>{option}</MenuItem>)}
-                </TextField>
-              </Box>
+          {/* Step 2: Review */}
+          {createStep === 2 && (
+            <div className="rounded-lg border border-border bg-surface-muted p-4 space-y-1.5 text-sm">
+              <p><span className="font-semibold">Bus:</span> {createForm.busId} — {createForm.busName}</p>
+              <p><span className="font-semibold">Number Plate:</span> {createForm.numberPlate}</p>
+              <p><span className="font-semibold">Route:</span> {createForm.routeMode === 'CUSTOM' ? 'Driver will record a custom route' : createForm.routeId}</p>
+              <p><span className="font-semibold">Capacity:</span> {createForm.seatCapacity} seats</p>
+              <p><span className="font-semibold">Type:</span> {createForm.busType} / {createForm.serviceType}</p>
+              <p><span className="font-semibold">Driver:</span> {createForm.driverName || 'Not provided'}</p>
+              <p><span className="font-semibold">Driver Email:</span> {createForm.driverEmail || 'Not provided'}</p>
+              <p><span className="font-semibold">Reason:</span> {createForm.reason || 'Not provided'}</p>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={closeCreate} disabled={createM.isPending}>Cancel</Button>
+            {createStep > 0 && (
+              <Button variant="outline" onClick={handleBack} disabled={createM.isPending}>Back</Button>
             )}
-
-            {activeCreateStep === 1 && (
-              <Box sx={{ display: 'grid', gap: 1.2 }}>
-                <TextField size="small" label="Driver Name" value={createForm.driverName} onChange={(e) => setCreateForm((p) => ({ ...p, driverName: e.target.value }))} />
-                <TextField size="small" type="email" label="Driver Email" value={createForm.driverEmail} onChange={(e) => setCreateForm((p) => ({ ...p, driverEmail: e.target.value }))} />
-                <TextField size="small" label="Driver Phone Number" value={createForm.driverPhoneNumber} onChange={(e) => setCreateForm((p) => ({ ...p, driverPhoneNumber: e.target.value }))} />
-                <TextField size="small" label="Driver NIC Number" value={createForm.driverNicNumber} onChange={(e) => setCreateForm((p) => ({ ...p, driverNicNumber: e.target.value }))} />
-                <TextField size="small" label="Driver License Card Number" value={createForm.driverLicenseCardNumber} onChange={(e) => setCreateForm((p) => ({ ...p, driverLicenseCardNumber: e.target.value }))} />
-                <TextField size="small" type="password" label="Initial Password" value={createForm.password} onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))} required />
-                <TextField size="small" label="Reason (optional)" value={createForm.reason} onChange={(e) => setCreateForm((p) => ({ ...p, reason: e.target.value }))} />
-              </Box>
-            )}
-
-            {activeCreateStep === 2 && (
-              <Box sx={{ display: 'grid', gap: 1.1 }}>
-                <Typography variant="body2"><strong>Bus:</strong> {createForm.busId} - {createForm.busName}</Typography>
-                <Typography variant="body2"><strong>Number Plate:</strong> {createForm.numberPlate}</Typography>
-                <Typography variant="body2">
-                  <strong>Route:</strong> {createForm.routeMode === 'CUSTOM' ? 'Driver will record a custom route' : createForm.routeId}
-                </Typography>
-                <Typography variant="body2"><strong>Capacity:</strong> {createForm.seatCapacity} seats</Typography>
-                <Typography variant="body2"><strong>Type:</strong> {createForm.busType} / {createForm.serviceType}</Typography>
-                <Typography variant="body2"><strong>Driver:</strong> {createForm.driverName || 'Not provided'}</Typography>
-                <Typography variant="body2"><strong>Driver Email:</strong> {createForm.driverEmail || 'Not provided'}</Typography>
-                <Typography variant="body2"><strong>Reason:</strong> {createForm.reason || 'Not provided'}</Typography>
-              </Box>
-            )}
-          </DialogContent>
-          <DialogActions sx={{ px: 3, py: 2 }}>
-            <Button type="button" onClick={handleCloseCreateDialog} disabled={creating}>Cancel</Button>
-            <Button type="button" variant="outlined" disabled={activeCreateStep === 0 || creating} onClick={handleBackStep}>
-              Back
-            </Button>
-            {activeCreateStep < CREATE_STEPS.length - 1 ? (
-              <Button key="continue" type="button" variant="contained" onClick={handleNextStep}>
-                Continue
-              </Button>
+            {createStep < 2 ? (
+              <Button onClick={handleNext}>Continue</Button>
             ) : (
-              <Button key="submit" type="button" variant="contained" disabled={creating} onClick={handleCreateRequest}>
-                {creating ? 'Submitting...' : 'Submit Request'}
+              <Button onClick={handleSubmit} disabled={createM.isPending}>
+                {createM.isPending ? 'Submitting…' : 'Submit Request'}
               </Button>
             )}
-          </DialogActions>
-        </Box>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Edit Bus</DialogTitle>
-        <DialogContent sx={{ display: 'grid', gap: 1.2, pt: 2 }}>
-          <TextField size="small" label="Bus Name" value={editForm.busName || ''} onChange={(e) => setEditForm((p) => ({ ...p, busName: e.target.value }))} />
-          <TextField size="small" label="Number Plate" value={editForm.numberPlate || ''} onChange={(e) => setEditForm((p) => ({ ...p, numberPlate: e.target.value.toUpperCase() }))} />
-          <TextField size="small" label="Route ID" value={editForm.routeId || ''} onChange={(e) => setEditForm((p) => ({ ...p, routeId: e.target.value }))} />
-          <TextField size="small" type="number" label="Seat Capacity" value={editForm.seatCapacity || ''} onChange={(e) => setEditForm((p) => ({ ...p, seatCapacity: e.target.value }))} />
-          <TextField select size="small" label="Bus Type" value={editForm.busType || 'AC'} onChange={(e) => setEditForm((p) => ({ ...p, busType: e.target.value }))}>
-            {BUS_TYPES.map((option) => <MenuItem key={option} value={option}>{option}</MenuItem>)}
-          </TextField>
-          <TextField select size="small" label="Service Type" value={editForm.serviceType || 'PUBLIC'} onChange={(e) => setEditForm((p) => ({ ...p, serviceType: e.target.value }))}>
-            {SERVICE_TYPES.map((option) => <MenuItem key={option} value={option}>{option}</MenuItem>)}
-          </TextField>
-          <TextField select size="small" label="Status" value={String(Boolean(editForm.isActive))} onChange={(e) => setEditForm((p) => ({ ...p, isActive: e.target.value === 'true' }))}>
-            <MenuItem value="true">Active</MenuItem>
-            <MenuItem value="false">Inactive</MenuItem>
-          </TextField>
-          <TextField select size="small" label="Maintenance" value={editForm.maintenanceStatus || 'ACTIVE'} onChange={(e) => setEditForm((p) => ({ ...p, maintenanceStatus: e.target.value }))}>
-            <MenuItem value="ACTIVE">ACTIVE</MenuItem>
-            <MenuItem value="MAINTENANCE">MAINTENANCE</MenuItem>
-            <MenuItem value="OUT_OF_SERVICE">OUT_OF_SERVICE</MenuItem>
-          </TextField>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSaveEdit} variant="contained" disabled={savingEdit}>{savingEdit ? 'Saving...' : 'Save'}</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+      {/* Edit dialog */}
+      <FormDialog
+        open={Boolean(editBus)}
+        onOpenChange={(v) => { if (!v) setEditBus(null); }}
+        title="Edit Bus"
+        submitLabel="Save Changes"
+        onSubmit={handleSaveEdit}
+        pending={updateBusM.isPending}
+        error={editError}
+      >
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="eb-name">Bus Name</Label>
+              <Input id="eb-name" value={editForm.busName || ''} onChange={(e) => setEditForm((p) => ({ ...p, busName: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="eb-plate">Number Plate</Label>
+              <Input id="eb-plate" value={editForm.numberPlate || ''} onChange={(e) => setEditForm((p) => ({ ...p, numberPlate: e.target.value.toUpperCase() }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="eb-route">Route ID</Label>
+              <Input id="eb-route" value={editForm.routeId || ''} onChange={(e) => setEditForm((p) => ({ ...p, routeId: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="eb-seats">Seat Capacity</Label>
+              <Input id="eb-seats" type="number" value={editForm.seatCapacity || ''} onChange={(e) => setEditForm((p) => ({ ...p, seatCapacity: e.target.value }))} />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="eb-bustype">Bus Type</Label>
+              <Select value={editForm.busType || 'AC'} onValueChange={(v) => setEditForm((p) => ({ ...p, busType: v }))}>
+                <SelectTrigger id="eb-bustype"><SelectValue /></SelectTrigger>
+                <SelectContent>{BUS_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="eb-service">Service Type</Label>
+              <Select value={editForm.serviceType || 'PUBLIC'} onValueChange={(v) => setEditForm((p) => ({ ...p, serviceType: v }))}>
+                <SelectTrigger id="eb-service"><SelectValue /></SelectTrigger>
+                <SelectContent>{SERVICE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="eb-maint">Maintenance</Label>
+              <Select value={editForm.maintenanceStatus || 'ACTIVE'} onValueChange={(v) => setEditForm((p) => ({ ...p, maintenanceStatus: v }))}>
+                <SelectTrigger id="eb-maint"><SelectValue /></SelectTrigger>
+                <SelectContent>{MAINTENANCE_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="eb-status">Status</Label>
+            <Select value={String(editForm.isActive ?? true)} onValueChange={(v) => setEditForm((p) => ({ ...p, isActive: v === 'true' }))}>
+              <SelectTrigger id="eb-status"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">Active</SelectItem>
+                <SelectItem value="false">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </FormDialog>
+
+      {/* Delete request confirmation */}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}
+        title="Request Bus Deletion"
+        description={`Submit a deletion request for ${deleteTarget?.busName || 'this bus'}. A reason is required.`}
+        confirmLabel="Submit Request"
+        requireReason
+        pending={deleteReqM.isPending}
+        onConfirm={handleDeleteConfirm}
+      />
+    </div>
   );
 }

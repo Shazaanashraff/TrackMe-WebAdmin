@@ -21,7 +21,6 @@ function SnapshotRow({ label, value, highlight = false }) {
   );
 }
 
-// refreshSignal kept as prop bridge — TanStack Query handles invalidation on refresh
 export function DashboardPage() {
   const dashQ = useSuperAdminDashboard();
   const opsQ = useOperationsOverview();

@@ -8,6 +8,8 @@ import { ForgotPasswordResetPage } from './pages/ForgotPasswordResetPage';
 import { AppShell } from './layout/AppShell';
 import { AppLoading } from './layout/AppLoading';
 import { ErrorBoundary } from './layout/ErrorBoundary';
+import { OfflineBanner } from './layout/OfflineBanner';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { Toaster } from './components/ui/sonner';
 import { DashboardPage } from './pages/DashboardPage';
 import { ManagersPage } from './pages/ManagersPage';
@@ -26,7 +28,7 @@ import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSess
 import { useRefreshData } from './hooks/use-refresh';
 import { StyleGuidePage } from './pages/StyleGuidePage';
 
-function ProtectedShell({ auth, onLogout, refreshSignal, triggerRefresh }) {
+function ProtectedShell({ auth, onLogout, triggerRefresh }) {
   const authToken = auth?.token || auth?.accessToken;
   const userRole = auth?.user?.role;
   const isSuperAdmin = userRole === 'super-admin';
@@ -42,13 +44,13 @@ function ProtectedShell({ auth, onLogout, refreshSignal, triggerRefresh }) {
     return (
       <Routes>
         <Route element={shell}>
-          <Route path="/dashboard" element={<DashboardPage refreshSignal={refreshSignal} />} />
-          <Route path="/managers" element={<ManagersPage refreshSignal={refreshSignal} />} />
-          <Route path="/operations" element={<OperationsPage refreshSignal={refreshSignal} />} />
-          <Route path="/routes" element={<RoutesPage refreshSignal={refreshSignal} />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/managers" element={<ManagersPage />} />
+          <Route path="/operations" element={<OperationsPage />} />
+          <Route path="/routes" element={<RoutesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<NotFoundPage role="super-admin" />} />
         </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     );
   }
@@ -56,15 +58,15 @@ function ProtectedShell({ auth, onLogout, refreshSignal, triggerRefresh }) {
   return (
     <Routes>
       <Route element={shell}>
-        <Route path="/manager/dashboard" element={<ManagerDashboardPage refreshSignal={refreshSignal} />} />
-        <Route path="/manager/buses" element={<ManagerBusesPage refreshSignal={refreshSignal} />} />
-        <Route path="/manager/tracking" element={<ManagerTrackingPage refreshSignal={refreshSignal} />} />
-        <Route path="/manager/accounts" element={<ManagerAccountsPage refreshSignal={refreshSignal} />} />
-        <Route path="/manager/route-approvals" element={<ManagerRouteApprovalsPage refreshSignal={refreshSignal} />} />
-        <Route path="/manager/private-routes" element={<ManagerPrivateRoutesPage refreshSignal={refreshSignal} />} />
+        <Route path="/manager/dashboard" element={<ManagerDashboardPage />} />
+        <Route path="/manager/buses" element={<ManagerBusesPage />} />
+        <Route path="/manager/tracking" element={<ManagerTrackingPage />} />
+        <Route path="/manager/accounts" element={<ManagerAccountsPage />} />
+        <Route path="/manager/route-approvals" element={<ManagerRouteApprovalsPage />} />
+        <Route path="/manager/private-routes" element={<ManagerPrivateRoutesPage />} />
         <Route path="/manager/settings" element={<ManagerSettingsPage />} />
+        <Route path="*" element={<NotFoundPage role="admin" />} />
       </Route>
-      <Route path="*" element={<Navigate to="/manager/dashboard" replace />} />
     </Routes>
   );
 }
@@ -123,8 +125,6 @@ function LoginShell({ auth, setAuth }) {
 export default function App() {
   const [auth, setAuth] = useState(() => readStoredAuth());
   const [hydrating, setHydrating] = useState(true);
-  const [refreshCounter, setRefreshCounter] = useState(0);
-  const refreshSignal = refreshCounter;
   const refreshQueries = useRefreshData();
 
   useEffect(() => {
@@ -186,13 +186,13 @@ export default function App() {
   };
 
   const triggerRefresh = () => {
-    setRefreshCounter((prev) => prev + 1); // legacy signal for un-migrated pages
-    refreshQueries(); // invalidate TanStack Query caches for migrated pages
+    refreshQueries();
     toast('Data refreshed');
   };
 
   return (
     <>
+      <OfflineBanner />
       <Toaster />
       {hydrating ? <AppLoading /> : null}
       {!hydrating ? (
@@ -209,7 +209,6 @@ export default function App() {
                 <ProtectedShell
                   auth={auth}
                   onLogout={handleLogout}
-                  refreshSignal={refreshSignal}
                   triggerRefresh={triggerRefresh}
                 />
               </ErrorBoundary>

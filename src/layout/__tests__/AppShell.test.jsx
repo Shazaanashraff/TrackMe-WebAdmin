@@ -140,6 +140,16 @@ describe('AppShell', () => {
     expect(screen.getByText('sa dashboard')).toBeInTheDocument();
   });
 
+  it('aside landmark has aria-label="Sidebar"', () => {
+    renderShell();
+    expect(screen.getByRole('complementary', { name: 'Sidebar' })).toBeInTheDocument();
+  });
+
+  it('nav landmark has aria-label="Main navigation"', () => {
+    renderShell();
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
+  });
+
   it('shows a pending badge count for manager when approvals exist', async () => {
     const { useManagerCustomRoutes, useRouteChangeRequests } = await import('@/hooks/use-route-approvals');
     useManagerCustomRoutes.mockReturnValue({

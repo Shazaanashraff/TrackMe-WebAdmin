@@ -199,6 +199,61 @@ describe('DataTable — column visibility', () => {
   });
 });
 
+// ── a11y ─────────────────────────────────────────────────────────────────────
+
+describe('DataTable — a11y', () => {
+  const sortData = [
+    { id: '1', name: 'Charlie', role: 'admin' },
+    { id: '2', name: 'Alice', role: 'admin' },
+  ];
+
+  it('sortable column headers have aria-sort="none" before any sort', () => {
+    render(<DataTable columns={COLS} data={sortData} />);
+    const headers = screen.getAllByRole('columnheader');
+    headers.forEach((h) => expect(h).toHaveAttribute('aria-sort', 'none'));
+  });
+
+  it('aria-sort updates to ascending on first sort click', async () => {
+    const user = userEvent.setup();
+    render(<DataTable columns={COLS} data={sortData} />);
+    await user.click(screen.getByRole('button', { name: /name/i }));
+    const nameHeader = screen.getAllByRole('columnheader')[0];
+    expect(nameHeader).toHaveAttribute('aria-sort', 'ascending');
+  });
+
+  it('aria-sort updates to descending on second sort click', async () => {
+    const user = userEvent.setup();
+    render(<DataTable columns={COLS} data={sortData} />);
+    const btn = screen.getByRole('button', { name: /name/i });
+    await user.click(btn);
+    await user.click(btn);
+    const nameHeader = screen.getAllByRole('columnheader')[0];
+    expect(nameHeader).toHaveAttribute('aria-sort', 'descending');
+  });
+
+  it('clickable row has tabIndex=0 and fires onRowClick on Enter', async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    render(<DataTable columns={COLS} data={makeRows(1)} onRowClick={onRowClick} />);
+    const rows = screen.getAllByRole('row');
+    const dataRow = rows[1];
+    expect(dataRow).toHaveAttribute('tabindex', '0');
+    dataRow.focus();
+    await user.keyboard('{Enter}');
+    expect(onRowClick).toHaveBeenCalledOnce();
+  });
+
+  it('clickable row fires onRowClick on Space', async () => {
+    const user = userEvent.setup();
+    const onRowClick = vi.fn();
+    render(<DataTable columns={COLS} data={makeRows(1)} onRowClick={onRowClick} />);
+    const dataRow = screen.getAllByRole('row')[1];
+    dataRow.focus();
+    await user.keyboard(' ');
+    expect(onRowClick).toHaveBeenCalledOnce();
+  });
+});
+
 // ── mobile card rendering ─────────────────────────────────────────────────────
 
 describe('DataTable — mobile card', () => {

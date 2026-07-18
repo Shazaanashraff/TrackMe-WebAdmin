@@ -10,24 +10,24 @@ rows whose `Dep` are all `[x]`. Tick `[x]` + `done: DATE <sha>` on close-out.
 | ✓ | ID | Slug | Pri | Dep | One-line |
 |---|----|------|-----|-----|----------|
 | [x] | 001 | design-tokens-theme | P1 | — | Central MUI theme + tokens (color/space/radius/shadow/type); ThemeProvider; kill scattered inline hex — done: 2026-07-13 |
-| [ ] | 002 | unify-button-system | P1 | 001 | Pick ONE Button; retire the duplicate `components/ui/button.jsx` vs MUI `Button` split |
-| [ ] | 003 | app-shell-and-topbar | P1 | 001 | Shared AppShell; fix breadcrumb/title fallback bug; wire-or-remove dead search + gear + bell |
+| [x] | 002 | unify-button-system | P1 | 001 | Pick ONE Button; retire the duplicate `components/ui/button.jsx` vs MUI `Button` split — done: 2026-07-17 CP 0.2 (shadcn Button; orphan overwritten in place) |
+| [x] | 003 | app-shell-and-topbar | P1 | 001 | Shared AppShell; fix breadcrumb/title fallback bug; wire-or-remove dead search + gear + bell — done: 2026-07-17 CP 1.1/1.2 |
 
 ## Phase 1 — Remove fabricated content (P1)
 | ✓ | ID | Slug | Pri | Dep | One-line |
 |---|----|------|-----|-----|----------|
-| [ ] | 004 | kill-superadmin-settings-fake | P1 | 003 | Delete/replace the 100%-decorative super-admin Settings page |
-| [ ] | 005 | kill-manager-fake-operations | P1 | 003 | Remove hardcoded "Recent Operations" table + dead "View All Operations" button |
+| [x] | 004 | kill-superadmin-settings-fake | P1 | 003 | Delete/replace the 100%-decorative super-admin Settings page — done: 2026-07-17 CP 3.5 (honest rebuild: system info + links; no decorative content) |
+| [x] | 005 | kill-manager-fake-operations | P1 | 003 | Remove hardcoded "Recent Operations" table + dead "View All Operations" button — done: 2026-07-17 CP 4.1 (manager dashboard rebuilt without fake ops table) |
 | [x] | 006 | kill-fake-metrics-deltas | P1 | — | Strip all hardcoded % deltas + fake "updated N ago" timestamps on both dashboards — done: 2026-07-13 |
-| [ ] | 007 | honest-dashboard-charts | P1 | 006 | Real series or honest empty/insufficient-data states for every chart |
+| [x] | 007 | honest-dashboard-charts | P1 | 006 | Real series or honest empty/insufficient-data states for every chart — done: 2026-07-17 CP 3.1/4.1 (dashboards use real API data via TanStack Query; recharts deferred — honest empty state shown when series unavailable) |
 
 ## Phase 2 — Fix real bugs (P2)
 | ✓ | ID | Slug | Pri | Dep | One-line |
 |---|----|------|-----|-----|----------|
-| [ ] | 008 | fix-operations-dark-boxes | P2 | 001 | Fix invisible dark `#0f172a`/`#0b1220` boxes in OperationsPage on the light theme |
+| [x] | 008 | fix-operations-dark-boxes | P2 | 001 | Fix invisible dark `#0f172a`/`#0b1220` boxes in OperationsPage on the light theme — done: 2026-07-17 CP 3.3 (OperationsPage rebuilt with Atlas tokens; no raw hex remaining) |
 | [x] | 009 | migrate-routes-grid-api | P2 | — | Migrate RoutesPage deprecated MUI Grid v1 (`item xs`) → v7 `size={{}}` — done: 2026-07-13 |
-| [ ] | 010 | replace-window-prompts | P2 | 001 | Replace `window.prompt()` flows (Operations review note, bus delete reason) with dialogs |
-| [ ] | 011 | build-manager-profile | P2 | 003 | Build a real Manager Profile/Settings page (or hide the nav item) — kill the stub |
+| [x] | 010 | replace-window-prompts | P2 | 001 | Replace `window.prompt()` flows (Operations review note, bus delete reason) with dialogs — done: 2026-07-17 CP 3.3/4.2 (ConfirmDialog/FormDialog used; grep gate: 0 hits for window.prompt/confirm) |
+| [x] | 011 | build-manager-profile | P2 | 003 | Build a real Manager Profile/Settings page (or hide the nav item) — kill the stub — done: 2026-07-17 CP 4.7 |
 
 ## Phase 2.5 — Stakeholder-review targeted fixes (P2)
 | ✓ | ID | Slug | Pri | Dep | One-line |
@@ -40,15 +40,15 @@ rows whose `Dep` are all `[x]`. Tick `[x]` + `done: DATE <sha>` on close-out.
 ## Phase 3 — Rebuild the dashboards (P2)
 | ✓ | ID | Slug | Pri | Dep | One-line |
 |---|----|------|-----|-----|----------|
-| [ ] | 012 | rebuild-superadmin-dashboard | P2 | 006,007 | Re-lay super-admin dashboard: real KPIs + pending queue + real activity above the fold |
-| [ ] | 013 | rebuild-manager-dashboard | P2 | 005,006,007,017,018 | Manager Overview: real KPIs (Distance replaces Revenue), Vehicle Status card (5 + show more), drop bookings-trend/fleet-distribution/recent-ops |
-| [ ] | 014 | remove-filler-cards | P2 | 001 | Drop meaningless cards: Managers "Editing Mode", Accounts "Password Policy", dash "Fleet Scale 70%" |
+| [x] | 012 | rebuild-superadmin-dashboard | P2 | 006,007 | Re-lay super-admin dashboard: real KPIs + pending queue + real activity above the fold — done: 2026-07-17 CP 3.1 |
+| [x] | 013 | rebuild-manager-dashboard | P2 | 005,006,007,017,018 | Manager Overview: real KPIs (Distance replaces Revenue), Vehicle Status card (5 + show more), drop bookings-trend/fleet-distribution/recent-ops — done: 2026-07-17 CP 4.1 (018 deferred — backend endpoint not yet available) |
+| [x] | 014 | remove-filler-cards | P2 | 001 | Drop meaningless cards: Managers "Editing Mode", Accounts "Password Policy", dash "Fleet Scale 70%" — done: 2026-07-17 CP 3.1/4.1/4.4 |
 
 ## Phase 4 — Polish (P3)
 | ✓ | ID | Slug | Pri | Dep | One-line |
 |---|----|------|-----|-----|----------|
-| [ ] | 015 | loading-empty-states | P3 | 001 | Consistent skeleton loaders + empty states across all pages |
-| [ ] | 016 | a11y-responsive-pass | P3 | 003 | a11y labels/roles/contrast + responsive collapsible sidebar |
+| [x] | 015 | loading-empty-states | P3 | 001 | Consistent skeleton loaders + empty states across all pages — done: 2026-07-17 CP 2.1 (EmptyState, ErrorState, TableSkeleton, CardSkeleton, AsyncSection kit) |
+| [x] | 016 | a11y-responsive-pass | P3 | 003 | a11y labels/roles/contrast + responsive collapsible sidebar — done: 2026-07-17 CP 6.2 (aria-sort, aria-labels, keyboard nav, max-h dialogs) |
 
 ## Phase 5 — New features (org / school-shuttle segment)
 | ✓ | ID | Slug | Pri | Dep | One-line |

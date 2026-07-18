@@ -1,139 +1,82 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import { Eye, Copy } from 'lucide-react';
+import { toast } from 'sonner';
+import { PageHeader } from '@/components/shared/page-header';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
-  Alert,
-  Badge,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Snackbar,
-  Stack,
-  Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography
-} from '@mui/material';
-import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
-import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
-import { adminApi } from '../api';
+  Card, CardContent, CardHeader, CardTitle,
+} from '@/components/ui/card';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import {
+  useManagerOwnedRoutes,
+  useRouteJoinRequests,
+  useRouteMembers,
+  useUpdateRoutePrivacy,
+  useRevealRoomKey,
+  useRotateRoomKey,
+  useDecideJoinRequest,
+  useRevokeRouteMember,
+} from '@/hooks/use-private-routes';
 
-const maskedCode = '••••••';
+const MASKED = '••••••';
 
-export function ManagerPrivateRoutesPage({ refreshSignal }) {
-  const [routes, setRoutes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [toast, setToast] = useState('');
-
+export function ManagerPrivateRoutesPage() {
   const [selectedRouteId, setSelectedRouteId] = useState(null);
-
   const [revealedCode, setRevealedCode] = useState('');
-  const [revealing, setRevealing] = useState(false);
-
   const [rotateDialogOpen, setRotateDialogOpen] = useState(false);
-  const [rotating, setRotating] = useState(false);
-
-  const [joinRequests, setJoinRequests] = useState([]);
-  const [loadingJoinRequests, setLoadingJoinRequests] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState(null);
   const [decisionNotes, setDecisionNotes] = useState({});
 
-  const [members, setMembers] = useState([]);
-  const [loadingMembers, setLoadingMembers] = useState(false);
-  const [removeTarget, setRemoveTarget] = useState(null);
-  const [removing, setRemoving] = useState(false);
+  const routesQ = useManagerOwnedRoutes();
+  const joinRequestsQ = useRouteJoinRequests(selectedRouteId, { status: 'PENDING' });
+  const membersQ = useRouteMembers(selectedRouteId, { status: 'ACTIVE' });
 
-  const loadRoutes = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await adminApi.getManagerOwnedRoutes();
-      setRoutes(response.data || []);
-    } catch (err) {
-      setError(err.message || 'Failed to load owned routes');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const updatePrivacyM = useUpdateRoutePrivacy();
+  const revealM = useRevealRoomKey();
+  const rotateM = useRotateRoomKey();
+  const decideM = useDecideJoinRequest();
+  const revokeM = useRevokeRouteMember();
 
-  useEffect(() => {
-    loadRoutes();
-  }, [loadRoutes, refreshSignal]);
-
-  const selectedRoute = routes.find((route) => route.routeId === selectedRouteId) || null;
-
-  const loadJoinRequests = useCallback(async (routeId) => {
-    if (!routeId) return;
-    setLoadingJoinRequests(true);
-    try {
-      const response = await adminApi.getRouteJoinRequests(routeId, { status: 'PENDING' });
-      setJoinRequests(response.data || []);
-    } catch (err) {
-      setToast(err.message || 'Failed to load join requests');
-    } finally {
-      setLoadingJoinRequests(false);
-    }
-  }, []);
-
-  const loadMembers = useCallback(async (routeId) => {
-    if (!routeId) return;
-    setLoadingMembers(true);
-    try {
-      const response = await adminApi.getRouteMembers(routeId, { status: 'ACTIVE' });
-      setMembers(response.data || []);
-    } catch (err) {
-      setToast(err.message || 'Failed to load members');
-    } finally {
-      setLoadingMembers(false);
-    }
-  }, []);
+  const routes = routesQ.data?.data || [];
+  const joinRequests = joinRequestsQ.data?.data || [];
+  const members = membersQ.data?.data || [];
+  const selectedRoute = routes.find((r) => r.routeId === selectedRouteId) || null;
 
   const handleSelectRoute = (route) => {
-    const nextId = selectedRouteId === route.routeId ? null : route.routeId;
-    setSelectedRouteId(nextId);
+    const next = selectedRouteId === route.routeId ? null : route.routeId;
+    setSelectedRouteId(next);
     setRevealedCode('');
-    if (nextId) {
-      loadJoinRequests(nextId);
-      loadMembers(nextId);
-    }
   };
 
   const handleTogglePrivacy = async (route, field, value) => {
-    setError('');
     try {
       const payload = {};
       if (field === 'isPrivate') payload.isPrivate = value;
       if (field === 'isHidden') payload.isHidden = value;
       if (field === 'joinApprovalRequired') payload.joinApprovalRequired = value;
-
-      await adminApi.updateRoutePrivacy(route.routeId, payload);
-      await loadRoutes();
-      setToast('Route privacy settings updated');
+      await updatePrivacyM.mutateAsync({ routeId: route.routeId, payload });
+      toast('Route privacy settings updated');
     } catch (err) {
-      setToast(err.message || 'Failed to update route privacy');
+      toast(err?.message || 'Failed to update route privacy');
     }
   };
 
   const handleReveal = async () => {
     if (!selectedRoute) return;
-    setRevealing(true);
     try {
-      const response = await adminApi.revealRoomKey(selectedRoute.routeId);
-      setRevealedCode(response?.data?.code || '');
+      const res = await revealM.mutateAsync(selectedRoute.routeId);
+      setRevealedCode(res?.data?.code || '');
     } catch (err) {
-      setToast(err.message || 'Failed to reveal room key');
-    } finally {
-      setRevealing(false);
+      toast(err?.message || 'Failed to reveal room key');
     }
   };
 
@@ -141,160 +84,127 @@ export function ManagerPrivateRoutesPage({ refreshSignal }) {
     if (!revealedCode) return;
     try {
       await navigator.clipboard.writeText(revealedCode);
-      setToast('Room key copied to clipboard');
+      toast('Room key copied to clipboard');
     } catch {
-      setToast('Failed to copy room key');
+      toast('Failed to copy room key');
     }
-  };
-
-  const openRotateDialog = () => setRotateDialogOpen(true);
-  const closeRotateDialog = () => {
-    if (rotating) return;
-    setRotateDialogOpen(false);
   };
 
   const handleRotate = async () => {
     if (!selectedRoute) return;
-    setRotating(true);
     try {
-      const response = await adminApi.rotateRoomKey(selectedRoute.routeId);
-      setRevealedCode(response?.data?.code || '');
+      const res = await rotateM.mutateAsync(selectedRoute.routeId);
+      setRevealedCode(res?.data?.code || '');
       setRotateDialogOpen(false);
-      setToast('Room key regenerated');
-      await loadRoutes();
+      toast('Room key regenerated');
     } catch (err) {
-      setToast(err.message || 'Failed to regenerate room key');
-    } finally {
-      setRotating(false);
+      toast(err?.message || 'Failed to regenerate room key');
     }
   };
 
   const handleDecision = async (requestId, decision) => {
-    setError('');
     try {
       const note = decisionNotes[requestId] || '';
-      await adminApi.decideJoinRequest(requestId, { decision, note });
-      await loadJoinRequests(selectedRouteId);
-      await loadMembers(selectedRouteId);
-      await loadRoutes();
-      setToast(decision === 'APPROVED' ? 'Join request approved' : 'Join request rejected');
+      await decideM.mutateAsync({ id: requestId, payload: { decision, note } });
+      toast(decision === 'APPROVED' ? 'Join request approved' : 'Join request rejected');
     } catch (err) {
-      setToast(err.message || 'Failed to record decision');
+      toast(err?.message || 'Failed to record decision');
     }
-  };
-
-  const openRemoveDialog = (member) => setRemoveTarget(member);
-  const closeRemoveDialog = () => {
-    if (removing) return;
-    setRemoveTarget(null);
   };
 
   const handleRemoveMember = async () => {
     if (!removeTarget || !selectedRoute) return;
-    setRemoving(true);
     try {
-      await adminApi.revokeRouteMember(selectedRoute.routeId, removeTarget.userId?._id || removeTarget.userId);
+      await revokeM.mutateAsync({
+        routeId: selectedRoute.routeId,
+        userId: removeTarget.userId?._id || removeTarget.userId,
+      });
       setRemoveTarget(null);
-      await loadMembers(selectedRouteId);
-      await loadRoutes();
-      setToast('Member removed');
+      toast('Member removed');
     } catch (err) {
-      setToast(err.message || 'Failed to remove member');
-    } finally {
-      setRemoving(false);
+      toast(err?.message || 'Failed to remove member');
     }
   };
 
   return (
-    <Box sx={{ display: 'grid', gap: 2.5 }}>
-      <Box sx={{ display: 'grid', gap: 1 }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, color: '#344767' }}>
-          Private Routes
-        </Typography>
-        <Typography variant="body2" sx={{ color: '#67748e' }}>
-          Manage room-key access, visibility, and join approval for your routes.
-        </Typography>
-      </Box>
+    <div className="space-y-6">
+      <PageHeader
+        title="Private Routes"
+        description="Manage room-key access, visibility, and join approval for your routes."
+      />
 
-      {error ? <Alert severity="error">{error}</Alert> : null}
-
-      <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.24)' }}>
-        <CardContent sx={{ p: 2.5 }}>
-          <Typography variant="h6" fontWeight={800} sx={{ mb: 1.5 }}>
-            Owned Routes
-          </Typography>
-
-          {!loading && routes.length === 0 ? (
-            <Alert severity="info">You don&apos;t own any routes yet.</Alert>
+      {/* Routes table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Owned Routes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {routes.length === 0 ? (
+            <Alert><AlertDescription>You don&apos;t own any routes yet.</AlertDescription></Alert>
           ) : (
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>Route</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell align="center">Private</TableCell>
-                    <TableCell align="center">Hidden</TableCell>
-                    <TableCell align="center">Require Approval</TableCell>
-                    <TableCell align="center">Pending</TableCell>
-                    <TableCell align="right">Actions</TableCell>
+                    <TableHead>Route</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-center">Private</TableHead>
+                    <TableHead className="text-center">Hidden</TableHead>
+                    <TableHead className="text-center">Require Approval</TableHead>
+                    <TableHead className="text-center">Pending</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                </TableHead>
+                </TableHeader>
                 <TableBody>
                   {routes.map((route) => {
                     const isPrivate = route.visibility === 'PRIVATE';
                     return (
-                      <TableRow key={route.routeId} hover selected={selectedRouteId === route.routeId}>
+                      <TableRow key={route.routeId} data-selected={selectedRouteId === route.routeId || undefined}>
                         <TableCell>
-                          <Typography variant="body2" fontWeight={700}>{route.routeName || route.routeId}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {route.source} → {route.destination}
-                          </Typography>
+                          <p className="text-sm font-semibold">{route.routeName || route.routeId}</p>
+                          <p className="text-xs text-muted-foreground">{route.source} → {route.destination}</p>
                         </TableCell>
                         <TableCell>
-                          <Chip
-                            size="small"
-                            label={route.isActive ? 'Active' : 'Inactive'}
-                            color={route.isActive ? 'success' : 'default'}
-                          />
+                          <Badge variant={route.isActive ? 'default' : 'secondary'}>
+                            {route.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell className="text-center">
                           <Switch
-                            size="small"
                             checked={isPrivate}
-                            onChange={(e) => handleTogglePrivacy(route, 'isPrivate', e.target.checked)}
-                            slotProps={{ input: { 'aria-label': `Private toggle for ${route.routeId}` } }}
+                            onCheckedChange={(v) => handleTogglePrivacy(route, 'isPrivate', v)}
+                            aria-label={`Private toggle for ${route.routeId}`}
                           />
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell className="text-center">
                           <Switch
-                            size="small"
                             checked={Boolean(route.isHidden)}
                             disabled={!isPrivate}
-                            onChange={(e) => handleTogglePrivacy(route, 'isHidden', e.target.checked)}
-                            slotProps={{ input: { 'aria-label': `Hidden toggle for ${route.routeId}` } }}
+                            onCheckedChange={(v) => handleTogglePrivacy(route, 'isHidden', v)}
+                            aria-label={`Hidden toggle for ${route.routeId}`}
                           />
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell className="text-center">
                           <Switch
-                            size="small"
                             checked={Boolean(route.joinApprovalRequired)}
                             disabled={!isPrivate}
-                            onChange={(e) => handleTogglePrivacy(route, 'joinApprovalRequired', e.target.checked)}
-                            slotProps={{ input: { 'aria-label': `Require approval toggle for ${route.routeId}` } }}
+                            onCheckedChange={(v) => handleTogglePrivacy(route, 'joinApprovalRequired', v)}
+                            aria-label={`Require approval toggle for ${route.routeId}`}
                           />
                         </TableCell>
-                        <TableCell align="center">
-                          {route.pendingRequestCount > 0 ? (
-                            <Badge badgeContent={route.pendingRequestCount} color="error" />
-                          ) : (
-                            <Typography variant="caption" color="text.secondary">0</Typography>
-                          )}
+                        <TableCell className="text-center">
+                          <span className="text-sm">
+                            {route.pendingRequestCount > 0 ? (
+                              <Badge variant="destructive">{route.pendingRequestCount}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">0</span>
+                            )}
+                          </span>
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell className="text-right">
                           <Button
-                            size="small"
-                            variant={selectedRouteId === route.routeId ? 'contained' : 'outlined'}
+                            size="sm"
+                            variant={selectedRouteId === route.routeId ? 'default' : 'outline'}
                             disabled={!isPrivate}
                             onClick={() => handleSelectRoute(route)}
                           >
@@ -306,150 +216,185 @@ export function ManagerPrivateRoutesPage({ refreshSignal }) {
                   })}
                 </TableBody>
               </Table>
-            </TableContainer>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {selectedRoute ? (
+      {/* Detail panel — only when a route is selected */}
+      {selectedRoute && (
         <>
-          <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.24)' }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="h6" fontWeight={800} sx={{ mb: 1.5 }}>
+          {/* Room Key */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
                 Room Key — {selectedRoute.routeName || selectedRoute.routeId}
-              </Typography>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Typography variant="h5" sx={{ fontFamily: 'monospace', letterSpacing: 2 }} data-testid="room-key-display">
-                  {revealedCode || maskedCode}
-                </Typography>
-                <IconButton size="small" onClick={handleReveal} disabled={revealing} aria-label="Reveal room key">
-                  <VisibilityRoundedIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={handleCopy} disabled={!revealedCode} aria-label="Copy room key">
-                  <ContentCopyRoundedIcon fontSize="small" />
-                </IconButton>
-                <Button variant="outlined" color="warning" size="small" onClick={openRotateDialog}>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <span
+                  className="font-mono text-2xl tracking-widest select-none"
+                  data-testid="room-key-display"
+                >
+                  {revealedCode || MASKED}
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleReveal}
+                  disabled={revealM.isPending}
+                  aria-label="Reveal room key"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCopy}
+                  disabled={!revealedCode}
+                  aria-label="Copy room key"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setRotateDialogOpen(true)}
+                >
                   Regenerate
                 </Button>
-              </Stack>
+              </div>
             </CardContent>
           </Card>
 
-          <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.24)' }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="h6" fontWeight={800} sx={{ mb: 1.5 }}>
-                Join Requests
-              </Typography>
-              {!loadingJoinRequests && joinRequests.length === 0 ? (
-                <Alert severity="info">No pending join requests.</Alert>
+          {/* Join Requests */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Join Requests</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {joinRequests.length === 0 ? (
+                <Alert><AlertDescription>No pending join requests.</AlertDescription></Alert>
               ) : (
-                <Stack spacing={1.5}>
+                <div className="space-y-3">
                   {joinRequests.map((req) => (
-                    <Card key={req._id} variant="outlined" sx={{ p: 1.5 }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
-                        <Box>
-                          <Typography variant="body2" fontWeight={700}>{req.userId?.name || 'Unknown user'}</Typography>
-                          <Typography variant="caption" color="text.secondary">{req.userId?.email}</Typography>
-                        </Box>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <TextField
-                            size="small"
-                            placeholder="Note (optional)"
-                            value={decisionNotes[req._id] || ''}
-                            onChange={(e) => setDecisionNotes((prev) => ({ ...prev, [req._id]: e.target.value }))}
-                          />
-                          <Button size="small" variant="contained" color="success" onClick={() => handleDecision(req._id, 'APPROVED')}>
-                            Approve
-                          </Button>
-                          <Button size="small" variant="outlined" color="error" onClick={() => handleDecision(req._id, 'REJECTED')}>
-                            Reject
-                          </Button>
-                        </Stack>
-                      </Stack>
-                    </Card>
+                    <div key={req._id} className="flex items-center justify-between flex-wrap gap-3 rounded-lg border border-border p-3">
+                      <div>
+                        <p className="text-sm font-semibold">{req.userId?.name || 'Unknown user'}</p>
+                        <p className="text-xs text-muted-foreground">{req.userId?.email}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          size="sm"
+                          placeholder="Note (optional)"
+                          value={decisionNotes[req._id] || ''}
+                          onChange={(e) => setDecisionNotes((p) => ({ ...p, [req._id]: e.target.value }))}
+                          className="h-8 w-36"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleDecision(req._id, 'APPROVED')}
+                          disabled={decideM.isPending}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDecision(req._id, 'REJECTED')}
+                          disabled={decideM.isPending}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
                   ))}
-                </Stack>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          <Card sx={{ border: '1px solid rgba(100, 116, 139, 0.24)' }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="h6" fontWeight={800} sx={{ mb: 1.5 }}>
-                Members
-              </Typography>
-              {!loadingMembers && members.length === 0 ? (
-                <Alert severity="info">No active members yet.</Alert>
+          {/* Members */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Members</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {members.length === 0 ? (
+                <Alert><AlertDescription>No active members yet.</AlertDescription></Alert>
               ) : (
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Name</TableCell>
-                        <TableCell>Email</TableCell>
-                        <TableCell>Granted Via</TableCell>
-                        <TableCell align="right">Actions</TableCell>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Granted Via</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {members.map((member) => (
+                      <TableRow key={member._id}>
+                        <TableCell className="font-medium">{member.userId?.name || 'Unknown'}</TableCell>
+                        <TableCell>{member.userId?.email}</TableCell>
+                        <TableCell>{member.grantedVia}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                            onClick={() => setRemoveTarget(member)}
+                          >
+                            Remove
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {members.map((member) => (
-                        <TableRow key={member._id}>
-                          <TableCell>{member.userId?.name || 'Unknown'}</TableCell>
-                          <TableCell>{member.userId?.email}</TableCell>
-                          <TableCell>{member.grantedVia}</TableCell>
-                          <TableCell align="right">
-                            <Button size="small" color="error" variant="outlined" onClick={() => openRemoveDialog(member)}>
-                              Remove
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>
         </>
-      ) : null}
+      )}
 
-      <Dialog open={rotateDialogOpen} onClose={closeRotateDialog}>
-        <DialogTitle>Regenerate room key?</DialogTitle>
+      {/* Rotate room key confirmation dialog */}
+      <Dialog open={rotateDialogOpen} onOpenChange={(v) => { if (!v && !rotateM.isPending) setRotateDialogOpen(false); }}>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            This generates a new 6-digit code. Existing members keep their access — this does not kick them out.
-            Anyone using the old code to join for the first time will need the new one.
-          </Typography>
+          <DialogHeader>
+            <DialogTitle>Regenerate room key?</DialogTitle>
+            <DialogDescription>
+              This generates a new 6-digit code. Existing members keep their access — this does not kick them out.
+              Anyone using the old code to join for the first time will need the new one.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRotateDialogOpen(false)} disabled={rotateM.isPending}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRotate} disabled={rotateM.isPending}>
+              {rotateM.isPending ? 'Regenerating…' : 'Regenerate'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={closeRotateDialog} disabled={rotating}>Cancel</Button>
-          <Button onClick={handleRotate} variant="contained" color="warning" disabled={rotating}>
-            {rotating ? 'Regenerating...' : 'Regenerate'}
-          </Button>
-        </DialogActions>
       </Dialog>
 
-      <Dialog open={Boolean(removeTarget)} onClose={closeRemoveDialog}>
-        <DialogTitle>Remove member?</DialogTitle>
+      {/* Remove member confirmation dialog */}
+      <Dialog open={Boolean(removeTarget)} onOpenChange={(v) => { if (!v && !revokeM.isPending) setRemoveTarget(null); }}>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            {removeTarget?.userId?.name || 'This user'} will lose access to live tracking for this route.
-          </Typography>
+          <DialogHeader>
+            <DialogTitle>Remove member?</DialogTitle>
+            <DialogDescription>
+              {removeTarget?.userId?.name || 'This user'} will lose access to live tracking for this route.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRemoveTarget(null)} disabled={revokeM.isPending}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRemoveMember} disabled={revokeM.isPending}>
+              {revokeM.isPending ? 'Removing…' : 'Remove'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={closeRemoveDialog} disabled={removing}>Cancel</Button>
-          <Button onClick={handleRemoveMember} variant="contained" color="error" disabled={removing}>
-            {removing ? 'Removing...' : 'Remove'}
-          </Button>
-        </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={Boolean(toast)}
-        autoHideDuration={4000}
-        onClose={() => setToast('')}
-        message={toast}
-      />
-    </Box>
+    </div>
   );
 }

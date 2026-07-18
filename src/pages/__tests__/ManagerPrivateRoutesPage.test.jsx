@@ -1,117 +1,121 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { ManagerPrivateRoutesPage } from '../ManagerPrivateRoutesPage';
-import { adminApi } from '../../api';
 
-vi.mock('../../api', () => ({
-  adminApi: {
-    getManagerOwnedRoutes: vi.fn(),
-    updateRoutePrivacy: vi.fn(),
-    rotateRoomKey: vi.fn(),
-    revealRoomKey: vi.fn(),
-    getRouteJoinRequests: vi.fn(),
-    decideJoinRequest: vi.fn(),
-    getRouteMembers: vi.fn(),
-    revokeRouteMember: vi.fn()
-  }
+vi.mock('@/hooks/use-private-routes', () => ({
+  useManagerOwnedRoutes: vi.fn(),
+  useRouteJoinRequests: vi.fn(),
+  useRouteMembers: vi.fn(),
+  useUpdateRoutePrivacy: vi.fn(),
+  useRevealRoomKey: vi.fn(),
+  useRotateRoomKey: vi.fn(),
+  useDecideJoinRequest: vi.fn(),
+  useRevokeRouteMember: vi.fn(),
 }));
 
+vi.mock('sonner', () => ({ toast: vi.fn() }));
+
+import {
+  useManagerOwnedRoutes,
+  useRouteJoinRequests,
+  useRouteMembers,
+  useUpdateRoutePrivacy,
+  useRevealRoomKey,
+  useRotateRoomKey,
+  useDecideJoinRequest,
+  useRevokeRouteMember,
+} from '@/hooks/use-private-routes';
+import { toast } from 'sonner';
+
 const PUBLIC_ROUTE = {
-  routeId: 'RT-1',
-  routeName: 'Downtown Loop',
-  source: 'A',
-  destination: 'B',
-  visibility: 'PUBLIC',
-  isHidden: false,
-  joinApprovalRequired: false,
-  isActive: true,
-  status: 'ACTIVE',
-  hasRoomKey: false,
-  memberCount: 0,
-  pendingRequestCount: 0
+  routeId: 'RT-1', routeName: 'Downtown Loop', source: 'A', destination: 'B',
+  visibility: 'PUBLIC', isHidden: false, joinApprovalRequired: false,
+  isActive: true, status: 'ACTIVE', hasRoomKey: false, memberCount: 0, pendingRequestCount: 0,
 };
-
 const PRIVATE_ROUTE = {
-  routeId: 'RT-2',
-  routeName: 'School Express',
-  source: 'C',
-  destination: 'D',
-  visibility: 'PRIVATE',
-  isHidden: true,
-  joinApprovalRequired: true,
-  isActive: true,
-  status: 'ACTIVE',
-  hasRoomKey: true,
-  roomKeyUpdatedAt: '2026-01-01T00:00:00Z',
-  memberCount: 2,
-  pendingRequestCount: 1
+  routeId: 'RT-2', routeName: 'School Express', source: 'C', destination: 'D',
+  visibility: 'PRIVATE', isHidden: true, joinApprovalRequired: true,
+  isActive: true, status: 'ACTIVE', hasRoomKey: true, roomKeyUpdatedAt: '2026-01-01T00:00:00Z',
+  memberCount: 2, pendingRequestCount: 1,
 };
-
 const JOIN_REQUEST = {
-  _id: 'jr-1',
-  userId: { name: 'Jane Doe', email: 'jane@example.com' },
-  routeId: 'RT-2',
-  status: 'PENDING',
-  createdAt: '2026-01-01T00:00:00Z'
+  _id: 'jr-1', userId: { name: 'Jane Doe', email: 'jane@example.com' },
+  routeId: 'RT-2', status: 'PENDING', createdAt: '2026-01-01T00:00:00Z',
 };
-
 const MEMBER = {
-  _id: 'mem-1',
-  userId: { _id: 'user-1', name: 'John Smith', email: 'john@example.com' },
-  routeId: 'RT-2',
-  status: 'ACTIVE',
-  grantedVia: 'ROOM_KEY',
-  grantedAt: '2026-01-01T00:00:00Z'
+  _id: 'mem-1', userId: { _id: 'user-1', name: 'John Smith', email: 'john@example.com' },
+  routeId: 'RT-2', status: 'ACTIVE', grantedVia: 'ROOM_KEY', grantedAt: '2026-01-01T00:00:00Z',
 };
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  adminApi.getManagerOwnedRoutes.mockResolvedValue({ data: [PUBLIC_ROUTE, PRIVATE_ROUTE] });
-  adminApi.getRouteJoinRequests.mockResolvedValue({ data: [] });
-  adminApi.getRouteMembers.mockResolvedValue({ data: [] });
-  adminApi.updateRoutePrivacy.mockResolvedValue({
-    success: true,
-    data: { routeId: 'RT-1', visibility: 'PRIVATE', isHidden: false, joinApprovalRequired: false, hasRoomKey: true }
-  });
-  adminApi.revealRoomKey.mockResolvedValue({ success: true, data: { routeId: 'RT-2', code: '123456' } });
-  adminApi.rotateRoomKey.mockResolvedValue({ success: true, data: { routeId: 'RT-2', code: '654321' } });
-  adminApi.decideJoinRequest.mockResolvedValue({ success: true, data: {} });
-  adminApi.revokeRouteMember.mockResolvedValue({ success: true, data: {} });
-});
+function makeMutation(overrides = {}) {
+  return { mutateAsync: vi.fn().mockResolvedValue({ data: {} }), isPending: false, ...overrides };
+}
+
+function defaultHooks({
+  routes = [PUBLIC_ROUTE, PRIVATE_ROUTE],
+  joinRequests = [],
+  members = [],
+  updatePrivacyMut, revealMut, rotateMut, decideMut, revokeMut,
+} = {}) {
+  useManagerOwnedRoutes.mockReturnValue({ data: { data: routes }, isLoading: false, error: null });
+  useRouteJoinRequests.mockReturnValue({ data: { data: joinRequests }, isLoading: false });
+  useRouteMembers.mockReturnValue({ data: { data: members }, isLoading: false });
+  useUpdateRoutePrivacy.mockReturnValue(updatePrivacyMut || makeMutation());
+  useRevealRoomKey.mockReturnValue(revealMut || makeMutation({ mutateAsync: vi.fn().mockResolvedValue({ data: { code: '123456' } }) }));
+  useRotateRoomKey.mockReturnValue(rotateMut || makeMutation({ mutateAsync: vi.fn().mockResolvedValue({ data: { code: '654321' } }) }));
+  useDecideJoinRequest.mockReturnValue(decideMut || makeMutation());
+  useRevokeRouteMember.mockReturnValue(revokeMut || makeMutation());
+}
+
+function setup(opts) {
+  defaultHooks(opts);
+  render(<MemoryRouter><ManagerPrivateRoutesPage /></MemoryRouter>);
+}
 
 describe('ManagerPrivateRoutesPage', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
   it('renders owned routes with privacy toggles', async () => {
-    render(<ManagerPrivateRoutesPage />);
+    setup();
     await waitFor(() => expect(screen.getByText('Downtown Loop')).toBeTruthy());
     expect(screen.getByText('School Express')).toBeTruthy();
   });
 
   it('calls updateRoutePrivacy with the correct payload when the Private switch is toggled', async () => {
-    render(<ManagerPrivateRoutesPage />);
+    const updatePrivacyMut = makeMutation();
+    setup({ updatePrivacyMut });
     await waitFor(() => expect(screen.getByText('Downtown Loop')).toBeTruthy());
 
     const privateSwitch = screen.getByLabelText('Private toggle for RT-1');
     fireEvent.click(privateSwitch);
 
     await waitFor(() =>
-      expect(adminApi.updateRoutePrivacy).toHaveBeenCalledWith('RT-1', { isPrivate: true })
+      expect(updatePrivacyMut.mutateAsync).toHaveBeenCalledWith({
+        routeId: 'RT-1',
+        payload: { isPrivate: true },
+      })
     );
   });
 
   it('calls updateRoutePrivacy with correct payload for hidden toggle', async () => {
-    render(<ManagerPrivateRoutesPage />);
+    const updatePrivacyMut = makeMutation();
+    setup({ updatePrivacyMut });
     await waitFor(() => expect(screen.getByText('School Express')).toBeTruthy());
 
     const hiddenSwitch = screen.getByLabelText('Hidden toggle for RT-2');
     fireEvent.click(hiddenSwitch);
 
     await waitFor(() =>
-      expect(adminApi.updateRoutePrivacy).toHaveBeenCalledWith('RT-2', { isHidden: false })
+      expect(updatePrivacyMut.mutateAsync).toHaveBeenCalledWith({
+        routeId: 'RT-2',
+        payload: { isHidden: false },
+      })
     );
   });
 
   it('disables hidden/approval switches for non-private routes', async () => {
-    render(<ManagerPrivateRoutesPage />);
+    setup();
     await waitFor(() => expect(screen.getByText('Downtown Loop')).toBeTruthy());
 
     expect(screen.getByLabelText('Hidden toggle for RT-1')).toBeDisabled();
@@ -119,24 +123,26 @@ describe('ManagerPrivateRoutesPage', () => {
   });
 
   it('reveals the room key after clicking reveal', async () => {
-    render(<ManagerPrivateRoutesPage />);
+    setup();
     await waitFor(() => expect(screen.getByText('School Express')).toBeTruthy());
 
     fireEvent.click(screen.getAllByRole('button', { name: /manage/i }).find((btn) => !btn.disabled));
-    await waitFor(() => expect(adminApi.getRouteJoinRequests).toHaveBeenCalledWith('RT-2', { status: 'PENDING' }));
+
+    // Room key section appears
+    await waitFor(() => expect(screen.getByTestId('room-key-display')).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: /reveal room key/i }));
 
     await waitFor(() => expect(screen.getByTestId('room-key-display').textContent).toBe('123456'));
-    expect(adminApi.revealRoomKey).toHaveBeenCalledWith('RT-2');
   });
 
-  it('shows a confirm dialog before rotating and calls the API on confirm', async () => {
-    render(<ManagerPrivateRoutesPage />);
+  it('shows a confirm dialog before rotating and calls rotateRoomKey on confirm', async () => {
+    const rotateMut = makeMutation({ mutateAsync: vi.fn().mockResolvedValue({ data: { code: '654321' } }) });
+    setup({ rotateMut });
     await waitFor(() => expect(screen.getByText('School Express')).toBeTruthy());
 
     fireEvent.click(screen.getAllByRole('button', { name: /manage/i }).find((btn) => !btn.disabled));
-    await waitFor(() => expect(screen.getByText(/room key/i)).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('button', { name: /reveal room key/i })).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: /regenerate/i }));
 
@@ -145,36 +151,42 @@ describe('ManagerPrivateRoutesPage', () => {
 
     fireEvent.click(dialog.getByRole('button', { name: /regenerate/i }));
 
-    await waitFor(() => expect(adminApi.rotateRoomKey).toHaveBeenCalledWith('RT-2'));
+    await waitFor(() => expect(rotateMut.mutateAsync).toHaveBeenCalledWith('RT-2'));
   });
 
   it('renders pending join requests and calls decideJoinRequest for approve/reject', async () => {
-    adminApi.getRouteJoinRequests.mockResolvedValue({ data: [JOIN_REQUEST] });
-    render(<ManagerPrivateRoutesPage />);
-    await waitFor(() => expect(screen.getByText('School Express')).toBeTruthy());
+    const decideMut = makeMutation();
+    setup({ joinRequests: [JOIN_REQUEST], decideMut });
 
-    const manageButtons = screen.getAllByRole('button', { name: /manage/i });
-    fireEvent.click(manageButtons.find((btn) => !btn.disabled));
+    await waitFor(() => expect(screen.getByText('School Express')).toBeTruthy());
+    fireEvent.click(screen.getAllByRole('button', { name: /manage/i }).find((btn) => !btn.disabled));
+
     await waitFor(() => expect(screen.getByText('Jane Doe')).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: /approve/i }));
     await waitFor(() =>
-      expect(adminApi.decideJoinRequest).toHaveBeenCalledWith('jr-1', { decision: 'APPROVED', note: '' })
+      expect(decideMut.mutateAsync).toHaveBeenCalledWith({
+        id: 'jr-1',
+        payload: { decision: 'APPROVED', note: '' },
+      })
     );
 
     fireEvent.click(screen.getByRole('button', { name: /reject/i }));
     await waitFor(() =>
-      expect(adminApi.decideJoinRequest).toHaveBeenCalledWith('jr-1', { decision: 'REJECTED', note: '' })
+      expect(decideMut.mutateAsync).toHaveBeenCalledWith({
+        id: 'jr-1',
+        payload: { decision: 'REJECTED', note: '' },
+      })
     );
   });
 
   it('renders members and calls revokeRouteMember on remove confirm', async () => {
-    adminApi.getRouteMembers.mockResolvedValue({ data: [MEMBER] });
-    render(<ManagerPrivateRoutesPage />);
-    await waitFor(() => expect(screen.getByText('School Express')).toBeTruthy());
+    const revokeMut = makeMutation();
+    setup({ members: [MEMBER], revokeMut });
 
-    const manageButtons = screen.getAllByRole('button', { name: /manage/i });
-    fireEvent.click(manageButtons.find((btn) => !btn.disabled));
+    await waitFor(() => expect(screen.getByText('School Express')).toBeTruthy());
+    fireEvent.click(screen.getAllByRole('button', { name: /manage/i }).find((btn) => !btn.disabled));
+
     await waitFor(() => expect(screen.getByText('John Smith')).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: /remove/i }));
@@ -182,16 +194,25 @@ describe('ManagerPrivateRoutesPage', () => {
     const dialog = within(screen.getByRole('dialog'));
     fireEvent.click(dialog.getByRole('button', { name: /remove/i }));
 
-    await waitFor(() => expect(adminApi.revokeRouteMember).toHaveBeenCalledWith('RT-2', 'user-1'));
+    await waitFor(() =>
+      expect(revokeMut.mutateAsync).toHaveBeenCalledWith({
+        routeId: 'RT-2',
+        userId: 'user-1',
+      })
+    );
   });
 
-  it('shows a snackbar and does not crash on a 403 error', async () => {
-    adminApi.updateRoutePrivacy.mockRejectedValue(new Error('Not authorized to manage this route'));
-    render(<ManagerPrivateRoutesPage />);
+  it('shows a toast and does not crash on a 403 error', async () => {
+    const updatePrivacyMut = makeMutation({
+      mutateAsync: vi.fn().mockRejectedValue(new Error('Not authorized to manage this route')),
+    });
+    setup({ updatePrivacyMut });
     await waitFor(() => expect(screen.getByText('Downtown Loop')).toBeTruthy());
 
     fireEvent.click(screen.getByLabelText('Private toggle for RT-1'));
 
-    await waitFor(() => expect(screen.getByText(/not authorized to manage this route/i)).toBeTruthy());
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(expect.stringMatching(/not authorized to manage this route/i))
+    );
   });
 });
