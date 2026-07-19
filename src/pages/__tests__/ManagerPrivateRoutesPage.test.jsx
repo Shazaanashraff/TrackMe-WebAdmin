@@ -8,6 +8,7 @@ vi.mock('@/hooks/use-private-routes', () => ({
   useRouteJoinRequests: vi.fn(),
   useRouteMembers: vi.fn(),
   useUpdateRoutePrivacy: vi.fn(),
+  useUpdateRouteQr: vi.fn(),
   useRevealRoomKey: vi.fn(),
   useRotateRoomKey: vi.fn(),
   useDecideJoinRequest: vi.fn(),
@@ -21,6 +22,7 @@ import {
   useRouteJoinRequests,
   useRouteMembers,
   useUpdateRoutePrivacy,
+  useUpdateRouteQr,
   useRevealRoomKey,
   useRotateRoomKey,
   useDecideJoinRequest,
@@ -30,12 +32,12 @@ import { toast } from 'sonner';
 
 const PUBLIC_ROUTE = {
   routeId: 'RT-1', routeName: 'Downtown Loop', source: 'A', destination: 'B',
-  visibility: 'PUBLIC', isHidden: false, joinApprovalRequired: false,
+  visibility: 'PUBLIC', isHidden: false, joinApprovalRequired: false, qrEnabled: false,
   isActive: true, status: 'ACTIVE', hasRoomKey: false, memberCount: 0, pendingRequestCount: 0,
 };
 const PRIVATE_ROUTE = {
   routeId: 'RT-2', routeName: 'School Express', source: 'C', destination: 'D',
-  visibility: 'PRIVATE', isHidden: true, joinApprovalRequired: true,
+  visibility: 'PRIVATE', isHidden: true, joinApprovalRequired: true, qrEnabled: true,
   isActive: true, status: 'ACTIVE', hasRoomKey: true, roomKeyUpdatedAt: '2026-01-01T00:00:00Z',
   memberCount: 2, pendingRequestCount: 1,
 };
@@ -56,12 +58,13 @@ function defaultHooks({
   routes = [PUBLIC_ROUTE, PRIVATE_ROUTE],
   joinRequests = [],
   members = [],
-  updatePrivacyMut, revealMut, rotateMut, decideMut, revokeMut,
+  updatePrivacyMut, updateQrMut, revealMut, rotateMut, decideMut, revokeMut,
 } = {}) {
   useManagerOwnedRoutes.mockReturnValue({ data: { data: routes }, isLoading: false, error: null });
   useRouteJoinRequests.mockReturnValue({ data: { data: joinRequests }, isLoading: false });
   useRouteMembers.mockReturnValue({ data: { data: members }, isLoading: false });
   useUpdateRoutePrivacy.mockReturnValue(updatePrivacyMut || makeMutation());
+  useUpdateRouteQr.mockReturnValue(updateQrMut || makeMutation());
   useRevealRoomKey.mockReturnValue(revealMut || makeMutation({ mutateAsync: vi.fn().mockResolvedValue({ data: { code: '123456' } }) }));
   useRotateRoomKey.mockReturnValue(rotateMut || makeMutation({ mutateAsync: vi.fn().mockResolvedValue({ data: { code: '654321' } }) }));
   useDecideJoinRequest.mockReturnValue(decideMut || makeMutation());
@@ -110,6 +113,23 @@ describe('ManagerPrivateRoutesPage', () => {
       expect(updatePrivacyMut.mutateAsync).toHaveBeenCalledWith({
         routeId: 'RT-2',
         payload: { isHidden: false },
+      })
+    );
+  });
+
+  it('calls updateRouteQr with the correct payload when the QR Attendance switch is toggled, independent of privacy', async () => {
+    const updateQrMut = makeMutation();
+    setup({ updateQrMut });
+    await waitFor(() => expect(screen.getByText('Downtown Loop')).toBeTruthy());
+
+    const qrSwitch = screen.getByLabelText('QR attendance toggle for RT-1');
+    expect(qrSwitch).not.toBeDisabled();
+    fireEvent.click(qrSwitch);
+
+    await waitFor(() =>
+      expect(updateQrMut.mutateAsync).toHaveBeenCalledWith({
+        routeId: 'RT-1',
+        qrEnabled: true,
       })
     );
   });

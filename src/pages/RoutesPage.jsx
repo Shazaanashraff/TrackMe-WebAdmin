@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -42,6 +43,7 @@ const EMPTY_FORM = {
   distance: '',
   fare: '',
   serviceType: 'PUBLIC',
+  qrEnabled: false,
   stops: [],
 };
 
@@ -73,6 +75,7 @@ const routeColumns = [
   { id: 'source', header: 'From', accessorKey: 'source' },
   { id: 'destination', header: 'To', accessorKey: 'destination' },
   { id: 'serviceType', header: 'Service', accessorKey: 'serviceType', cell: (i) => <Badge variant="secondary">{i.getValue()}</Badge> },
+  { id: 'qrEnabled', header: 'QR', accessorKey: 'qrEnabled', cell: (i) => (i.getValue() ? <Badge>On</Badge> : <Badge variant="outline">Off</Badge>) },
   { id: 'stops', header: 'Stops', accessorKey: 'stopsCount', cell: (i) => i.getValue() ?? 0 },
   { id: 'status', header: 'Status', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() !== false ? 'active' : 'inactive'} /> },
 ];
@@ -138,6 +141,7 @@ export function RoutesPage() {
         distance: Number(form.distance),
         fare: Number(form.fare),
         serviceType: form.serviceType,
+        qrEnabled: form.qrEnabled,
         stops: filledStops,
         stopsCount: filledStops.length,
       });
@@ -210,6 +214,18 @@ export function RoutesPage() {
                     {SERVICE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="route-qr">QR Attendance</Label>
+                <div className="flex items-center h-9 gap-2">
+                  <Switch
+                    id="route-qr"
+                    checked={form.qrEnabled}
+                    onCheckedChange={(v) => setForm((p) => ({ ...p, qrEnabled: v }))}
+                    aria-label="Enable QR attendance for this route"
+                  />
+                  <span className="text-sm text-muted-foreground">{form.qrEnabled ? 'Enabled' : 'Disabled'}</span>
+                </div>
               </div>
             </div>
 
