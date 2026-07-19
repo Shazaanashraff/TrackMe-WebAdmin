@@ -40,6 +40,12 @@ function setup(opts) {
   return { user };
 }
 
+async function fillPasswords(user, { old = '', next = '', confirm = '' }) {
+  if (old) await user.type(screen.getByLabelText(/^old password$/i), old);
+  if (next) await user.type(screen.getByLabelText(/^new password$/i), next);
+  if (confirm) await user.type(screen.getByLabelText(/^confirm new password$/i), confirm);
+}
+
 describe('ManagerAccountsPage', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
@@ -61,10 +67,12 @@ describe('ManagerAccountsPage', () => {
     expect(screen.getByRole('button', { name: /update password/i })).toBeInTheDocument();
   });
 
-  it('renders reset form with bus select and password input', () => {
+  it('renders reset form with bus select and old/new/confirm password inputs', () => {
     setup();
     expect(screen.getByLabelText(/^bus$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/new password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^old password$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^new password$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^confirm new password$/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /update password/i })).toBeInTheDocument();
   });
 
@@ -74,55 +82,85 @@ describe('ManagerAccountsPage', () => {
     expect(screen.getByText(/Selected Account Context/i)).toBeInTheDocument();
   });
 
+  it('each password field has a show/hide visibility toggle', async () => {
+    const { user } = setup();
+    const oldInput = screen.getByLabelText(/^old password$/i);
+    expect(oldInput).toHaveAttribute('type', 'password');
+
+    await user.click(screen.getByRole('button', { name: /show old password/i }));
+    expect(oldInput).toHaveAttribute('type', 'text');
+
+    await user.click(screen.getByRole('button', { name: /hide old password/i }));
+    expect(oldInput).toHaveAttribute('type', 'password');
+  });
+
   it('shows validation error when no bus is selected', async () => {
     const { user } = setup({ buses: [] }); // empty = no auto-select
-    await user.type(screen.getByLabelText(/new password/i), 'password123');
+    await fillPasswords(user, { old: 'oldpass1', next: 'password123', confirm: 'password123' });
     await user.click(screen.getByRole('button', { name: /update password/i }));
     expect(screen.getByText(/please select a bus/i)).toBeInTheDocument();
   });
 
-  it('shows validation error when password is empty', async () => {
+  it('shows validation error when old password is empty', async () => {
     const { user } = setup();
+    await fillPasswords(user, { next: 'password123', confirm: 'password123' });
+    await user.click(screen.getByRole('button', { name: /update password/i }));
+    expect(screen.getByText(/old password is required/i)).toBeInTheDocument();
+  });
+
+  it('shows validation error when new password is empty', async () => {
+    const { user } = setup();
+    await fillPasswords(user, { old: 'oldpass1' });
     await user.click(screen.getByRole('button', { name: /update password/i }));
     expect(screen.getByText(/new password is required/i)).toBeInTheDocument();
   });
 
-  it('shows validation error when password is too short', async () => {
+  it('shows validation error when new password is too short', async () => {
     const { user } = setup();
-    await user.type(screen.getByLabelText(/new password/i), 'short');
+    await fillPasswords(user, { old: 'oldpass1', next: 'short', confirm: 'short' });
     await user.click(screen.getByRole('button', { name: /update password/i }));
     expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument();
   });
 
-  it('calls resetBusAccountPassword mutation with correct payload', async () => {
+  it('shows validation error when new password and confirmation do not match', async () => {
+    const { user } = setup();
+    await fillPasswords(user, { old: 'oldpass1', next: 'Secure1234!', confirm: 'Different1234!' });
+    await user.click(screen.getByRole('button', { name: /update password/i }));
+    expect(screen.getByText(/do not match/i)).toBeInTheDocument();
+  });
+
+  it('calls resetBusAccountPassword mutation with oldPassword + password payload', async () => {
     const resetMut = makeMutation();
     const { user } = setup({ resetMut });
 
-    await user.type(screen.getByLabelText(/new password/i), 'Secure1234!');
+    await fillPasswords(user, { old: 'oldpass1', next: 'Secure1234!', confirm: 'Secure1234!' });
     await user.click(screen.getByRole('button', { name: /update password/i }));
 
     await waitFor(() => expect(resetMut.mutateAsync).toHaveBeenCalledTimes(1));
     const call = resetMut.mutateAsync.mock.calls[0][0];
     expect(call.busId).toBe('BUS-1'); // auto-selected first bus
+    expect(call.payload.oldPassword).toBe('oldpass1');
     expect(call.payload.password).toBe('Secure1234!');
   });
 
-  it('shows success toast and clears password on success', async () => {
+  it('shows success toast and clears all password fields on success', async () => {
     const { user } = setup();
-    await user.type(screen.getByLabelText(/new password/i), 'Secure1234!');
+    await fillPasswords(user, { old: 'oldpass1', next: 'Secure1234!', confirm: 'Secure1234!' });
     await user.click(screen.getByRole('button', { name: /update password/i }));
 
     await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.stringMatching(/updated successfully/i)));
-    expect(screen.getByLabelText(/new password/i)).toHaveValue('');
+    expect(screen.getByLabelText(/^old password$/i)).toHaveValue('');
+    expect(screen.getByLabelText(/^new password$/i)).toHaveValue('');
+    expect(screen.getByLabelText(/^confirm new password$/i)).toHaveValue('');
   });
 
-  it('shows server error on mutation failure', async () => {
-    const resetMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(new Error('Server error')) });
+  it('shows a wrong-old-password server error inline', async () => {
+    const resetMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(new Error('Old password is incorrect')) });
     const { user } = setup({ resetMut });
 
-    await user.type(screen.getByLabelText(/new password/i), 'Secure1234!');
+    await fillPasswords(user, { old: 'wrongpass', next: 'Secure1234!', confirm: 'Secure1234!' });
     await user.click(screen.getByRole('button', { name: /update password/i }));
 
-    await waitFor(() => expect(screen.getByText(/server error/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/old password is incorrect/i)).toBeInTheDocument());
   });
 });

@@ -47,3 +47,11 @@ Super-admin's manager-password reset (`ManagersPage`) unless the same pattern is
 lint + test green. (Backend contract test tracked in the backend integration suite.)
 
 ## Blocked
+None for the web-admin (frontend) scope of this todo — implemented in full (steps 1-5).
+
+Steps 6-7 (`resetBusAccountPassword` backend verification of `oldPassword` + integration test +
+`docs/TESTING_GUIDE.md` row) live in the separate backend repository, which this session does not
+have access to. The frontend now sends `{ oldPassword, password }` to
+`adminApi.resetManagerBusAccountPassword`, and surfaces whatever error message the backend
+returns — but until the backend contract change lands, the backend will not actually reject a
+wrong old password. This is a coordination item for the backend repo, not a frontend blocker.

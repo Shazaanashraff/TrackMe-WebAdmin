@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
@@ -13,9 +14,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useManagerBuses } from '@/hooks/use-buses';
 import { useResetBusAccountPassword } from '@/hooks/use-buses';
 
+function PasswordField({ id, label, value, onChange, placeholder, autoComplete }) {
+  const [visible, setVisible] = useState(false);
+  const toggleVisibility = () => setVisible((v) => !v);
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative">
+        <Input
+          id={id}
+          type={visible ? 'text' : 'password'}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          className="pr-9"
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={toggleVisibility}
+          aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+          className="absolute right-0 top-0 h-9 w-9 text-muted-foreground"
+        >
+          {visible ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function ManagerAccountsPage() {
   const [selectedBusId, setSelectedBusId] = useState('');
-  const [password, setPassword] = useState('');
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [formError, setFormError] = useState(null);
 
   const busesQ = useManagerBuses();
@@ -36,12 +71,16 @@ export function ManagerAccountsPage() {
     e.preventDefault();
     setFormError(null);
     if (!selectedBusId) { setFormError('Please select a bus.'); return; }
-    if (!password.trim()) { setFormError('New password is required.'); return; }
-    if (password.length < 8) { setFormError('Password must be at least 8 characters.'); return; }
+    if (!oldPassword.trim()) { setFormError('Old password is required.'); return; }
+    if (!newPassword.trim()) { setFormError('New password is required.'); return; }
+    if (newPassword.length < 8) { setFormError('Password must be at least 8 characters.'); return; }
+    if (newPassword !== confirmPassword) { setFormError('New password and confirmation do not match.'); return; }
 
     try {
-      await resetM.mutateAsync({ busId: selectedBusId, payload: { password } });
-      setPassword('');
+      await resetM.mutateAsync({ busId: selectedBusId, payload: { oldPassword, password: newPassword } });
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
       toast('Bus account password updated successfully');
     } catch (err) {
       setFormError(err?.message || 'Failed to update password');
@@ -97,16 +136,30 @@ export function ManagerAccountsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="acc-pw">New Password</Label>
-                  <Input
-                    id="acc-pw"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Min 8 characters"
-                  />
-                </div>
+                <PasswordField
+                  id="acc-pw-old"
+                  label="Old Password"
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  placeholder="Current password"
+                  autoComplete="current-password"
+                />
+                <PasswordField
+                  id="acc-pw-new"
+                  label="New Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min 8 characters"
+                  autoComplete="new-password"
+                />
+                <PasswordField
+                  id="acc-pw-confirm"
+                  label="Confirm New Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                  autoComplete="new-password"
+                />
                 <Button type="submit" disabled={resetM.isPending}>
                   {resetM.isPending ? 'Updating…' : 'Update Password'}
                 </Button>
