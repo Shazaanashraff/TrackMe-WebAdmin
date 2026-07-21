@@ -4,6 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ManagersPage } from '../ManagersPage';
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useNavigate: () => mockNavigate,
+}));
+
 vi.mock('@/hooks/use-managers', () => ({
   useManagers: vi.fn(),
   useCreateManager: vi.fn(),
@@ -174,5 +180,12 @@ describe('ManagersPage', () => {
   it('shows empty state when no managers exist', () => {
     setup({ rows: [] });
     expect(screen.getByText('No managers yet')).toBeInTheDocument();
+  });
+
+  it('navigates to that manager\'s Operations detail when View is clicked', async () => {
+    const { user } = setup();
+    const viewBtns = screen.getAllByRole('button', { name: /view/i });
+    await user.click(viewBtns[0]);
+    expect(mockNavigate).toHaveBeenCalledWith('/operations?managerId=m1');
   });
 });

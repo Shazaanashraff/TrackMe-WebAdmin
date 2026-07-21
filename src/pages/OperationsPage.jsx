@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Activity, Bus, CheckCircle, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
@@ -29,7 +30,8 @@ import {
 const SERVICE_TYPES = ['PUBLIC', 'SCHOOL', 'UNIVERSITY', 'OFFICE'];
 
 export function OperationsPage() {
-  const [selectedManagerId, setSelectedManagerId] = useState('');
+  const [searchParams] = useSearchParams();
+  const [selectedManagerId, setSelectedManagerId] = useState(searchParams.get('managerId') || '');
   const [reviewTarget, setReviewTarget] = useState(null); // { id, decision }
   const [editBus, setEditBus] = useState(null);
   const [editServiceType, setEditServiceType] = useState('PUBLIC');

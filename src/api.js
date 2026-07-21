@@ -285,6 +285,12 @@ export const adminApi = {
       body: JSON.stringify(payload)
     }),
 
+  updateRouteQr: (routeId, qrEnabled) =>
+    request(`/api/manager/routes/${routeId}/qr`, {
+      method: 'PATCH',
+      body: JSON.stringify({ qrEnabled })
+    }),
+
   rotateRoomKey: (routeId) =>
     request(`/api/manager/routes/${routeId}/room-key/rotate`, {
       method: 'POST'

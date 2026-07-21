@@ -107,12 +107,14 @@ function defaultHooks({
   useUpdateBus.mockReturnValue(updateBusMut || makeMutation());
 }
 
-function setup(opts = {}) {
+function setup(opts = {}, { initialEntries } = {}) {
   defaultHooks(opts);
   const user = userEvent.setup();
   render(
     <TooltipProvider>
-      <MemoryRouter><OperationsPage /></MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries || ['/operations']}>
+        <OperationsPage />
+      </MemoryRouter>
     </TooltipProvider>,
   );
   return { user };
@@ -161,6 +163,11 @@ describe('OperationsPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Bus Alpha')).toBeInTheDocument();
     });
+  });
+
+  it('preselects the manager passed via ?managerId= instead of the first row', () => {
+    setup({ detail: DETAIL_A }, { initialEntries: ['/operations?managerId=m2'] });
+    expect(useOperationManagerDetail).toHaveBeenCalledWith('m2');
   });
 
   it('shows empty state panel when no managers exist', () => {

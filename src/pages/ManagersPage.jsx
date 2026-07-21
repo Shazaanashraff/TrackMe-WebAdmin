@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Users, UserCheck, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
@@ -35,6 +36,7 @@ function validate(form, isEdit) {
 const EMPTY_FORM = { name: '', email: '', password: '' };
 
 export function ManagersPage() {
+  const navigate = useNavigate();
   const managersQ = useManagers();
   const createM = useCreateManager();
   const updateM = useUpdateManager();
@@ -146,6 +148,9 @@ export function ManagersPage() {
         const toggling = statusM.isPending && statusM.variables?.managerId === row._id;
         return (
           <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={() => navigate(`/operations?managerId=${row._id}`)}>
+              View
+            </Button>
             <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
               Edit
             </Button>

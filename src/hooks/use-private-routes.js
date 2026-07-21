@@ -33,6 +33,14 @@ export function useUpdateRoutePrivacy() {
   });
 }
 
+export function useUpdateRouteQr() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ routeId, qrEnabled }) => adminApi.updateRouteQr(routeId, qrEnabled),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: qk.privateRoutes.owned() }),
+  });
+}
+
 export function useRevealRoomKey() {
   return useMutation({
     mutationFn: (routeId) => adminApi.revealRoomKey(routeId),

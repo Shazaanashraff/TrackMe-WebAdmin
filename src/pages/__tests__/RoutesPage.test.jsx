@@ -151,6 +151,28 @@ describe('RoutesPage', () => {
     });
   });
 
+  it('defaults QR attendance to disabled and includes it in the create payload when enabled', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ createMut });
+
+    expect(screen.getByLabelText(/enable qr attendance/i)).not.toBeChecked();
+
+    await user.type(screen.getByLabelText(/route id/i), 'RT-QR-01');
+    await user.type(screen.getByLabelText(/route name/i), 'QR Route');
+    await user.type(screen.getByLabelText(/source/i), 'A');
+    await user.type(screen.getByLabelText(/destination/i), 'B');
+    await user.type(screen.getByLabelText(/distance/i), '12');
+    await user.type(screen.getByLabelText(/fare/i), '60');
+    await user.click(screen.getByLabelText(/enable qr attendance/i));
+    await user.click(screen.getByRole('button', { name: /create route/i }));
+
+    await waitFor(() => {
+      expect(createMut.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ routeId: 'RT-QR-01', qrEnabled: true }),
+      );
+    });
+  });
+
   it('resets form after successful create', async () => {
     const createMut = makeMutation();
     const { user } = setup({ createMut });

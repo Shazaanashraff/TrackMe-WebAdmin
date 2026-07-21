@@ -21,6 +21,7 @@ import {
   useRouteJoinRequests,
   useRouteMembers,
   useUpdateRoutePrivacy,
+  useUpdateRouteQr,
   useRevealRoomKey,
   useRotateRoomKey,
   useDecideJoinRequest,
@@ -41,6 +42,7 @@ export function ManagerPrivateRoutesPage() {
   const membersQ = useRouteMembers(selectedRouteId, { status: 'ACTIVE' });
 
   const updatePrivacyM = useUpdateRoutePrivacy();
+  const updateQrM = useUpdateRouteQr();
   const revealM = useRevealRoomKey();
   const rotateM = useRotateRoomKey();
   const decideM = useDecideJoinRequest();
@@ -67,6 +69,15 @@ export function ManagerPrivateRoutesPage() {
       toast('Route privacy settings updated');
     } catch (err) {
       toast(err?.message || 'Failed to update route privacy');
+    }
+  };
+
+  const handleToggleQr = async (route, value) => {
+    try {
+      await updateQrM.mutateAsync({ routeId: route.routeId, qrEnabled: value });
+      toast(value ? 'QR attendance enabled for this route' : 'QR attendance disabled for this route');
+    } catch (err) {
+      toast(err?.message || 'Failed to update QR attendance');
     }
   };
 
@@ -130,7 +141,7 @@ export function ManagerPrivateRoutesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Private Routes"
-        description="Manage room-key access, visibility, and join approval for your routes."
+        description="Manage room-key access, visibility, join approval, and QR attendance for your routes."
       />
 
       {/* Routes table */}
@@ -151,6 +162,7 @@ export function ManagerPrivateRoutesPage() {
                     <TableHead className="text-center">Private</TableHead>
                     <TableHead className="text-center">Hidden</TableHead>
                     <TableHead className="text-center">Require Approval</TableHead>
+                    <TableHead className="text-center">QR Attendance</TableHead>
                     <TableHead className="text-center">Pending</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -190,6 +202,13 @@ export function ManagerPrivateRoutesPage() {
                             disabled={!isPrivate}
                             onCheckedChange={(v) => handleTogglePrivacy(route, 'joinApprovalRequired', v)}
                             aria-label={`Require approval toggle for ${route.routeId}`}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Switch
+                            checked={Boolean(route.qrEnabled)}
+                            onCheckedChange={(v) => handleToggleQr(route, v)}
+                            aria-label={`QR attendance toggle for ${route.routeId}`}
                           />
                         </TableCell>
                         <TableCell className="text-center">
