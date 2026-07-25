@@ -39,6 +39,17 @@
 | adminApi.getSuperAdminDashboard() | unit (fetch) | src/__tests__/api.test.js | GET + auth | dashboard payload changes |
 | Dashboard page flow | RTL | src/__tests__/pages/DashboardPage.test.jsx | cards + error state | metrics layout changes |
 
+## Account Management (bus-account password reset)
+| Item (fn / flow) | Test type | Test file | Cases covered | Update when |
+|---|---|---|---|---|
+| adminApi.resetManagerBusAccountPassword() payload | unit (fetch) | src/pages/__tests__/ManagerAccountsPage.test.jsx | sends `{ oldPassword, password }` | reset payload contract changes |
+| ManagerAccountsPage reset form | RTL (Vitest) | src/pages/__tests__/ManagerAccountsPage.test.jsx | old/new/confirm required, new ≥ 8 chars, new === confirm, per-field show/hide toggle, wrong-old-password server error rendered inline, success clears all fields | reset form UI/validation changes |
+
+> Backend contract: `resetBusAccountPassword` (managerController.js) must verify `oldPassword`
+> against the driver's stored password before applying `password`, returning a 400/401 on
+> mismatch (todo 019). That verification lives in the backend repo and is tracked there —
+> not covered by this repo's test suite.
+
 ## Custom Routes (school/work shuttles)
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
 |---|---|---|---|---|
