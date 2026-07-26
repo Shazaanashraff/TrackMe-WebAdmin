@@ -140,6 +140,22 @@ export const adminApi = {
       retryAfterRefresh: false
     }),
 
+  // Consumes the invite/reset link emailed to a manager (buildSetupLink on the
+  // backend). Both are public — no auth token exists yet at this point.
+  validateAccountSetup: (token) =>
+    request('/api/auth/account-setup/validate', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+      retryAfterRefresh: false
+    }),
+
+  completeAccountSetup: (token, password) =>
+    request('/api/auth/account-setup/complete', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+      retryAfterRefresh: false
+    }),
+
   getSuperAdminDashboard: () => request('/api/super-admin/dashboard'),
 
   getSystemRoutes: (params = {}) => {

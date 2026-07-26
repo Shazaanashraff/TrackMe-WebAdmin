@@ -20,7 +20,7 @@ import {
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function validate(form, isEdit) {
+function validate(form) {
   const errors = [];
   if (!form.name.trim()) errors.push('Name is required.');
   if (!form.email.trim()) {
@@ -28,12 +28,10 @@ function validate(form, isEdit) {
   } else if (!emailRegex.test(form.email)) {
     errors.push('Enter a valid email address.');
   }
-  if (!isEdit && !form.password.trim()) errors.push('Password is required for a new manager.');
-  if (form.password && form.password.length < 8) errors.push('Password must be at least 8 characters.');
   return errors;
 }
 
-const EMPTY_FORM = { name: '', email: '', password: '' };
+const EMPTY_FORM = { name: '', email: '' };
 
 export function ManagersPage() {
   const navigate = useNavigate();
@@ -56,7 +54,7 @@ export function ManagersPage() {
     return { total, active, inactive: total - active };
   }, [rows]);
 
-  const submitting = createM.isPending || updateM.isPending || resetPwM.isPending;
+  const submitting = createM.isPending || updateM.isPending;
 
   const openCreate = () => {
     setEditTarget(null);
@@ -67,14 +65,14 @@ export function ManagersPage() {
 
   const openEdit = (row) => {
     setEditTarget(row);
-    setForm({ name: row.name, email: row.email, password: '' });
+    setForm({ name: row.name, email: row.email });
     setServerError(null);
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     setServerError(null);
-    const errs = validate(form, Boolean(editTarget));
+    const errs = validate(form);
     if (errs.length > 0) {
       setServerError(errs.join(' '));
       return;
@@ -85,24 +83,28 @@ export function ManagersPage() {
           managerId: editTarget._id,
           payload: { name: form.name, email: form.email },
         });
-        if (form.password) {
-          await resetPwM.mutateAsync({
-            managerId: editTarget._id,
-            payload: { password: form.password },
-          });
-        }
         toast('Manager updated successfully');
       } else {
-        await createM.mutateAsync({
-          name: form.name,
-          email: form.email,
-          password: form.password,
-        });
-        toast('Manager created successfully');
+        // The super admin never sets a manager's password directly — the backend
+        // always emails an activation link the manager uses to set their own
+        // (see accountSetup on the Manager model). `emailSent` tells us whether
+        // that actually went out.
+        const result = await createM.mutateAsync({ name: form.name, email: form.email });
+        toast(result?.message || 'Manager invited');
       }
       setDialogOpen(false);
     } catch (err) {
       setServerError(err);
+    }
+  };
+
+  const handleSendResetEmail = async () => {
+    if (!editTarget) return;
+    try {
+      const result = await resetPwM.mutateAsync({ managerId: editTarget._id, payload: {} });
+      toast(result?.message || 'Reset link emailed to the manager');
+    } catch (err) {
+      toast(`Failed: ${err?.message || 'Unknown error'}`);
     }
   };
 
@@ -229,20 +231,29 @@ export function ManagersPage() {
               autoComplete="off"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="mgr-pw">
-              Password
-              {editTarget && <span className="text-muted-foreground font-normal ml-1">(optional reset)</span>}
-            </Label>
-            <Input
-              id="mgr-pw"
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-              placeholder="Minimum 8 characters"
-              autoComplete="new-password"
-            />
-          </div>
+          {editTarget ? (
+            <div className="space-y-1.5">
+              <Label>Password</Label>
+              <p className="text-sm text-muted-foreground">
+                Managers set their own password via an emailed link — the super admin
+                never sets it directly.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={resetPwM.isPending}
+                onClick={handleSendResetEmail}
+              >
+                {resetPwM.isPending ? 'Sending…' : 'Send password reset email'}
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              An activation link will be emailed to this address so the manager can set
+              their own password.
+            </p>
+          )}
         </div>
       </FormDialog>
     </div>

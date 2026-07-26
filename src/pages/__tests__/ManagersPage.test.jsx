@@ -119,21 +119,21 @@ describe('ManagersPage', () => {
     expect(screen.getByText(/name is required/i)).toBeInTheDocument();
   });
 
-  it('calls createManager mutation with correct payload', async () => {
+  it('calls createManager mutation with correct payload (no password field)', async () => {
     const createMut = makeMutation();
     const { user } = setup({ createMut });
     await user.click(screen.getByRole('button', { name: /add manager/i }));
     await screen.findByRole('heading', { name: /add manager/i });
 
+    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
+
     await user.type(screen.getByLabelText(/manager name/i), 'Carol');
     await user.type(screen.getByLabelText(/email/i), 'carol@co.com');
-    await user.type(screen.getByLabelText(/password/i), 'secret123');
     await user.click(screen.getByRole('button', { name: /create manager/i }));
 
     expect(createMut.mutateAsync).toHaveBeenCalledWith({
       name: 'Carol',
       email: 'carol@co.com',
-      password: 'secret123',
     });
   });
 
@@ -163,6 +163,20 @@ describe('ManagersPage', () => {
     expect(updateMut.mutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ payload: expect.objectContaining({ name: 'Alice Updated' }) }),
     );
+  });
+
+  it('sends a password reset email from the edit dialog instead of setting one directly', async () => {
+    const resetPwMut = makeMutation({ mutateAsync: vi.fn().mockResolvedValue({ message: 'Reset link emailed to the manager.' }) });
+    const { user } = setup({ resetPwMut });
+
+    const editBtns = screen.getAllByRole('button', { name: /edit/i });
+    await user.click(editBtns[0]);
+    await screen.findByRole('dialog');
+
+    expect(screen.queryByLabelText(/^password$/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /send password reset email/i }));
+
+    expect(resetPwMut.mutateAsync).toHaveBeenCalledWith({ managerId: 'm1', payload: {} });
   });
 
   it('calls updateManagerStatus when Deactivate is clicked', async () => {

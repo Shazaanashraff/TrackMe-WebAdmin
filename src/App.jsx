@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { ForgotPasswordRequestPage } from './pages/ForgotPasswordRequestPage';
 import { ForgotPasswordVerifyPage } from './pages/ForgotPasswordVerifyPage';
 import { ForgotPasswordResetPage } from './pages/ForgotPasswordResetPage';
+import { ActivateAccountPage } from './pages/ActivateAccountPage';
 import { AppShell } from './layout/AppShell';
 import { AppLoading } from './layout/AppLoading';
 import { ErrorBoundary } from './layout/ErrorBoundary';
@@ -202,6 +203,7 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordRequestPage />} />
           <Route path="/forgot-password/verify" element={<ForgotPasswordVerifyPage />} />
           <Route path="/forgot-password/reset" element={<ForgotPasswordResetPage />} />
+          <Route path="/activate" element={<ActivateAccountPage />} />
           <Route
             path="/*"
             element={
