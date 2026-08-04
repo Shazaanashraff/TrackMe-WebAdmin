@@ -244,7 +244,7 @@ describe('OperationsPage', () => {
     await waitFor(() => { expect(screen.getByText('Bus Alpha')).toBeInTheDocument(); });
     await user.click(screen.getByRole('button', { name: /edit/i }));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Edit Bus')).toBeInTheDocument();
+    expect(screen.getByText('Edit Vehicle')).toBeInTheDocument();
   });
 
   it('calls updateBus mutation when bus edit dialog is saved', async () => {

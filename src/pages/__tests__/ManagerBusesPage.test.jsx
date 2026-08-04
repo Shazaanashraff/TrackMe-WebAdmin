@@ -76,7 +76,7 @@ describe('ManagerBusesPage', () => {
 
   it('renders the page heading', () => {
     setup();
-    expect(screen.getByRole('heading', { level: 1, name: /bus management/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /vehicle management/i })).toBeInTheDocument();
   });
 
   it('shows loading skeletons when fetching', () => {
@@ -91,7 +91,7 @@ describe('ManagerBusesPage', () => {
 
   it('renders stat cards with correct counts', () => {
     setup({ buses: BUSES }); // 1 bus, 1 active
-    expect(screen.getByText('Total Buses')).toBeInTheDocument();
+    expect(screen.getByText('Total Vehicles')).toBeInTheDocument();
     expect(screen.getByText('Active Fleet')).toBeInTheDocument();
     expect(screen.getByText('Inactive Fleet')).toBeInTheDocument();
   });
@@ -105,7 +105,7 @@ describe('ManagerBusesPage', () => {
 
   it('shows empty state when no buses', () => {
     setup({ buses: [] });
-    expect(screen.getByText(/no buses yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no vehicles yet/i)).toBeInTheDocument();
   });
 });
 
@@ -116,11 +116,11 @@ describe('ManagerBusesPage route assignment toggle', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   async function fillStep0(user, { routeMode = 'EXISTING' } = {}) {
-    await user.click(screen.getByRole('button', { name: /add bus request/i }));
+    await user.click(screen.getByRole('button', { name: /add vehicle request/i }));
     await screen.findByRole('dialog');
 
-    await user.type(screen.getByLabelText(/bus id/i), 'BUS-99');
-    await user.type(screen.getByLabelText(/bus name/i), 'Shuttle 99');
+    await user.type(screen.getByLabelText(/vehicle id/i), 'BUS-99');
+    await user.type(screen.getByLabelText(/vehicle name/i), 'Shuttle 99');
     await user.type(screen.getByLabelText(/number plate/i), 'ABC-123');
 
     if (routeMode === 'CUSTOM') {
@@ -185,7 +185,7 @@ describe('ManagerBusesPage route assignment toggle', () => {
   it('shows validation error when required step 0 fields are empty', async () => {
     const { user } = setup();
 
-    await user.click(screen.getByRole('button', { name: /add bus request/i }));
+    await user.click(screen.getByRole('button', { name: /add vehicle request/i }));
     await screen.findByRole('dialog');
 
     // Click Continue without filling anything
@@ -237,7 +237,7 @@ describe('ManagerBusesPage edit and delete', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toBeInTheDocument();
-    expect(screen.getByLabelText(/bus name/i)).toHaveValue('Shuttle 1');
+    expect(screen.getByLabelText(/vehicle name/i)).toHaveValue('Shuttle 1');
     expect(screen.getByLabelText(/number plate/i)).toHaveValue('AB-1234');
   });
 
@@ -259,7 +259,7 @@ describe('ManagerBusesPage edit and delete', () => {
     await user.click(screen.getByRole('button', { name: /delete req/i }));
 
     await screen.findByRole('alertdialog');
-    expect(screen.getByText(/request bus deletion/i)).toBeInTheDocument();
+    expect(screen.getByText(/request vehicle deletion/i)).toBeInTheDocument();
   });
 
   it('calls deleteReq mutation with the provided reason', async () => {

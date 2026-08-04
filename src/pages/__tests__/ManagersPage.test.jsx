@@ -15,6 +15,7 @@ vi.mock('@/hooks/use-managers', () => ({
   useCreateManager: vi.fn(),
   useUpdateManager: vi.fn(),
   useUpdateManagerStatus: vi.fn(),
+  useDeleteManager: vi.fn(),
   useResetManagerPassword: vi.fn(),
 }));
 vi.mock('sonner', () => ({ toast: vi.fn() }));
@@ -24,6 +25,7 @@ import {
   useCreateManager,
   useUpdateManager,
   useUpdateManagerStatus,
+  useDeleteManager,
   useResetManagerPassword,
 } from '@/hooks/use-managers';
 
@@ -46,12 +48,14 @@ function defaultHooks({
   createMut,
   updateMut,
   statusMut,
+  deleteMut,
   resetPwMut,
 } = {}) {
   useManagers.mockReturnValue({ data: { data: rows }, isLoading: loading, error, refetch: vi.fn() });
   useCreateManager.mockReturnValue(createMut || makeMutation());
   useUpdateManager.mockReturnValue(updateMut || makeMutation());
   useUpdateManagerStatus.mockReturnValue(statusMut || makeMutation());
+  useDeleteManager.mockReturnValue(deleteMut || makeMutation());
   useResetManagerPassword.mockReturnValue(resetPwMut || makeMutation());
 }
 
@@ -119,22 +123,87 @@ describe('ManagersPage', () => {
     expect(screen.getByText(/name is required/i)).toBeInTheDocument();
   });
 
-  it('calls createManager mutation with correct payload (no password field)', async () => {
+  it('calls createManager mutation with the password the super admin set', async () => {
     const createMut = makeMutation();
     const { user } = setup({ createMut });
     await user.click(screen.getByRole('button', { name: /add manager/i }));
     await screen.findByRole('heading', { name: /add manager/i });
 
-    expect(screen.queryByLabelText(/password/i)).not.toBeInTheDocument();
-
     await user.type(screen.getByLabelText(/manager name/i), 'Carol');
     await user.type(screen.getByLabelText(/email/i), 'carol@co.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'CarolPass1!');
+    await user.type(screen.getByLabelText(/confirm password/i), 'CarolPass1!');
     await user.click(screen.getByRole('button', { name: /create manager/i }));
 
     expect(createMut.mutateAsync).toHaveBeenCalledWith({
       name: 'Carol',
       email: 'carol@co.com',
+      password: 'CarolPass1!',
     });
+  });
+
+  it('rejects mismatched passwords', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ createMut });
+    await user.click(screen.getByRole('button', { name: /add manager/i }));
+    await screen.findByRole('heading', { name: /add manager/i });
+
+    await user.type(screen.getByLabelText(/manager name/i), 'Carol');
+    await user.type(screen.getByLabelText(/email/i), 'carol@co.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'CarolPass1!');
+    await user.type(screen.getByLabelText(/confirm password/i), 'CarolPass2!');
+    await user.click(screen.getByRole('button', { name: /create manager/i }));
+
+    expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
+    expect(createMut.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('toggles password visibility', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: /add manager/i }));
+    await screen.findByRole('heading', { name: /add manager/i });
+
+    const passwordField = screen.getByLabelText(/^password$/i);
+    expect(passwordField).toHaveAttribute('type', 'password');
+
+    // Each field has its own toggle; the first belongs to the password field.
+    await user.click(screen.getAllByRole('button', { name: /show password/i })[0]);
+    expect(passwordField).toHaveAttribute('type', 'text');
+
+    await user.click(screen.getAllByRole('button', { name: /hide password/i })[0]);
+    expect(passwordField).toHaveAttribute('type', 'password');
+  });
+
+  it('requires a password when creating a manager', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ createMut });
+    await user.click(screen.getByRole('button', { name: /add manager/i }));
+    await screen.findByRole('heading', { name: /add manager/i });
+
+    await user.type(screen.getByLabelText(/manager name/i), 'Carol');
+    await user.type(screen.getByLabelText(/email/i), 'carol@co.com');
+    await user.click(screen.getByRole('button', { name: /create manager/i }));
+
+    expect(screen.getByText(/password is required/i)).toBeInTheDocument();
+    expect(createMut.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('rejects a weak password before sending the request', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ createMut });
+    await user.click(screen.getByRole('button', { name: /add manager/i }));
+    await screen.findByRole('heading', { name: /add manager/i });
+
+    await user.type(screen.getByLabelText(/manager name/i), 'Carol');
+    await user.type(screen.getByLabelText(/email/i), 'carol@co.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'alllowercase');
+    await user.type(screen.getByLabelText(/confirm password/i), 'alllowercase');
+    await user.click(screen.getByRole('button', { name: /create manager/i }));
+
+    expect(
+      screen.getByText(/password must contain an uppercase letter/i),
+    ).toBeInTheDocument();
+    expect(createMut.mutateAsync).not.toHaveBeenCalled();
   });
 
   it('opens edit dialog pre-filled with manager data', async () => {
@@ -165,18 +234,35 @@ describe('ManagersPage', () => {
     );
   });
 
-  it('sends a password reset email from the edit dialog instead of setting one directly', async () => {
-    const resetPwMut = makeMutation({ mutateAsync: vi.fn().mockResolvedValue({ message: 'Reset link emailed to the manager.' }) });
+  it('sets a new password directly from the edit dialog', async () => {
+    const resetPwMut = makeMutation({ mutateAsync: vi.fn().mockResolvedValue({}) });
     const { user } = setup({ resetPwMut });
 
     const editBtns = screen.getAllByRole('button', { name: /edit/i });
     await user.click(editBtns[0]);
     await screen.findByRole('dialog');
 
-    expect(screen.queryByLabelText(/^password$/i)).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /send password reset email/i }));
+    await user.type(screen.getByLabelText(/^new password$/i), 'BrandNew1!');
+    await user.type(screen.getByLabelText(/confirm new password/i), 'BrandNew1!');
+    await user.click(screen.getByRole('button', { name: /update password/i }));
 
-    expect(resetPwMut.mutateAsync).toHaveBeenCalledWith({ managerId: 'm1', payload: {} });
+    expect(resetPwMut.mutateAsync).toHaveBeenCalledWith({
+      managerId: 'm1',
+      payload: { password: 'BrandNew1!' },
+    });
+  });
+
+  it('cannot submit an empty password from the edit dialog', async () => {
+    const resetPwMut = makeMutation();
+    const { user } = setup({ resetPwMut });
+
+    const editBtns = screen.getAllByRole('button', { name: /edit/i });
+    await user.click(editBtns[0]);
+    await screen.findByRole('dialog');
+
+    // Password is optional on edit, so the action stays disabled until one is typed.
+    expect(screen.getByRole('button', { name: /update password/i })).toBeDisabled();
+    expect(resetPwMut.mutateAsync).not.toHaveBeenCalled();
   });
 
   it('calls updateManagerStatus when Deactivate is clicked', async () => {
@@ -189,6 +275,70 @@ describe('ManagersPage', () => {
     expect(statusMut.mutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ managerId: 'm1', payload: { isActive: false } }),
     );
+  });
+
+  // Deleting is irreversible, so the button only unlocks once a manager has been
+  // deactivated — MGR_A is active, MGR_B is not.
+  describe('Delete manager', () => {
+    const deleteButtons = () => screen.getAllByRole('button', { name: /^delete$/i });
+
+    it('disables Delete for an active manager and enables it for a deactivated one', () => {
+      setup();
+      const [activeRowDelete, inactiveRowDelete] = deleteButtons();
+      expect(activeRowDelete).toBeDisabled();
+      expect(inactiveRowDelete).toBeEnabled();
+    });
+
+    it('explains why Delete is unavailable while the manager is active', () => {
+      setup();
+      expect(deleteButtons()[0]).toHaveAttribute(
+        'title',
+        expect.stringMatching(/deactivate/i),
+      );
+    });
+
+    it('does not delete immediately — it asks for confirmation first', async () => {
+      const deleteMut = makeMutation();
+      const { user } = setup({ deleteMut });
+
+      await user.click(deleteButtons()[1]);
+
+      expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+      expect(deleteMut.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('deletes the manager once the confirmation is accepted', async () => {
+      const deleteMut = makeMutation();
+      const { user } = setup({ deleteMut });
+
+      await user.click(deleteButtons()[1]);
+      const dialog = await screen.findByRole('alertdialog');
+      await user.click(within(dialog).getByRole('button', { name: /delete manager/i }));
+
+      expect(deleteMut.mutateAsync).toHaveBeenCalledWith({ managerId: 'm2' });
+    });
+
+    it('does not delete when the confirmation is cancelled', async () => {
+      const deleteMut = makeMutation();
+      const { user } = setup({ deleteMut });
+
+      await user.click(deleteButtons()[1]);
+      const dialog = await screen.findByRole('alertdialog');
+      await user.click(within(dialog).getByRole('button', { name: /cancel/i }));
+
+      expect(deleteMut.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('warns that the deletion cannot be undone', async () => {
+      const { user } = setup();
+
+      await user.click(deleteButtons()[1]);
+      const dialog = await screen.findByRole('alertdialog');
+
+      expect(within(dialog).getByText(/cannot be undone/i)).toBeInTheDocument();
+      // The buses must be described as surviving, not deleted alongside.
+      expect(within(dialog).getByText(/unassigned/i)).toBeInTheDocument();
+    });
   });
 
   it('shows empty state when no managers exist', () => {

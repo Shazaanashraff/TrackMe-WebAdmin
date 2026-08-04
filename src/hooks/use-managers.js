@@ -38,6 +38,18 @@ export function useUpdateManagerStatus() {
   });
 }
 
+export function useDeleteManager() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ managerId }) => adminApi.deleteManager(managerId),
+    onSuccess: () => {
+      // Deleting a manager unassigns their buses, so the bus lists go stale too.
+      queryClient.invalidateQueries({ queryKey: qk.managers.all() });
+      queryClient.invalidateQueries({ queryKey: qk.buses.all() });
+    },
+  });
+}
+
 export function useResetManagerPassword() {
   return useMutation({
     mutationFn: ({ managerId, payload }) => adminApi.resetManagerPassword(managerId, payload),

@@ -42,7 +42,7 @@ export function ManagerAccountsPage() {
     try {
       await resetM.mutateAsync({ busId: selectedBusId, payload: { password } });
       setPassword('');
-      toast('Bus account password updated successfully');
+      toast('Vehicle account password updated successfully');
     } catch (err) {
       setFormError(err?.message || 'Failed to update password');
     }
@@ -52,7 +52,7 @@ export function ManagerAccountsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Account Management"
-        description="Rotate bus account credentials securely when driver assignments change."
+        description="Rotate vehicle account credentials securely when driver assignments change."
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -66,7 +66,7 @@ export function ManagerAccountsPage() {
         <div className="lg:col-span-3">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Reset Bus Account Password</CardTitle>
+              <CardTitle className="text-base">Reset Vehicle Account Password</CardTitle>
               <CardDescription>
                 Select a bus account and set a new credential for the assigned operator.
               </CardDescription>
@@ -82,11 +82,11 @@ export function ManagerAccountsPage() {
                   <Label htmlFor="acc-bus">Bus</Label>
                   <Select value={selectedBusId} onValueChange={setSelectedBusId}>
                     <SelectTrigger id="acc-bus">
-                      <SelectValue placeholder="Select a bus" />
+                      <SelectValue placeholder="Select a vehicle" />
                     </SelectTrigger>
                     <SelectContent>
                       {buses.length === 0 ? (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">No buses found</div>
+                        <div className="px-3 py-2 text-sm text-muted-foreground">No vehicles found</div>
                       ) : (
                         buses.map((bus) => (
                           <SelectItem key={bus._id || bus.busId} value={bus.busId}>
@@ -124,8 +124,8 @@ export function ManagerAccountsPage() {
             <CardContent>
               <dl className="space-y-2 text-sm">
                 {[
-                  { label: 'Bus', value: selectedBus?.busName || 'Not selected' },
-                  { label: 'Bus ID', value: selectedBusId || 'N/A' },
+                  { label: 'Vehicle', value: selectedBus?.busName || 'Not selected' },
+                  { label: 'Vehicle ID', value: selectedBusId || 'N/A' },
                   { label: 'Number Plate', value: selectedBus?.numberPlate || 'N/A' },
                   { label: 'Route', value: selectedBus?.routeId || 'N/A' },
                   { label: 'Driver Email', value: selectedBus?.driverId?.email || 'N/A' },

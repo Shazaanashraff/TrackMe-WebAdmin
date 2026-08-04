@@ -160,10 +160,18 @@ export default function App() {
           if (!cancelled) {
             setAuth(normalizedAuth);
           }
-        } catch {
-          clearStoredAuth();
-          if (!cancelled) {
-            setAuth(null);
+        } catch (err) {
+          // Only a genuine rejection means the session is dead. A network error,
+          // a timeout, or the backend restarting leaves `status` undefined — in
+          // that case keep the stored session (the access token is still valid)
+          // instead of logging the user out on every reload.
+          const rejectedByServer = err?.status === 401 || err?.status === 403;
+
+          if (rejectedByServer) {
+            clearStoredAuth();
+            if (!cancelled) {
+              setAuth(null);
+            }
           }
         }
       }

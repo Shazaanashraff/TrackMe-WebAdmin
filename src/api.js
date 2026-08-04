@@ -96,7 +96,11 @@ const request = async (path, options = {}) => {
     const fieldErrors = Array.isArray(data.errors)
       ? data.errors.map((item) => item.message || item.msg).filter(Boolean)
       : [];
-    throw new Error(fieldErrors[0] || data.message || 'Request failed');
+    const error = new Error(fieldErrors[0] || data.message || 'Request failed');
+    // Callers need to tell "the server rejected this" apart from "the request
+    // never got through" — a network failure must not be treated as a rejection.
+    error.status = response.status;
+    throw error;
   }
 
   return data;
@@ -194,6 +198,11 @@ export const adminApi = {
     request(`/api/super-admin/managers/${managerId}/status`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
+    }),
+
+  deleteManager: (managerId) =>
+    request(`/api/super-admin/managers/${managerId}`, {
+      method: 'DELETE'
     }),
 
   resetManagerPassword: (managerId, payload) =>

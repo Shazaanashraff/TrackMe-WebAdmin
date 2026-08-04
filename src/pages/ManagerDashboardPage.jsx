@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Bus, BookOpen, Hourglass, Wallet } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
@@ -8,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useManagerDashboard } from '@/hooks/use-dashboard';
 
 export function ManagerDashboardPage() {
+  const { user } = useOutletContext() ?? {};
   const dashQ = useManagerDashboard();
   const d = dashQ.data?.data;
 
@@ -23,20 +25,20 @@ export function ManagerDashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Manager Dashboard"
+        title={user?.name || user?.email || 'Manager Dashboard'}
         description="Live overview of your fleet, bookings, and pending requests."
       />
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Total Buses"
+          label="Total Vehicles"
           value={fleet.totalBuses ?? '—'}
           icon={Bus}
           isLoading={dashQ.isLoading}
         />
         <StatCard
-          label="Active Buses"
+          label="Active Vehicles"
           value={
             utilizationPct != null
               ? `${fleet.activeBuses} (${utilizationPct}%)`
@@ -63,7 +65,7 @@ export function ManagerDashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Booking Summary</CardTitle>
-          <CardDescription>Confirmed and cancelled journeys across all your buses</CardDescription>
+          <CardDescription>Confirmed and cancelled journeys across all your vehicles</CardDescription>
         </CardHeader>
         <CardContent>
           <AsyncSection

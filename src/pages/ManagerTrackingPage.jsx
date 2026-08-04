@@ -139,7 +139,7 @@ export function ManagerTrackingPage() {
     <div className="space-y-6">
       <PageHeader
         title="Live Tracking"
-        description="Monitor bus movement in real-time and review recent path history."
+        description="Monitor vehicle movement in real-time and review recent path history."
       />
 
       {locationQ.isError && (
@@ -158,14 +158,14 @@ export function ManagerTrackingPage() {
         <CardContent className="pt-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div className="space-y-1.5">
-              <Label htmlFor="tracking-bus">Select Bus</Label>
+              <Label htmlFor="tracking-bus">Select Vehicle</Label>
               <Select value={selectedBusId} onValueChange={setSelectedBusId}>
                 <SelectTrigger id="tracking-bus">
-                  <SelectValue placeholder="Select a bus" />
+                  <SelectValue placeholder="Select a vehicle" />
                 </SelectTrigger>
                 <SelectContent>
                   {buses.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">No buses found</div>
+                    <div className="px-3 py-2 text-sm text-muted-foreground">No vehicles found</div>
                   ) : (
                     buses.map((bus) => (
                       <SelectItem key={bus._id || bus.busId} value={bus.busId}>
@@ -251,7 +251,7 @@ export function ManagerTrackingPage() {
                 </div>
               </div>
               <div className="rounded-lg border border-border px-3.5 py-3">
-                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Selected Bus</p>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Selected Vehicle</p>
                 <p className="text-sm font-medium mt-0.5">
                   {locationData?.bus?.busName || selectedBusId || 'No bus selected'}
                 </p>

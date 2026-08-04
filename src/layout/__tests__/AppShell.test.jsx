@@ -59,7 +59,7 @@ describe('AppShell', () => {
   it('renders manager nav links', () => {
     renderShell({ role: 'admin', path: '/manager/dashboard' });
     expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Buses' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Vehicles' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Live Tracking' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Drivers' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Route Approvals' })).toBeInTheDocument();

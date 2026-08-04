@@ -30,7 +30,7 @@ export const SUPER_ADMIN_NAV = [
 
 export const MANAGER_NAV = [
   { label: 'Overview', path: '/manager/dashboard', icon: LayoutDashboard },
-  { label: 'Buses', path: '/manager/buses', icon: Bus },
+  { label: 'Vehicles', path: '/manager/buses', icon: Bus },
   { label: 'Live Tracking', path: '/manager/tracking', icon: MapPin },
   { label: 'Drivers', path: '/manager/accounts', icon: UserCog },
   { label: 'Route Approvals', path: '/manager/route-approvals', icon: GitPullRequest, hasBadge: true },
@@ -248,7 +248,7 @@ export function AppShell({ user, onLogout, onRefresh }) {
 
           <main className="flex-1 overflow-y-auto">
             <div className="max-w-screen-2xl mx-auto px-6 py-6">
-              <Outlet />
+              <Outlet context={{ user }} />
             </div>
           </main>
         </div>

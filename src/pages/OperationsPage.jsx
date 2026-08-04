@@ -96,7 +96,7 @@ export function OperationsPage() {
     setBusDialogError(null);
     try {
       await updateBusM.mutateAsync({ busId: editBus.busId || editBus._id, payload: { serviceType: editServiceType } });
-      toast('Bus updated');
+      toast('Vehicle updated');
       setEditBus(null);
     } catch (err) {
       setBusDialogError(err);
@@ -105,13 +105,13 @@ export function OperationsPage() {
 
   const overviewColumns = useMemo(() => [
     { id: 'manager', header: 'Manager', accessorKey: 'managerName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
-    { id: 'buses', header: 'Buses', accessorKey: 'fleet', cell: (i) => i.getValue()?.totalBuses ?? 0 },
+    { id: 'buses', header: 'Vehicles', accessorKey: 'fleet', cell: (i) => i.getValue()?.totalBuses ?? 0 },
     { id: 'bookings', header: 'Bookings', accessorKey: 'bookings', cell: (i) => i.getValue()?.totalBookings ?? 0 },
     { id: 'status', header: 'Status', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'online' : 'offline'} /> },
   ], []);
 
   const busColumns = useMemo(() => [
-    { id: 'name', header: 'Bus', accessorKey: 'busName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
+    { id: 'name', header: 'Vehicle', accessorKey: 'busName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
     { id: 'service', header: 'Service', accessorKey: 'serviceType', cell: (i) => <Badge variant="secondary">{i.getValue() || 'PUBLIC'}</Badge> },
     { id: 'state', header: 'State', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'online' : 'offline'} /> },
     { id: 'rating', header: 'Rating', accessorKey: 'reviewMetrics', cell: (i) => i.getValue()?.averageRating?.toFixed(1) ?? '—' },
@@ -129,7 +129,7 @@ export function OperationsPage() {
   const requestColumns = useMemo(() => [
     { id: 'type', header: 'Type', accessorKey: 'type' },
     { id: 'manager', header: 'Manager', accessorKey: 'managerId', cell: (i) => i.getValue()?.name || '—' },
-    { id: 'busId', header: 'Bus', accessorKey: 'busId' },
+    { id: 'busId', header: 'Vehicle', accessorKey: 'busId' },
     { id: 'submitted', header: 'Submitted', accessorKey: 'createdAt', cell: (i) => i.getValue() ? <RelativeTime date={i.getValue()} /> : '—' },
     { id: 'reason', header: 'Reason', accessorKey: 'reason', cell: (i) => i.getValue() || '—' },
     {
@@ -217,8 +217,8 @@ export function OperationsPage() {
             >
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {[
-                  { label: 'Total Buses', value: detailStats.total },
-                  { label: 'Active Buses', value: detailStats.active },
+                  { label: 'Total Vehicles', value: detailStats.total },
+                  { label: 'Active Vehicles', value: detailStats.active },
                   { label: 'Bookings', value: detailStats.bookings },
                   { label: 'Revenue', value: <Money amount={detailStats.revenue} /> },
                 ].map(({ label, value }) => (
@@ -232,7 +232,7 @@ export function OperationsPage() {
               <DataTable
                 columns={busColumns}
                 data={detail?.buses || []}
-                emptyTitle="No buses assigned"
+                emptyTitle="No vehicles assigned"
               />
             </AsyncSection>
           </CardContent>
@@ -243,8 +243,8 @@ export function OperationsPage() {
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-base">Bus Requests</CardTitle>
-            <CardDescription>Pending bus account requests from managers</CardDescription>
+            <CardTitle className="text-base">Vehicle Requests</CardTitle>
+            <CardDescription>Pending vehicle account requests from managers</CardDescription>
           </div>
           <Select value={requestStatus} onValueChange={setRequestStatus}>
             <SelectTrigger className="w-32 h-8 text-xs">
@@ -265,7 +265,7 @@ export function OperationsPage() {
             error={requestsQ.error}
             onRetry={requestsQ.refetch}
             emptyTitle="No requests"
-            emptyDescription="There are no bus requests matching the current filter."
+            emptyDescription="There are no vehicle requests matching the current filter."
           />
         </CardContent>
       </Card>
@@ -323,7 +323,7 @@ export function OperationsPage() {
       <FormDialog
         open={Boolean(editBus)}
         onOpenChange={(open) => { if (!open) setEditBus(null); }}
-        title="Edit Bus"
+        title="Edit Vehicle"
         submitLabel="Save Changes"
         onSubmit={handleSaveBus}
         pending={updateBusM.isPending}

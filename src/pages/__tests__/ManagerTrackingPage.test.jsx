@@ -108,7 +108,7 @@ describe('ManagerTrackingPage', () => {
 
   it('renders bus selector label', () => {
     setup();
-    expect(screen.getByLabelText(/select bus/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/select vehicle/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/history window/i)).toBeInTheDocument();
   });
 
