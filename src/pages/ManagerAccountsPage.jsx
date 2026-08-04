@@ -7,6 +7,8 @@ import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { PasswordInput } from '@/components/shared/password-input';
+import { StepRail } from '@/components/shared/step-rail';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,10 +73,14 @@ export function ManagerAccountsPage() {
   const revealKeyM = useDriverEnrollmentKey();
   const rotateKeyM = useRotateDriverEnrollmentKey();
 
+  // Creating expands an inline onboarding card; editing still uses a dialog,
+  // since an edit is a quick correction rather than a walk-through.
+  const [onboarding, setOnboarding] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [serverError, setServerError] = useState(null);
+  const [lastCreated, setLastCreated] = useState(null);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [resetTarget, setResetTarget] = useState(null);
@@ -95,11 +101,17 @@ export function ManagerAccountsPage() {
 
   const submitting = createM.isPending || updateM.isPending;
 
-  const openCreate = () => {
+  const startOnboarding = () => {
     setEditTarget(null);
     setForm(EMPTY_FORM);
     setServerError(null);
-    setDialogOpen(true);
+    setOnboarding(true);
+  };
+
+  const cancelOnboarding = () => {
+    setOnboarding(false);
+    setForm(EMPTY_FORM);
+    setServerError(null);
   };
 
   const openEdit = (driver) => {
@@ -137,6 +149,7 @@ export function ManagerAccountsPage() {
           },
         });
         toast('Driver updated successfully');
+        setDialogOpen(false);
       } else {
         const result = await createM.mutateAsync({
           name: form.name,
@@ -151,9 +164,15 @@ export function ManagerAccountsPage() {
         if (result?.enrollmentKey) {
           setRevealedKeys((prev) => ({ ...prev, [result.data._id]: result.enrollmentKey }));
         }
-        toast(`Driver created — enrollment key ${result?.enrollmentKey || ''}`.trim());
+        setLastCreated({
+          name: result?.data?.name || form.name,
+          email: result?.data?.email || form.email,
+          enrollmentKey: result?.enrollmentKey || null,
+        });
+        setOnboarding(false);
+        setForm(EMPTY_FORM);
+        toast('Driver created');
       }
-      setDialogOpen(false);
     } catch (err) {
       setServerError(err);
     }
@@ -353,12 +372,180 @@ export function ManagerAccountsPage() {
         title="Drivers"
         description="Manage driver accounts, their assigned vehicles, and passenger enrollment keys."
         actions={
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4 mr-1.5" />
-            Add Driver
+          <Button
+            variant={onboarding ? 'outline' : 'default'}
+            onClick={onboarding ? cancelOnboarding : startOnboarding}
+          >
+            {onboarding ? 'Close form' : (
+              <>
+                <Plus className="h-4 w-4 mr-1.5" />
+                Add Driver
+              </>
+            )}
           </Button>
         }
       />
+
+      {onboarding && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Add a driver</CardTitle>
+            <CardDescription>
+              Everything below is on one page — fill it in whatever order suits you.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <StepRail
+              steps={[
+                { title: 'Driver', description: 'Identity and contact' },
+                { title: 'Documents', description: 'NIC and licence' },
+                { title: 'Access', description: 'Sign-in and keys' },
+              ]}
+            />
+
+            <form
+              className="space-y-6"
+              onSubmit={(e) => { e.preventDefault(); handleSave(); }}
+            >
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">1 · Driver details</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ob-name">Full name</Label>
+                    <Input
+                      id="ob-name"
+                      value={form.name}
+                      onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                      placeholder="Enter full name"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ob-phone">Phone number</Label>
+                    <Input
+                      id="ob-phone"
+                      type="tel"
+                      value={form.phoneNumber}
+                      onChange={(e) => setForm((p) => ({ ...p, phoneNumber: e.target.value }))}
+                      placeholder="07X XXX XXXX"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="ob-email">Email</Label>
+                    <Input
+                      id="ob-email"
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                      placeholder="driver@company.com"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">2 · Documents</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ob-nic">NIC number</Label>
+                    <Input
+                      id="ob-nic"
+                      value={form.nicNumber}
+                      onChange={(e) => setForm((p) => ({ ...p, nicNumber: e.target.value.toUpperCase() }))}
+                      placeholder="Optional"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ob-licence">Licence card number</Label>
+                    <Input
+                      id="ob-licence"
+                      value={form.licenseCardNumber}
+                      onChange={(e) => setForm((p) => ({ ...p, licenseCardNumber: e.target.value.toUpperCase() }))}
+                      placeholder="Optional"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">3 · App access</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ob-password">Temporary password</Label>
+                    <PasswordInput
+                      id="ob-password"
+                      value={form.password}
+                      onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+                      placeholder="At least 8 characters"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  A passenger enrollment key is generated automatically and shown once the
+                  driver is created. The driver signs in to the app with their email.
+                </p>
+
+                {serverError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>
+                      {typeof serverError === 'string'
+                        ? serverError
+                        : serverError?.message || 'An error occurred'}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button type="button" variant="ghost" onClick={cancelOnboarding} disabled={submitting}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={submitting}>
+                    {submitting ? 'Creating…' : 'Create driver'}
+                  </Button>
+                </div>
+              </section>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {lastCreated && (
+        <Card>
+          <CardContent className="flex flex-wrap items-center gap-x-8 gap-y-3 py-4">
+            <div>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">Driver ready</p>
+              <p className="font-medium text-foreground">{lastCreated.name}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">Signs in with</p>
+              <p className="font-medium text-foreground">{lastCreated.email}</p>
+            </div>
+            {lastCreated.enrollmentKey && (
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Passenger enrollment key
+                </p>
+                <code className="whitespace-nowrap text-sm font-medium">
+                  {lastCreated.enrollmentKey}
+                </code>
+              </div>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="ml-auto"
+              onClick={() => setLastCreated(null)}
+            >
+              Dismiss
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard label="Total Drivers" value={stats.total} icon={Users} isLoading={driversQ.isLoading} />
@@ -390,8 +577,8 @@ export function ManagerAccountsPage() {
       <FormDialog
         open={dialogOpen}
         onOpenChange={(open) => { if (!submitting) setDialogOpen(open); }}
-        title={editTarget ? 'Edit Driver' : 'Add Driver'}
-        submitLabel={editTarget ? 'Save Driver' : 'Create Driver'}
+        title="Edit Driver"
+        submitLabel="Save Driver"
         onSubmit={handleSave}
         pending={submitting}
         error={serverError}
@@ -450,22 +637,6 @@ export function ManagerAccountsPage() {
               autoComplete="off"
             />
           </div>
-          {!editTarget && (
-            <div className="space-y-1.5">
-              <Label htmlFor="drv-password">Password</Label>
-              <PasswordInput
-                id="drv-password"
-                value={form.password}
-                onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-                placeholder="At least 8 characters"
-                autoComplete="new-password"
-              />
-              <p className="text-sm text-muted-foreground">
-                Share this with the driver directly. An enrollment key is generated
-                automatically for their passengers.
-              </p>
-            </div>
-          )}
         </div>
       </FormDialog>
 
