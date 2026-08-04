@@ -277,14 +277,36 @@ export const adminApi = {
   // the correct source for any "assign a route to my vehicle" dropdown.
   getManagerAssignableRoutes: () => request('/api/manager/routes'),
 
-  getManagerCustomRoutes: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return request(`/api/manager/custom-routes${query ? `?${query}` : ''}`);
-  },
+  getManagerDrivers: () => request('/api/manager/drivers'),
 
-  nameCustomRoute: (routeId, payload) =>
-    request(`/api/manager/custom-routes/${routeId}/name`, {
-      method: 'PATCH',
+  createManagerDriver: (payload) =>
+    request('/api/manager/drivers', {
+      method: 'POST',
       body: JSON.stringify(payload)
+    }),
+
+  updateManagerDriver: (driverId, payload) =>
+    request(`/api/manager/drivers/${driverId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    }),
+
+  deleteManagerDriver: (driverId) =>
+    request(`/api/manager/drivers/${driverId}`, {
+      method: 'DELETE'
+    }),
+
+  resetManagerDriverPassword: (driverId, password) =>
+    request(`/api/manager/drivers/${driverId}/password`, {
+      method: 'PUT',
+      body: JSON.stringify({ password })
+    }),
+
+  getDriverEnrollmentKey: (driverId) =>
+    request(`/api/manager/drivers/${driverId}/enrollment-key`),
+
+  rotateDriverEnrollmentKey: (driverId) =>
+    request(`/api/manager/drivers/${driverId}/enrollment-key/rotate`, {
+      method: 'POST'
     })
 };

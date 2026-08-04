@@ -31,4 +31,9 @@ export const qk = {
     assignableRoutes: () => ['routes', 'assignable'],
     managerRequests: () => ['manager-requests'],
   },
+  drivers: {
+    all: () => ['drivers'],
+    list: () => ['drivers', 'list'],
+    enrollmentKey: (driverId) => ['drivers', driverId, 'enrollment-key'],
+  },
 };
