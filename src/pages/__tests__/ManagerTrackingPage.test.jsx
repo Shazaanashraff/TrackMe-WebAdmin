@@ -30,26 +30,26 @@ vi.mock('socket.io-client', () => ({
   io: vi.fn(() => mockSocket),
 }));
 
-vi.mock('@/hooks/use-buses', () => ({
-  useManagerBuses: vi.fn(),
+vi.mock('@/hooks/use-vehicles', () => ({
+  useManagerVehicles: vi.fn(),
 }));
 
 vi.mock('@/hooks/use-tracking', () => ({
-  useManagerBusLocation: vi.fn(),
+  useManagerVehicleLocation: vi.fn(),
 }));
 
 import { io } from 'socket.io-client';
-import { useManagerBuses } from '@/hooks/use-buses';
-import { useManagerBusLocation } from '@/hooks/use-tracking';
+import { useManagerVehicles } from '@/hooks/use-vehicles';
+import { useManagerVehicleLocation } from '@/hooks/use-tracking';
 
-const BUSES = [
-  { _id: 'b1', busId: 'BUS-1', busName: 'Shuttle 1', isActive: true },
-  { _id: 'b2', busId: 'BUS-2', busName: 'Express 2', isActive: true },
+const VEHICLES = [
+  { _id: 'b1', vehicleId: 'VEHICLE-1', vehicleName: 'Shuttle 1', isActive: true },
+  { _id: 'b2', vehicleId: 'VEHICLE-2', vehicleName: 'Express 2', isActive: true },
 ];
 
 const LOCATION = {
-  bus: { busId: 'BUS-1', busName: 'Shuttle 1', routeId: 'PUB-1' },
-  latest: { lat: 7.2906, lng: 80.6337, timestamp: '2026-07-17T10:00:00Z', speed: 45, accuracy: 10, busId: 'BUS-1' },
+  vehicle: { vehicleId: 'VEHICLE-1', vehicleName: 'Shuttle 1', routeId: 'PUB-1' },
+  latest: { lat: 7.2906, lng: 80.6337, timestamp: '2026-07-17T10:00:00Z', speed: 45, accuracy: 10, vehicleId: 'VEHICLE-1' },
   history: [
     { lat: 7.2900, lng: 80.6330, timestamp: '2026-07-17T09:58:00Z', speed: 40, accuracy: 12 },
     { lat: 7.2906, lng: 80.6337, timestamp: '2026-07-17T10:00:00Z', speed: 45, accuracy: 10 },
@@ -57,17 +57,17 @@ const LOCATION = {
 };
 
 function defaultHooks({
-  buses = BUSES, busesLoading = false, busesError = null,
+  vehicles = VEHICLES, vehiclesLoading = false, vehiclesError = null,
   location = LOCATION, locationLoading = false, locationError = null,
 } = {}) {
-  useManagerBuses.mockReturnValue({
-    data: buses ? { data: buses } : undefined,
-    isLoading: busesLoading,
-    isError: Boolean(busesError),
-    error: busesError,
+  useManagerVehicles.mockReturnValue({
+    data: vehicles ? { data: vehicles } : undefined,
+    isLoading: vehiclesLoading,
+    isError: Boolean(vehiclesError),
+    error: vehiclesError,
     refetch: vi.fn(),
   });
-  useManagerBusLocation.mockReturnValue({
+  useManagerVehicleLocation.mockReturnValue({
     data: location ? { data: location } : undefined,
     isLoading: locationLoading,
     isError: Boolean(locationError),
@@ -96,8 +96,8 @@ describe('ManagerTrackingPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: /live tracking/i })).toBeInTheDocument();
   });
 
-  it('shows error alert when buses query fails', () => {
-    setup({ busesError: new Error('Network error'), buses: null, location: null });
+  it('shows error alert when vehicles query fails', () => {
+    setup({ vehiclesError: new Error('Network error'), vehicles: null, location: null });
     expect(document.body.textContent).toMatch(/network error/i);
   });
 
@@ -106,7 +106,7 @@ describe('ManagerTrackingPage', () => {
     expect(document.body.textContent).toMatch(/gps error/i);
   });
 
-  it('renders bus selector label', () => {
+  it('renders vehicle selector label', () => {
     setup();
     expect(screen.getByLabelText(/select vehicle/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/history window/i)).toBeInTheDocument();
@@ -136,7 +136,7 @@ describe('ManagerTrackingPage', () => {
     expect(screen.getByText('10 m')).toBeInTheDocument();
   });
 
-  it('shows selected bus name and route in live status', () => {
+  it('shows selected vehicle name and route in live status', () => {
     setup();
     // Speed and accuracy come from locationData — if these render, locationData is set
     expect(screen.getByText('45 km/h')).toBeInTheDocument();
@@ -169,7 +169,7 @@ describe('ManagerTrackingPage', () => {
     );
   });
 
-  it('emits manager:join-bus on socket connect', () => {
+  it('emits manager:join-vehicle on socket connect', () => {
     localStorage.setItem('admin-auth', JSON.stringify({ token: 'tkn' }));
     setup();
     // Find the 'connect' handler and invoke it
@@ -177,15 +177,15 @@ describe('ManagerTrackingPage', () => {
     expect(connectCall).toBeTruthy();
     connectCall[1](); // invoke the connect handler
     expect(mockSocket.emit).toHaveBeenCalledWith(
-      'manager:join-bus',
-      { busId: 'BUS-1' },
+      'manager:join-vehicle',
+      { vehicleId: 'VEHICLE-1' },
       expect.any(Function),
     );
   });
 
-  it('shows "No buses found" when bus list is empty', () => {
-    // Pass location: null so locationData stays null → bus name falls through to 'No bus selected'
-    setup({ buses: [], location: null });
-    expect(screen.getByText('No bus selected')).toBeInTheDocument();
+  it('shows "No vehicles found" when vehicle list is empty', () => {
+    // Pass location: null so locationData stays null → vehicle name falls through to 'No vehicle selected'
+    setup({ vehicles: [], location: null });
+    expect(screen.getByText('No vehicle selected')).toBeInTheDocument();
   });
 });

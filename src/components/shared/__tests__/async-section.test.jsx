@@ -7,10 +7,10 @@ describe('AsyncSection', () => {
   it('renders children when data is present and not loading', () => {
     render(
       <AsyncSection isLoading={false} data={[{ id: 1 }]}>
-        <p>Bus list here</p>
+        <p>Vehicle list here</p>
       </AsyncSection>,
     );
-    expect(screen.getByText('Bus list here')).toBeInTheDocument();
+    expect(screen.getByText('Vehicle list here')).toBeInTheDocument();
   });
 
   it('renders default CardSkeleton when isLoading with no loadingFallback', () => {
@@ -56,11 +56,11 @@ describe('AsyncSection', () => {
 
   it('renders EmptyState when data is an empty array', () => {
     render(
-      <AsyncSection isLoading={false} data={[]} emptyTitle="No buses yet">
+      <AsyncSection isLoading={false} data={[]} emptyTitle="No vehicles yet">
         <p>never</p>
       </AsyncSection>,
     );
-    expect(screen.getByText('No buses yet')).toBeInTheDocument();
+    expect(screen.getByText('No vehicles yet')).toBeInTheDocument();
     expect(screen.queryByText('never')).toBeNull();
   });
 

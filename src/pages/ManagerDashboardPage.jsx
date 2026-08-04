@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Bus, BookOpen, Hourglass, Wallet } from 'lucide-react';
+import { Bus as VehicleIcon, BookOpen, Hourglass, Wallet } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
 import { AsyncSection } from '@/components/shared/async-section';
@@ -18,9 +18,9 @@ export function ManagerDashboardPage() {
   const pending = d?.pendingRequests ?? 0;
 
   const utilizationPct = useMemo(() => {
-    if (!fleet.totalBuses) return null;
-    return Math.round((fleet.activeBuses / fleet.totalBuses) * 100);
-  }, [fleet.activeBuses, fleet.totalBuses]);
+    if (!fleet.totalVehicles) return null;
+    return Math.round((fleet.activeVehicles / fleet.totalVehicles) * 100);
+  }, [fleet.activeVehicles, fleet.totalVehicles]);
 
   return (
     <div className="space-y-6">
@@ -33,18 +33,18 @@ export function ManagerDashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Total Vehicles"
-          value={fleet.totalBuses ?? '—'}
-          icon={Bus}
+          value={fleet.totalVehicles ?? '—'}
+          icon={VehicleIcon}
           isLoading={dashQ.isLoading}
         />
         <StatCard
           label="Active Vehicles"
           value={
             utilizationPct != null
-              ? `${fleet.activeBuses} (${utilizationPct}%)`
-              : (fleet.activeBuses ?? '—')
+              ? `${fleet.activeVehicles} (${utilizationPct}%)`
+              : (fleet.activeVehicles ?? '—')
           }
-          icon={Bus}
+          icon={VehicleIcon}
           isLoading={dashQ.isLoading}
         />
         <StatCard

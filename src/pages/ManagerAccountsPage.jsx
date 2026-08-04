@@ -10,37 +10,37 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useManagerBuses } from '@/hooks/use-buses';
-import { useResetBusAccountPassword } from '@/hooks/use-buses';
+import { useManagerVehicles } from '@/hooks/use-vehicles';
+import { useResetVehicleAccountPassword } from '@/hooks/use-vehicles';
 
 export function ManagerAccountsPage() {
-  const [selectedBusId, setSelectedBusId] = useState('');
+  const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState(null);
 
-  const busesQ = useManagerBuses();
-  const resetM = useResetBusAccountPassword();
+  const vehiclesQ = useManagerVehicles();
+  const resetM = useResetVehicleAccountPassword();
 
-  const buses = busesQ.data?.data || [];
+  const vehicles = vehiclesQ.data?.data || [];
 
-  // Auto-select first bus
+  // Auto-select first vehicle
   useEffect(() => {
-    if (buses.length > 0 && !selectedBusId) {
-      setSelectedBusId(buses[0].busId);
+    if (vehicles.length > 0 && !selectedVehicleId) {
+      setSelectedVehicleId(vehicles[0].vehicleId);
     }
-  }, [buses, selectedBusId]);
+  }, [vehicles, selectedVehicleId]);
 
-  const selectedBus = buses.find((b) => b.busId === selectedBusId);
+  const selectedVehicle = vehicles.find((b) => b.vehicleId === selectedVehicleId);
 
   const handleReset = async (e) => {
     e.preventDefault();
     setFormError(null);
-    if (!selectedBusId) { setFormError('Please select a bus.'); return; }
+    if (!selectedVehicleId) { setFormError('Please select a vehicle.'); return; }
     if (!password.trim()) { setFormError('New password is required.'); return; }
     if (password.length < 8) { setFormError('Password must be at least 8 characters.'); return; }
 
     try {
-      await resetM.mutateAsync({ busId: selectedBusId, payload: { password } });
+      await resetM.mutateAsync({ vehicleId: selectedVehicleId, payload: { password } });
       setPassword('');
       toast('Vehicle account password updated successfully');
     } catch (err) {
@@ -56,8 +56,8 @@ export function ManagerAccountsPage() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Managed Buses" value={buses.length} isLoading={busesQ.isLoading} />
-        <StatCard label="Selected Bus" value={selectedBusId || 'None'} isLoading={busesQ.isLoading} />
+        <StatCard label="Managed Vehicles" value={vehicles.length} isLoading={vehiclesQ.isLoading} />
+        <StatCard label="Selected Vehicle" value={selectedVehicleId || 'None'} isLoading={vehiclesQ.isLoading} />
         <StatCard label="Password Policy" value="Min 8 chars" />
       </div>
 
@@ -68,7 +68,7 @@ export function ManagerAccountsPage() {
             <CardHeader>
               <CardTitle className="text-base">Reset Vehicle Account Password</CardTitle>
               <CardDescription>
-                Select a bus account and set a new credential for the assigned operator.
+                Select a vehicle account and set a new credential for the assigned operator.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -79,18 +79,18 @@ export function ManagerAccountsPage() {
               )}
               <form onSubmit={handleReset} className="space-y-4 max-w-md">
                 <div className="space-y-1.5">
-                  <Label htmlFor="acc-bus">Bus</Label>
-                  <Select value={selectedBusId} onValueChange={setSelectedBusId}>
-                    <SelectTrigger id="acc-bus">
+                  <Label htmlFor="acc-vehicle">Vehicle</Label>
+                  <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
+                    <SelectTrigger id="acc-vehicle">
                       <SelectValue placeholder="Select a vehicle" />
                     </SelectTrigger>
                     <SelectContent>
-                      {buses.length === 0 ? (
+                      {vehicles.length === 0 ? (
                         <div className="px-3 py-2 text-sm text-muted-foreground">No vehicles found</div>
                       ) : (
-                        buses.map((bus) => (
-                          <SelectItem key={bus._id || bus.busId} value={bus.busId}>
-                            {bus.busName} ({bus.busId})
+                        vehicles.map((vehicle) => (
+                          <SelectItem key={vehicle._id || vehicle.vehicleId} value={vehicle.vehicleId}>
+                            {vehicle.vehicleName} ({vehicle.vehicleId})
                           </SelectItem>
                         ))
                       )}
@@ -124,11 +124,11 @@ export function ManagerAccountsPage() {
             <CardContent>
               <dl className="space-y-2 text-sm">
                 {[
-                  { label: 'Vehicle', value: selectedBus?.busName || 'Not selected' },
-                  { label: 'Vehicle ID', value: selectedBusId || 'N/A' },
-                  { label: 'Number Plate', value: selectedBus?.numberPlate || 'N/A' },
-                  { label: 'Route', value: selectedBus?.routeId || 'N/A' },
-                  { label: 'Driver Email', value: selectedBus?.driverId?.email || 'N/A' },
+                  { label: 'Vehicle', value: selectedVehicle?.vehicleName || 'Not selected' },
+                  { label: 'Vehicle ID', value: selectedVehicleId || 'N/A' },
+                  { label: 'Number Plate', value: selectedVehicle?.numberPlate || 'N/A' },
+                  { label: 'Route', value: selectedVehicle?.routeId || 'N/A' },
+                  { label: 'Driver Email', value: selectedVehicle?.driverId?.email || 'N/A' },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex gap-1.5">
                     <dt className="font-semibold shrink-0">{label}:</dt>

@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 
 const STATUS_MAP = {
-  // bus
+  // vehicle
   online: { variant: 'settled', label: 'Online' },
   idle: { variant: 'progress', label: 'Idle' },
   offline: { variant: 'danger', label: 'Offline' },

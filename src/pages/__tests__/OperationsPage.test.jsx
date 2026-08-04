@@ -8,31 +8,31 @@ import { OperationsPage } from '../OperationsPage';
 vi.mock('@/hooks/use-operations', () => ({
   useOperationsOverview: vi.fn(),
   useOperationManagerDetail: vi.fn(),
-  usePendingBusRequests: vi.fn(),
+  usePendingVehicleRequests: vi.fn(),
   useAuditLogs: vi.fn(),
-  useReviewBusRequest: vi.fn(),
-  useUpdateBus: vi.fn(),
+  useReviewVehicleRequest: vi.fn(),
+  useUpdateVehicle: vi.fn(),
 }));
 vi.mock('sonner', () => ({ toast: vi.fn() }));
 
 import {
   useOperationsOverview,
   useOperationManagerDetail,
-  usePendingBusRequests,
+  usePendingVehicleRequests,
   useAuditLogs,
-  useReviewBusRequest,
-  useUpdateBus,
+  useReviewVehicleRequest,
+  useUpdateVehicle,
 } from '@/hooks/use-operations';
 
-const MGR_A = { managerId: 'm1', managerName: 'Alice Smith', isActive: true, fleet: { totalBuses: 3 }, bookings: { totalBookings: 20 } };
-const MGR_B = { managerId: 'm2', managerName: 'Bob Jones', isActive: false, fleet: { totalBuses: 1 }, bookings: { totalBookings: 5 } };
+const MGR_A = { managerId: 'm1', managerName: 'Alice Smith', isActive: true, fleet: { totalVehicles: 3 }, bookings: { totalBookings: 20 } };
+const MGR_B = { managerId: 'm2', managerName: 'Bob Jones', isActive: false, fleet: { totalVehicles: 1 }, bookings: { totalBookings: 5 } };
 
 const DETAIL_A = {
   manager: { name: 'Alice Smith', email: 'alice@co.com' },
-  buses: [
+  vehicles: [
     {
       _id: 'b1',
-      busName: 'Bus Alpha',
+      vehicleName: 'Vehicle Alpha',
       serviceType: 'PUBLIC',
       isActive: true,
       bookingMetrics: { totalBookings: 15, totalRevenue: 300 },
@@ -43,9 +43,9 @@ const DETAIL_A = {
 
 const REQ_A = {
   _id: 'r1',
-  type: 'NEW_BUS',
+  type: 'NEW_VEHICLE',
   managerId: { name: 'Alice Smith' },
-  busId: 'BUS-001',
+  vehicleId: 'VEHICLE-001',
   createdAt: '2026-07-17T10:00:00Z',
   reason: 'Expanding fleet',
   status: 'PENDING',
@@ -55,8 +55,8 @@ const AUDIT_A = {
   _id: 'a1',
   createdAt: '2026-07-17T09:00:00Z',
   managerId: { name: 'Alice Smith' },
-  action: 'BUS_UPDATED',
-  entityType: 'Bus',
+  action: 'VEHICLE_UPDATED',
+  entityType: 'Vehicle',
   actorId: { email: 'admin@co.com' },
 };
 
@@ -77,7 +77,7 @@ function defaultHooks({
   loading = false,
   overviewError = null,
   reviewMut,
-  updateBusMut,
+  updateVehicleMut,
 } = {}) {
   useOperationsOverview.mockReturnValue({
     data: { data: overview },
@@ -91,7 +91,7 @@ function defaultHooks({
     error: null,
     refetch: vi.fn(),
   });
-  usePendingBusRequests.mockReturnValue({
+  usePendingVehicleRequests.mockReturnValue({
     data: { data: requests },
     isLoading: false,
     error: null,
@@ -103,8 +103,8 @@ function defaultHooks({
     error: null,
     refetch: vi.fn(),
   });
-  useReviewBusRequest.mockReturnValue(reviewMut || makeMutation());
-  useUpdateBus.mockReturnValue(updateBusMut || makeMutation());
+  useReviewVehicleRequest.mockReturnValue(reviewMut || makeMutation());
+  useUpdateVehicle.mockReturnValue(updateVehicleMut || makeMutation());
 }
 
 function setup(opts = {}, { initialEntries } = {}) {
@@ -161,7 +161,7 @@ describe('OperationsPage', () => {
   it('auto-selects first manager and shows detail on load', async () => {
     setup({ detail: DETAIL_A });
     await waitFor(() => {
-      expect(screen.getByText('Bus Alpha')).toBeInTheDocument();
+      expect(screen.getByText('Vehicle Alpha')).toBeInTheDocument();
     });
   });
 
@@ -175,10 +175,10 @@ describe('OperationsPage', () => {
     expect(screen.getByText('No manager selected')).toBeInTheDocument();
   });
 
-  it('renders pending request rows in the Bus Requests table', () => {
+  it('renders pending request rows in the Vehicle Requests table', () => {
     setup({ requests: [REQ_A] });
-    expect(screen.getByText('NEW_BUS')).toBeInTheDocument();
-    expect(screen.getByText('BUS-001')).toBeInTheDocument();
+    expect(screen.getByText('NEW_VEHICLE')).toBeInTheDocument();
+    expect(screen.getByText('VEHICLE-001')).toBeInTheDocument();
     expect(screen.getByText('Expanding fleet')).toBeInTheDocument();
   });
 
@@ -234,28 +234,28 @@ describe('OperationsPage', () => {
 
   it('renders audit log rows', () => {
     setup({ audit: [AUDIT_A] });
-    expect(screen.getByText('BUS_UPDATED')).toBeInTheDocument();
-    expect(screen.getByText('Bus')).toBeInTheDocument();
+    expect(screen.getByText('VEHICLE_UPDATED')).toBeInTheDocument();
+    expect(screen.getByText('Vehicle')).toBeInTheDocument();
     expect(screen.getByText('admin@co.com')).toBeInTheDocument();
   });
 
-  it('opens bus edit FormDialog when Edit is clicked', async () => {
+  it('opens vehicle edit FormDialog when Edit is clicked', async () => {
     const { user } = setup({ detail: DETAIL_A });
-    await waitFor(() => { expect(screen.getByText('Bus Alpha')).toBeInTheDocument(); });
+    await waitFor(() => { expect(screen.getByText('Vehicle Alpha')).toBeInTheDocument(); });
     await user.click(screen.getByRole('button', { name: /edit/i }));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Edit Vehicle')).toBeInTheDocument();
   });
 
-  it('calls updateBus mutation when bus edit dialog is saved', async () => {
-    const updateBusMut = makeMutation();
-    const { user } = setup({ detail: DETAIL_A, updateBusMut });
-    await waitFor(() => { expect(screen.getByText('Bus Alpha')).toBeInTheDocument(); });
+  it('calls updateVehicle mutation when vehicle edit dialog is saved', async () => {
+    const updateVehicleMut = makeMutation();
+    const { user } = setup({ detail: DETAIL_A, updateVehicleMut });
+    await waitFor(() => { expect(screen.getByText('Vehicle Alpha')).toBeInTheDocument(); });
     await user.click(screen.getByRole('button', { name: /edit/i }));
     await screen.findByRole('dialog');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
-    expect(updateBusMut.mutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ busId: 'b1', payload: { serviceType: 'PUBLIC' } }),
+    expect(updateVehicleMut.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ vehicleId: 'b1', payload: { serviceType: 'PUBLIC' } }),
     );
   });
 });

@@ -9,8 +9,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useManagerBuses } from '@/hooks/use-buses';
-import { useManagerBusLocation } from '@/hooks/use-tracking';
+import { useManagerVehicles } from '@/hooks/use-vehicles';
+import { useManagerVehicleLocation } from '@/hooks/use-tracking';
 
 const markerIcon = new L.Icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -46,21 +46,21 @@ function toLatLng(point) {
 }
 
 export function ManagerTrackingPage() {
-  const [selectedBusId, setSelectedBusId] = useState('');
+  const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [windowMinutes, setWindowMinutes] = useState(15);
   const [locationData, setLocationData] = useState(null);
 
-  const busesQ = useManagerBuses();
-  const buses = busesQ.data?.data || [];
+  const vehiclesQ = useManagerVehicles();
+  const vehicles = vehiclesQ.data?.data || [];
 
-  const locationQ = useManagerBusLocation(selectedBusId, windowMinutes);
+  const locationQ = useManagerVehicleLocation(selectedVehicleId, windowMinutes);
 
-  // Auto-select first bus when list loads
+  // Auto-select first vehicle when list loads
   useEffect(() => {
-    if (buses.length > 0 && !selectedBusId) {
-      setSelectedBusId(buses[0].busId);
+    if (vehicles.length > 0 && !selectedVehicleId) {
+      setSelectedVehicleId(vehicles[0].vehicleId);
     }
-  }, [buses, selectedBusId]);
+  }, [vehicles, selectedVehicleId]);
 
   // Seed locationData from the REST query; socket events append on top
   useEffect(() => {
@@ -71,7 +71,7 @@ export function ManagerTrackingPage() {
 
   // Real-time socket.io updates
   useEffect(() => {
-    if (!selectedBusId) return undefined;
+    if (!selectedVehicleId) return undefined;
 
     let token = null;
     try {
@@ -86,27 +86,27 @@ export function ManagerTrackingPage() {
     const socket = io(API_BASE_URL, { transports: ['websocket'], auth: { token } });
 
     socket.on('connect', () => {
-      socket.emit('manager:join-bus', { busId: selectedBusId }, () => {});
+      socket.emit('manager:join-vehicle', { vehicleId: selectedVehicleId }, () => {});
     });
 
-    socket.on('bus:update', (payload) => {
-      if (!payload || payload.busId !== selectedBusId) return;
+    socket.on('vehicle:update', (payload) => {
+      if (!payload || payload.vehicleId !== selectedVehicleId) return;
       setLocationData((prev) => {
         const history = [...(prev?.history || [])];
         history.push({
           lat: payload.lat, lng: payload.lng,
           timestamp: payload.timestamp, speed: payload.speed,
-          accuracy: payload.accuracy, busId: payload.busId,
-          routeId: payload.routeId || prev?.bus?.routeId,
+          accuracy: payload.accuracy, vehicleId: payload.vehicleId,
+          routeId: payload.routeId || prev?.vehicle?.routeId,
         });
         const cutoff = Date.now() - windowMinutes * 60 * 1000;
         return {
           ...prev,
-          bus: prev?.bus || { busId: payload.busId, busName: payload.busName, routeId: payload.routeId || '' },
+          vehicle: prev?.vehicle || { vehicleId: payload.vehicleId, vehicleName: payload.vehicleName, routeId: payload.routeId || '' },
           latest: {
             lat: payload.lat, lng: payload.lng,
             timestamp: payload.timestamp, speed: payload.speed,
-            accuracy: payload.accuracy, busId: payload.busId,
+            accuracy: payload.accuracy, vehicleId: payload.vehicleId,
           },
           history: history.filter((p) => new Date(p.timestamp).getTime() >= cutoff),
         };
@@ -114,10 +114,10 @@ export function ManagerTrackingPage() {
     });
 
     return () => {
-      socket.emit('manager:leave-bus', { busId: selectedBusId }, () => {});
+      socket.emit('manager:leave-vehicle', { vehicleId: selectedVehicleId }, () => {});
       socket.disconnect();
     };
-  }, [selectedBusId, windowMinutes]);
+  }, [selectedVehicleId, windowMinutes]);
 
   const pathPoints = useMemo(
     () => (locationData?.history || []).map((p) => toLatLng(p)).filter(Boolean),
@@ -144,12 +144,12 @@ export function ManagerTrackingPage() {
 
       {locationQ.isError && (
         <Alert variant="destructive">
-          <AlertDescription>{locationQ.error?.message || 'Failed to load bus location'}</AlertDescription>
+          <AlertDescription>{locationQ.error?.message || 'Failed to load vehicle location'}</AlertDescription>
         </Alert>
       )}
-      {busesQ.isError && (
+      {vehiclesQ.isError && (
         <Alert variant="destructive">
-          <AlertDescription>{busesQ.error?.message || 'Failed to load buses'}</AlertDescription>
+          <AlertDescription>{vehiclesQ.error?.message || 'Failed to load vehicles'}</AlertDescription>
         </Alert>
       )}
 
@@ -158,18 +158,18 @@ export function ManagerTrackingPage() {
         <CardContent className="pt-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div className="space-y-1.5">
-              <Label htmlFor="tracking-bus">Select Vehicle</Label>
-              <Select value={selectedBusId} onValueChange={setSelectedBusId}>
-                <SelectTrigger id="tracking-bus">
+              <Label htmlFor="tracking-vehicle">Select Vehicle</Label>
+              <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
+                <SelectTrigger id="tracking-vehicle">
                   <SelectValue placeholder="Select a vehicle" />
                 </SelectTrigger>
                 <SelectContent>
-                  {buses.length === 0 ? (
+                  {vehicles.length === 0 ? (
                     <div className="px-3 py-2 text-sm text-muted-foreground">No vehicles found</div>
                   ) : (
-                    buses.map((bus) => (
-                      <SelectItem key={bus._id || bus.busId} value={bus.busId}>
-                        {bus.busName} ({bus.busId})
+                    vehicles.map((vehicle) => (
+                      <SelectItem key={vehicle._id || vehicle.vehicleId} value={vehicle.vehicleId}>
+                        {vehicle.vehicleName} ({vehicle.vehicleId})
                       </SelectItem>
                     ))
                   )}
@@ -220,7 +220,7 @@ export function ManagerTrackingPage() {
                   {latestPoint && (
                     <Marker position={latestPoint} icon={markerIcon}>
                       <LeafletTooltip direction="top" offset={[0, -12]} opacity={1} permanent>
-                        {locationData?.bus?.busName || selectedBusId}
+                        {locationData?.vehicle?.vehicleName || selectedVehicleId}
                       </LeafletTooltip>
                     </Marker>
                   )}
@@ -253,10 +253,10 @@ export function ManagerTrackingPage() {
               <div className="rounded-lg border border-border px-3.5 py-3">
                 <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Selected Vehicle</p>
                 <p className="text-sm font-medium mt-0.5">
-                  {locationData?.bus?.busName || selectedBusId || 'No bus selected'}
+                  {locationData?.vehicle?.vehicleName || selectedVehicleId || 'No vehicle selected'}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Route: {locationData?.bus?.routeId || 'N/A'}
+                  Route: {locationData?.vehicle?.routeId || 'N/A'}
                 </p>
               </div>
             </CardContent>

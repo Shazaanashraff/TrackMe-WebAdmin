@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Sun, Moon, Bus, Settings, MoreVertical, Info,
+  Sun, Moon, Bus as VehicleIcon, Settings, MoreVertical, Info,
   AlertTriangle, CheckCircle, XCircle, Copy, Bell, Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -218,7 +218,7 @@ export function StyleGuidePage() {
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Body / UI — Inter</p>
                 <div className="space-y-1">
-                  <p className="text-sm text-foreground">Base UI text (14px) — 22 buses, 4 routes, 1 active request</p>
+                  <p className="text-sm text-foreground">Base UI text (14px) — 22 vehicles, 4 routes, 1 active request</p>
                   <p className="text-sm text-muted-foreground">Secondary / muted text — Last updated 4 minutes ago</p>
                   <p className="text-xs text-muted-foreground">Label / caption (12px) — ROUTE STATUS</p>
                 </div>
@@ -302,7 +302,7 @@ export function StyleGuidePage() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {/* Input */}
               <div className="space-y-2">
-                <Label htmlFor="sg-input">Bus plate number</Label>
+                <Label htmlFor="sg-input">Vehicle plate number</Label>
                 <Input id="sg-input" placeholder="WP ABC-1234" />
               </div>
               <div className="space-y-2">
@@ -376,8 +376,8 @@ export function StyleGuidePage() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>Total Buses</CardTitle>
-                    <Bus className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle>Total Vehicles</CardTitle>
+                    <VehicleIcon className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <CardDescription>Active fleet in this region</CardDescription>
                 </CardHeader>
@@ -506,7 +506,7 @@ export function StyleGuidePage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Bus ID</TableHead>
+                    <TableHead>Vehicle ID</TableHead>
                     <TableHead>Route</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -599,19 +599,19 @@ export function StyleGuidePage() {
               {/* AlertDialog */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive">Delete Bus</Button>
+                  <Button variant="destructive">Delete Vehicle</Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Remove bus B-042?</AlertDialogTitle>
+                    <AlertDialogTitle>Remove vehicle B-042?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will permanently remove the bus from the fleet. All tracking history will be archived. This action cannot be undone.
+                      This will permanently remove the vehicle from the fleet. All tracking history will be archived. This action cannot be undone.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Remove bus
+                      Remove vehicle
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -624,7 +624,7 @@ export function StyleGuidePage() {
                 </SheetTrigger>
                 <SheetContent>
                   <SheetHeader>
-                    <SheetTitle>Bus B-042 Detail</SheetTitle>
+                    <SheetTitle>Vehicle B-042 Detail</SheetTitle>
                     <SheetDescription>Colombo–Kandy route · Last GPS 2 min ago</SheetDescription>
                   </SheetHeader>
                   <div className="mt-6 space-y-4">
@@ -705,7 +705,7 @@ export function StyleGuidePage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Bus B-042</DropdownMenuLabel>
+                  <DropdownMenuLabel>Vehicle B-042</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
                     <Eye className="h-4 w-4" /> View detail
@@ -715,7 +715,7 @@ export function StyleGuidePage() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                    <XCircle className="h-4 w-4" /> Remove bus
+                    <XCircle className="h-4 w-4" /> Remove vehicle
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -740,7 +740,7 @@ export function StyleGuidePage() {
           <Section id="scroll" title="Scroll Area">
             <div className="flex gap-4">
               <div className="w-64">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Bus list (scroll)</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Vehicle list (scroll)</p>
                 <ScrollArea className="h-48 rounded-xl border border-border bg-surface">
                   <div className="p-3 space-y-1">
                     {Array.from({ length: 16 }, (_, i) => `B-0${String(i + 1).padStart(2, '0')}`).map((id, i) => (

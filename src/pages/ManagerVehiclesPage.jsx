@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, Bus, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Bus as VehicleIcon, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
@@ -19,22 +19,22 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  useManagerBuses,
+  useManagerVehicles,
   useManagerAssignableRoutes,
-  useCreateBusAccountRequest,
-  useUpdateManagerBus,
-  useRequestDeleteBus,
-} from '@/hooks/use-buses';
+  useCreateVehicleAccountRequest,
+  useUpdateManagerVehicle,
+  useRequestDeleteVehicle,
+} from '@/hooks/use-vehicles';
 
 const SERVICE_TYPES = ['PUBLIC', 'SCHOOL', 'UNIVERSITY', 'OFFICE'];
-const BUS_TYPES = ['AC', 'NON-AC', 'DELUXE', 'SLEEPER'];
+const VEHICLE_TYPES = ['AC', 'NON-AC', 'DELUXE', 'SLEEPER'];
 const MAINTENANCE_STATUSES = ['ACTIVE', 'MAINTENANCE', 'OUT_OF_SERVICE'];
 const CREATE_STEPS = ['Vehicle Details', 'Driver & Access', 'Review & Submit'];
 
 const EMPTY_CREATE = {
-  busId: '', busName: '', numberPlate: '',
+  vehicleId: '', vehicleName: '', numberPlate: '',
   routeMode: 'EXISTING', routeId: '',
-  seatCapacity: 40, busType: 'AC', serviceType: 'PUBLIC',
+  seatCapacity: 40, vehicleType: 'AC', serviceType: 'PUBLIC',
   driverName: '', driverEmail: '', driverPhoneNumber: '',
   driverNicNumber: '', driverLicenseCardNumber: '',
   password: '', reason: '',
@@ -42,7 +42,7 @@ const EMPTY_CREATE = {
 
 function validateStep(form, step) {
   if (step === 0) {
-    if (!form.busId.trim() || !form.busName.trim() || !form.numberPlate.trim()) {
+    if (!form.vehicleId.trim() || !form.vehicleName.trim() || !form.numberPlate.trim()) {
       return form.routeMode === 'CUSTOM'
         ? 'Please complete Vehicle ID, Vehicle Name, and Number Plate.'
         : 'Please complete Vehicle ID, Vehicle Name, Number Plate, and Route.';
@@ -63,32 +63,32 @@ function validateStep(form, step) {
   return null;
 }
 
-export function ManagerBusesPage() {
-  const busesQ = useManagerBuses();
+export function ManagerVehiclesPage() {
+  const vehiclesQ = useManagerVehicles();
   const routesQ = useManagerAssignableRoutes();
-  const createM = useCreateBusAccountRequest();
-  const updateBusM = useUpdateManagerBus();
-  const deleteReqM = useRequestDeleteBus();
+  const createM = useCreateVehicleAccountRequest();
+  const updateVehicleM = useUpdateManagerVehicle();
+  const deleteReqM = useRequestDeleteVehicle();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createStep, setCreateStep] = useState(0);
   const [createForm, setCreateForm] = useState(EMPTY_CREATE);
   const [createError, setCreateError] = useState(null);
 
-  const [editBus, setEditBus] = useState(null);
+  const [editVehicle, setEditVehicle] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [editError, setEditError] = useState(null);
 
-  const [deleteTarget, setDeleteTarget] = useState(null); // bus object
+  const [deleteTarget, setDeleteTarget] = useState(null); // vehicle object
 
-  const buses = busesQ.data?.data || [];
+  const vehicles = vehiclesQ.data?.data || [];
   const routes = routesQ.data?.data || [];
 
   const summary = useMemo(() => {
-    const total = buses.length;
-    const active = buses.filter((b) => b.isActive !== false).length;
+    const total = vehicles.length;
+    const active = vehicles.filter((b) => b.isActive !== false).length;
     return { total, active, inactive: total - active };
-  }, [buses]);
+  }, [vehicles]);
 
   const setCreate = (key) => (e) => setCreateForm((p) => ({ ...p, [key]: e.target.value }));
 
@@ -129,31 +129,31 @@ export function ManagerBusesPage() {
     }
   };
 
-  const openEdit = (bus) => {
-    setEditBus(bus);
+  const openEdit = (vehicle) => {
+    setEditVehicle(vehicle);
     setEditForm({
-      busName: bus.busName || '',
-      numberPlate: bus.numberPlate || '',
-      routeId: bus.routeId || '',
-      seatCapacity: bus.seatCapacity || 40,
-      busType: bus.busType || 'AC',
-      serviceType: bus.serviceType || 'PUBLIC',
-      isActive: bus.isActive !== false,
-      maintenanceStatus: bus.maintenanceStatus || 'ACTIVE',
+      vehicleName: vehicle.vehicleName || '',
+      numberPlate: vehicle.numberPlate || '',
+      routeId: vehicle.routeId || '',
+      seatCapacity: vehicle.seatCapacity || 40,
+      vehicleType: vehicle.vehicleType || 'AC',
+      serviceType: vehicle.serviceType || 'PUBLIC',
+      isActive: vehicle.isActive !== false,
+      maintenanceStatus: vehicle.maintenanceStatus || 'ACTIVE',
     });
     setEditError(null);
   };
 
   const handleSaveEdit = async () => {
-    if (!editBus) return;
+    if (!editVehicle) return;
     setEditError(null);
     try {
-      await updateBusM.mutateAsync({
-        busId: editBus.busId,
+      await updateVehicleM.mutateAsync({
+        vehicleId: editVehicle.vehicleId,
         payload: { ...editForm, seatCapacity: Number(editForm.seatCapacity) },
       });
       toast('Vehicle updated');
-      setEditBus(null);
+      setEditVehicle(null);
     } catch (err) {
       setEditError(err);
     }
@@ -162,7 +162,7 @@ export function ManagerBusesPage() {
   const handleDeleteConfirm = async (reason) => {
     if (!deleteTarget) return;
     try {
-      await deleteReqM.mutateAsync({ busId: deleteTarget.busId, payload: { reason: reason || '' } });
+      await deleteReqM.mutateAsync({ vehicleId: deleteTarget.vehicleId, payload: { reason: reason || '' } });
       toast('Delete request submitted');
       setDeleteTarget(null);
     } catch (err) {
@@ -172,8 +172,8 @@ export function ManagerBusesPage() {
   };
 
   const columns = useMemo(() => [
-    { id: 'busId', header: 'Vehicle ID', accessorKey: 'busId' },
-    { id: 'busName', header: 'Vehicle Name', accessorKey: 'busName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
+    { id: 'vehicleId', header: 'Vehicle ID', accessorKey: 'vehicleId' },
+    { id: 'vehicleName', header: 'Vehicle Name', accessorKey: 'vehicleName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
     { id: 'plate', header: 'Plate', accessorKey: 'numberPlate' },
     { id: 'route', header: 'Route', accessorKey: 'routeId' },
     { id: 'service', header: 'Service', accessorKey: 'serviceType' },
@@ -181,11 +181,11 @@ export function ManagerBusesPage() {
     {
       id: 'actions', header: '', accessorKey: '_id', enableSorting: false,
       cell: (i) => {
-        const bus = i.row.original;
+        const vehicle = i.row.original;
         return (
           <div className="flex gap-1.5">
-            <Button size="sm" variant="outline" onClick={() => openEdit(bus)}>Edit</Button>
-            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(bus)}>Delete Req</Button>
+            <Button size="sm" variant="outline" onClick={() => openEdit(vehicle)}>Edit</Button>
+            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(vehicle)}>Delete Req</Button>
           </div>
         );
       },
@@ -206,17 +206,17 @@ export function ManagerBusesPage() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Total Vehicles" value={summary.total} icon={Bus} isLoading={busesQ.isLoading} />
-        <StatCard label="Active Fleet" value={summary.active} icon={CheckCircle} isLoading={busesQ.isLoading} />
-        <StatCard label="Inactive Fleet" value={summary.inactive} icon={XCircle} isLoading={busesQ.isLoading} />
+        <StatCard label="Total Vehicles" value={summary.total} icon={VehicleIcon} isLoading={vehiclesQ.isLoading} />
+        <StatCard label="Active Fleet" value={summary.active} icon={CheckCircle} isLoading={vehiclesQ.isLoading} />
+        <StatCard label="Inactive Fleet" value={summary.inactive} icon={XCircle} isLoading={vehiclesQ.isLoading} />
       </div>
 
       <DataTable
         columns={columns}
-        data={buses}
-        isLoading={busesQ.isLoading}
-        error={busesQ.error}
-        onRetry={busesQ.refetch}
+        data={vehicles}
+        isLoading={vehiclesQ.isLoading}
+        error={vehiclesQ.error}
+        onRetry={vehiclesQ.refetch}
         emptyTitle="No vehicles yet"
         emptyDescription="Submit a vehicle account request to get started."
       />
@@ -237,17 +237,17 @@ export function ManagerBusesPage() {
             </Alert>
           )}
 
-          {/* Step 0: Bus Details */}
+          {/* Step 0: Vehicle Details */}
           {createStep === 0 && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="cb-busid">Vehicle ID</Label>
-                  <Input id="cb-busid" value={createForm.busId} onChange={setCreate('busId')} placeholder="BUS-001" />
+                  <Label htmlFor="cb-vehicleid">Vehicle ID</Label>
+                  <Input id="cb-vehicleid" value={createForm.vehicleId} onChange={setCreate('vehicleId')} placeholder="VEHICLE-001" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="cb-busname">Vehicle Name</Label>
-                  <Input id="cb-busname" value={createForm.busName} onChange={setCreate('busName')} placeholder="Express Kandy" />
+                  <Label htmlFor="cb-vehiclename">Vehicle Name</Label>
+                  <Input id="cb-vehiclename" value={createForm.vehicleName} onChange={setCreate('vehicleName')} placeholder="Express Kandy" />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -305,10 +305,10 @@ export function ManagerBusesPage() {
                   <Input id="cb-seats" type="number" min="1" value={createForm.seatCapacity} onChange={setCreate('seatCapacity')} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="cb-bustype">Vehicle Type</Label>
-                  <Select value={createForm.busType} onValueChange={(v) => setCreateForm((p) => ({ ...p, busType: v }))}>
-                    <SelectTrigger id="cb-bustype"><SelectValue /></SelectTrigger>
-                    <SelectContent>{BUS_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  <Label htmlFor="cb-vehicletype">Vehicle Type</Label>
+                  <Select value={createForm.vehicleType} onValueChange={(v) => setCreateForm((p) => ({ ...p, vehicleType: v }))}>
+                    <SelectTrigger id="cb-vehicletype"><SelectValue /></SelectTrigger>
+                    <SelectContent>{VEHICLE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
@@ -361,11 +361,11 @@ export function ManagerBusesPage() {
           {/* Step 2: Review */}
           {createStep === 2 && (
             <div className="rounded-lg border border-border bg-surface-muted p-4 space-y-1.5 text-sm">
-              <p><span className="font-semibold">Bus:</span> {createForm.busId} — {createForm.busName}</p>
+              <p><span className="font-semibold">Vehicle:</span> {createForm.vehicleId} — {createForm.vehicleName}</p>
               <p><span className="font-semibold">Number Plate:</span> {createForm.numberPlate}</p>
               <p><span className="font-semibold">Route:</span> {createForm.routeMode === 'CUSTOM' ? 'Driver will record a custom route' : createForm.routeId}</p>
               <p><span className="font-semibold">Capacity:</span> {createForm.seatCapacity} seats</p>
-              <p><span className="font-semibold">Type:</span> {createForm.busType} / {createForm.serviceType}</p>
+              <p><span className="font-semibold">Type:</span> {createForm.vehicleType} / {createForm.serviceType}</p>
               <p><span className="font-semibold">Driver:</span> {createForm.driverName || 'Not provided'}</p>
               <p><span className="font-semibold">Driver Email:</span> {createForm.driverEmail || 'Not provided'}</p>
               <p><span className="font-semibold">Reason:</span> {createForm.reason || 'Not provided'}</p>
@@ -390,19 +390,19 @@ export function ManagerBusesPage() {
 
       {/* Edit dialog */}
       <FormDialog
-        open={Boolean(editBus)}
-        onOpenChange={(v) => { if (!v) setEditBus(null); }}
+        open={Boolean(editVehicle)}
+        onOpenChange={(v) => { if (!v) setEditVehicle(null); }}
         title="Edit Vehicle"
         submitLabel="Save Changes"
         onSubmit={handleSaveEdit}
-        pending={updateBusM.isPending}
+        pending={updateVehicleM.isPending}
         error={editError}
       >
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="eb-name">Vehicle Name</Label>
-              <Input id="eb-name" value={editForm.busName || ''} onChange={(e) => setEditForm((p) => ({ ...p, busName: e.target.value }))} />
+              <Input id="eb-name" value={editForm.vehicleName || ''} onChange={(e) => setEditForm((p) => ({ ...p, vehicleName: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="eb-plate">Number Plate</Label>
@@ -419,10 +419,10 @@ export function ManagerBusesPage() {
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="eb-bustype">Vehicle Type</Label>
-              <Select value={editForm.busType || 'AC'} onValueChange={(v) => setEditForm((p) => ({ ...p, busType: v }))}>
-                <SelectTrigger id="eb-bustype"><SelectValue /></SelectTrigger>
-                <SelectContent>{BUS_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              <Label htmlFor="eb-vehicletype">Vehicle Type</Label>
+              <Select value={editForm.vehicleType || 'AC'} onValueChange={(v) => setEditForm((p) => ({ ...p, vehicleType: v }))}>
+                <SelectTrigger id="eb-vehicletype"><SelectValue /></SelectTrigger>
+                <SelectContent>{VEHICLE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
@@ -458,7 +458,7 @@ export function ManagerBusesPage() {
         open={Boolean(deleteTarget)}
         onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}
         title="Request Vehicle Deletion"
-        description={`Submit a deletion request for ${deleteTarget?.busName || 'this vehicle'}. A reason is required.`}
+        description={`Submit a deletion request for ${deleteTarget?.vehicleName || 'this vehicle'}. A reason is required.`}
         confirmLabel="Submit Request"
         requireReason
         pending={deleteReqM.isPending}

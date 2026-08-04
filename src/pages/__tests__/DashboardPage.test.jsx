@@ -8,21 +8,21 @@ vi.mock('@/hooks/use-dashboard', () => ({
 }));
 vi.mock('@/hooks/use-operations', () => ({
   useOperationsOverview: vi.fn(),
-  usePendingBusRequests: vi.fn(),
+  usePendingVehicleRequests: vi.fn(),
 }));
 
 import { useSuperAdminDashboard } from '@/hooks/use-dashboard';
-import { useOperationsOverview, usePendingBusRequests } from '@/hooks/use-operations';
+import { useOperationsOverview, usePendingVehicleRequests } from '@/hooks/use-operations';
 
 const METRICS = {
   managers: { totalManagers: 4 },
-  buses: { activeBuses: 10, inactiveBuses: 1 },
+  vehicles: { activeVehicles: 10, inactiveVehicles: 1 },
   bookings: { confirmedBookings: 25 },
   reviews: { averageRating: 4.2 },
 };
 
 function makeOp(id, name = 'Route A', active = true) {
-  return { _id: id, routeName: name, managerName: 'Mgr', isActive: active, activeBuses: 3 };
+  return { _id: id, routeName: name, managerName: 'Mgr', isActive: active, activeVehicles: 3 };
 }
 
 function defaultHooks({ metrics = METRICS, ops = [], pending = [], loading = false, error = null } = {}) {
@@ -39,7 +39,7 @@ function defaultHooks({ metrics = METRICS, ops = [], pending = [], loading = fal
     error: null,
     refetch: vi.fn(),
   });
-  usePendingBusRequests.mockReturnValue({
+  usePendingVehicleRequests.mockReturnValue({
     data: { data: pending },
     isLoading: false,
   });
@@ -65,7 +65,7 @@ describe('DashboardPage', () => {
     setup();
     // Stat card labels confirm the right sections are rendered
     expect(screen.getByText('Total Managers')).toBeInTheDocument();
-    expect(screen.getByText('Active Buses')).toBeInTheDocument();
+    expect(screen.getByText('Active Vehicles')).toBeInTheDocument();
     expect(screen.getByText('Confirmed Bookings')).toBeInTheDocument();
     expect(screen.getByText('Avg Rating')).toBeInTheDocument();
 
@@ -109,8 +109,8 @@ describe('DashboardPage', () => {
 
   it('shows fleet snapshot rows', () => {
     setup({ pending: [{ id: 'p1' }, { id: 'p2' }] });
-    expect(screen.getByText('Pending bus requests')).toBeInTheDocument();
-    expect(screen.getByText('Inactive buses')).toBeInTheDocument();
+    expect(screen.getByText('Pending vehicle requests')).toBeInTheDocument();
+    expect(screen.getByText('Inactive vehicles')).toBeInTheDocument();
   });
 
   it('shows analytics placeholder with no fabricated numbers', () => {

@@ -4,33 +4,33 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ManagerAccountsPage } from '../ManagerAccountsPage';
 
-vi.mock('@/hooks/use-buses', () => ({
-  useManagerBuses: vi.fn(),
-  useResetBusAccountPassword: vi.fn(),
+vi.mock('@/hooks/use-vehicles', () => ({
+  useManagerVehicles: vi.fn(),
+  useResetVehicleAccountPassword: vi.fn(),
 }));
 vi.mock('sonner', () => ({ toast: vi.fn() }));
 
-import { useManagerBuses, useResetBusAccountPassword } from '@/hooks/use-buses';
+import { useManagerVehicles, useResetVehicleAccountPassword } from '@/hooks/use-vehicles';
 import { toast } from 'sonner';
 
-const BUSES = [
-  { _id: 'b1', busId: 'BUS-1', busName: 'Shuttle 1', numberPlate: 'AB-1234', routeId: 'PUB-1', driverId: { email: 'driver@test.com' } },
-  { _id: 'b2', busId: 'BUS-2', busName: 'Express 2', numberPlate: 'CD-5678', routeId: 'PUB-2' },
+const VEHICLES = [
+  { _id: 'b1', vehicleId: 'VEHICLE-1', vehicleName: 'Shuttle 1', numberPlate: 'AB-1234', routeId: 'PUB-1', driverId: { email: 'driver@test.com' } },
+  { _id: 'b2', vehicleId: 'VEHICLE-2', vehicleName: 'Express 2', numberPlate: 'CD-5678', routeId: 'PUB-2' },
 ];
 
 function makeMutation(overrides = {}) {
   return { mutateAsync: vi.fn().mockResolvedValue({}), isPending: false, ...overrides };
 }
 
-function defaultHooks({ buses = BUSES, loading = false, error = null, resetMut } = {}) {
-  useManagerBuses.mockReturnValue({
-    data: buses ? { data: buses } : undefined,
+function defaultHooks({ vehicles = VEHICLES, loading = false, error = null, resetMut } = {}) {
+  useManagerVehicles.mockReturnValue({
+    data: vehicles ? { data: vehicles } : undefined,
     isLoading: loading,
     isError: Boolean(error),
     error,
     refetch: vi.fn(),
   });
-  useResetBusAccountPassword.mockReturnValue(resetMut || makeMutation());
+  useResetVehicleAccountPassword.mockReturnValue(resetMut || makeMutation());
 }
 
 function setup(opts) {
@@ -48,37 +48,37 @@ describe('ManagerAccountsPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: /account management/i })).toBeInTheDocument();
   });
 
-  it('shows managed buses count stat card', () => {
+  it('shows managed vehicles count stat card', () => {
     setup();
-    expect(screen.getByText('Managed Buses')).toBeInTheDocument();
+    expect(screen.getByText('Managed Vehicles')).toBeInTheDocument();
     expect(screen.getAllByText('2').length).toBeGreaterThan(0);
   });
 
   it('renders the form during load (loading does not crash)', () => {
-    setup({ loading: true, buses: null });
+    setup({ loading: true, vehicles: null });
     // Page heading and form remain visible during load
     expect(screen.getByRole('heading', { level: 1, name: /account management/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /update password/i })).toBeInTheDocument();
   });
 
-  it('renders reset form with bus select and password input', () => {
+  it('renders reset form with vehicle select and password input', () => {
     setup();
-    expect(screen.getByLabelText(/^bus$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^vehicle$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/new password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /update password/i })).toBeInTheDocument();
   });
 
-  it('renders context panel with selected bus details', () => {
+  it('renders context panel with selected vehicle details', () => {
     setup();
-    // Auto-selects first bus → context shows BUS-1 details
+    // Auto-selects first vehicle → context shows VEHICLE-1 details
     expect(screen.getByText(/Selected Account Context/i)).toBeInTheDocument();
   });
 
-  it('shows validation error when no bus is selected', async () => {
-    const { user } = setup({ buses: [] }); // empty = no auto-select
+  it('shows validation error when no vehicle is selected', async () => {
+    const { user } = setup({ vehicles: [] }); // empty = no auto-select
     await user.type(screen.getByLabelText(/new password/i), 'password123');
     await user.click(screen.getByRole('button', { name: /update password/i }));
-    expect(screen.getByText(/please select a bus/i)).toBeInTheDocument();
+    expect(screen.getByText(/please select a vehicle/i)).toBeInTheDocument();
   });
 
   it('shows validation error when password is empty', async () => {
@@ -94,7 +94,7 @@ describe('ManagerAccountsPage', () => {
     expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument();
   });
 
-  it('calls resetBusAccountPassword mutation with correct payload', async () => {
+  it('calls resetVehicleAccountPassword mutation with correct payload', async () => {
     const resetMut = makeMutation();
     const { user } = setup({ resetMut });
 
@@ -103,7 +103,7 @@ describe('ManagerAccountsPage', () => {
 
     await waitFor(() => expect(resetMut.mutateAsync).toHaveBeenCalledTimes(1));
     const call = resetMut.mutateAsync.mock.calls[0][0];
-    expect(call.busId).toBe('BUS-1'); // auto-selected first bus
+    expect(call.vehicleId).toBe('VEHICLE-1'); // auto-selected first vehicle
     expect(call.payload.password).toBe('Secure1234!');
   });
 

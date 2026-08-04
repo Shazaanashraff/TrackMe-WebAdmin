@@ -15,9 +15,9 @@ const PLANNED_SECTIONS = [
   {
     title: 'Operations Alerts',
     items: [
-      'Trigger alerts when any bus rating drops below 3.5.',
+      'Trigger alerts when any vehicle rating drops below 3.5.',
       'Notify super admin when manager cancellation rate exceeds threshold.',
-      'Raise maintenance escalations for buses inactive > 48 hours.',
+      'Raise maintenance escalations for vehicles inactive > 48 hours.',
     ],
   },
   {

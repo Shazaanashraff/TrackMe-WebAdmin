@@ -175,10 +175,10 @@ export function ManagersPage() {
     if (!deleteTarget) return;
     try {
       const result = await deleteM.mutateAsync({ managerId: deleteTarget._id });
-      const freed = result?.data?.unassignedBuses ?? 0;
+      const freed = result?.data?.unassignedVehicles ?? 0;
       toast(
         freed > 0
-          ? `Manager deleted — ${freed} bus${freed === 1 ? '' : 'es'} unassigned`
+          ? `Manager deleted — ${freed} vehicle${freed === 1 ? '' : 'es'} unassigned`
           : 'Manager deleted'
       );
       setDeleteTarget(null);
@@ -283,7 +283,7 @@ export function ManagersPage() {
         open={Boolean(deleteTarget)}
         onOpenChange={(open) => { if (!open && !deleteM.isPending) setDeleteTarget(null); }}
         title={`Delete ${deleteTarget?.name || 'this manager'}?`}
-        description="This permanently deletes the manager account and cannot be undone. Any buses they own are unassigned and stay in the fleet."
+        description="This permanently deletes the manager account and cannot be undone. Any vehicles they own are unassigned and stay in the fleet."
         confirmLabel="Delete Manager"
         destructive
         pending={deleteM.isPending}

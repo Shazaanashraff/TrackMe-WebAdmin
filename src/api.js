@@ -211,19 +211,19 @@ export const adminApi = {
       body: JSON.stringify(payload)
     }),
 
-  assignBusesToManager: (managerId, busIds) =>
-    request(`/api/super-admin/managers/${managerId}/assign-buses`, {
+  assignVehiclesToManager: (managerId, vehicleIds) =>
+    request(`/api/super-admin/managers/${managerId}/assign-vehicles`, {
       method: 'PATCH',
-      body: JSON.stringify({ busIds })
+      body: JSON.stringify({ vehicleIds })
     }),
 
-  getPendingBusRequests: (params = {}) => {
+  getPendingVehicleRequests: (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    return request(`/api/super-admin/bus-requests${query ? `?${query}` : ''}`);
+    return request(`/api/super-admin/vehicle-requests${query ? `?${query}` : ''}`);
   },
 
-  reviewBusRequest: (requestId, payload) =>
-    request(`/api/super-admin/bus-requests/${requestId}/review`, {
+  reviewVehicleRequest: (requestId, payload) =>
+    request(`/api/super-admin/vehicle-requests/${requestId}/review`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     }),
@@ -233,51 +233,51 @@ export const adminApi = {
     return request(`/api/super-admin/audit-logs${query ? `?${query}` : ''}`);
   },
 
-  updateBus: (busId, payload) =>
-    request(`/api/bus/${busId}`, {
+  updateVehicle: (vehicleId, payload) =>
+    request(`/api/vehicle/${vehicleId}`, {
       method: 'PUT',
       body: JSON.stringify(payload)
     }),
 
   getManagerDashboard: () => request('/api/manager/dashboard'),
 
-  getBusRoutes: () => request('/api/bus/routes'),
+  getVehicleRoutes: () => request('/api/vehicle/routes'),
 
-  getManagerBuses: () => request('/api/manager/buses'),
+  getManagerVehicles: () => request('/api/manager/vehicles'),
 
-  getManagerBusById: (busId) => request(`/api/manager/buses/${busId}`),
+  getManagerVehicleById: (vehicleId) => request(`/api/manager/vehicles/${vehicleId}`),
 
-  updateManagerBus: (busId, payload) =>
-    request(`/api/manager/buses/${busId}`, {
+  updateManagerVehicle: (vehicleId, payload) =>
+    request(`/api/manager/vehicles/${vehicleId}`, {
       method: 'PUT',
       body: JSON.stringify(payload)
     }),
 
-  createBusAccountRequest: (payload) =>
-    request('/api/manager/bus-accounts', {
+  createVehicleAccountRequest: (payload) =>
+    request('/api/manager/vehicle-accounts', {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
 
-  requestDeleteBus: (busId, payload) =>
-    request(`/api/manager/buses/${busId}/delete-request`, {
+  requestDeleteVehicle: (vehicleId, payload) =>
+    request(`/api/manager/vehicles/${vehicleId}/delete-request`, {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
 
   getManagerRequests: () => request('/api/manager/requests'),
 
-  resetManagerBusAccountPassword: (busId, payload) =>
-    request(`/api/manager/bus-accounts/${busId}/reset-password`, {
+  resetManagerVehicleAccountPassword: (vehicleId, payload) =>
+    request(`/api/manager/vehicle-accounts/${vehicleId}/reset-password`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     }),
 
-  getManagerBusLocation: (busId, minutes = 15) =>
-    request(`/api/manager/buses/${busId}/location?minutes=${minutes}`),
+  getManagerVehicleLocation: (vehicleId, minutes = 15) =>
+    request(`/api/manager/vehicles/${vehicleId}/location?minutes=${minutes}`),
 
   // Public routes + this manager's own named (ACTIVE) private custom routes —
-  // the correct source for any "assign a route to my bus" dropdown.
+  // the correct source for any "assign a route to my vehicle" dropdown.
   getManagerAssignableRoutes: () => request('/api/manager/routes'),
 
   getManagerCustomRoutes: (params = {}) => {

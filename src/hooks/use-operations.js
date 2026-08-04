@@ -17,10 +17,10 @@ export function useOperationManagerDetail(managerId) {
   });
 }
 
-export function usePendingBusRequests(params = {}) {
+export function usePendingVehicleRequests(params = {}) {
   return useQuery({
-    queryKey: qk.busRequests.pending(params),
-    queryFn: () => adminApi.getPendingBusRequests(params),
+    queryKey: qk.vehicleRequests.pending(params),
+    queryFn: () => adminApi.getPendingVehicleRequests(params),
   });
 }
 
@@ -31,23 +31,23 @@ export function useAuditLogs(params = {}) {
   });
 }
 
-export function useReviewBusRequest() {
+export function useReviewVehicleRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ requestId, payload }) => adminApi.reviewBusRequest(requestId, payload),
+    mutationFn: ({ requestId, payload }) => adminApi.reviewVehicleRequest(requestId, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: qk.busRequests.all() });
+      queryClient.invalidateQueries({ queryKey: qk.vehicleRequests.all() });
       queryClient.invalidateQueries({ queryKey: qk.operations.overview() });
     },
   });
 }
 
-export function useUpdateBus() {
+export function useUpdateVehicle() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ busId, payload }) => adminApi.updateBus(busId, payload),
+    mutationFn: ({ vehicleId, payload }) => adminApi.updateVehicle(vehicleId, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: qk.buses.all() });
+      queryClient.invalidateQueries({ queryKey: qk.vehicles.all() });
       queryClient.invalidateQueries({ queryKey: qk.operations.overview() });
     },
   });

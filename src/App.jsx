@@ -18,7 +18,7 @@ import { OperationsPage } from './pages/OperationsPage';
 import { RoutesPage } from './pages/RoutesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ManagerDashboardPage } from './pages/ManagerDashboardPage';
-import { ManagerBusesPage } from './pages/ManagerBusesPage';
+import { ManagerVehiclesPage } from './pages/ManagerVehiclesPage';
 import { ManagerTrackingPage } from './pages/ManagerTrackingPage';
 import { ManagerAccountsPage } from './pages/ManagerAccountsPage';
 import { ManagerSettingsPage } from './pages/ManagerSettingsPage';
@@ -60,7 +60,7 @@ function ProtectedShell({ auth, onLogout, triggerRefresh }) {
     <Routes>
       <Route element={shell}>
         <Route path="/manager/dashboard" element={<ManagerDashboardPage />} />
-        <Route path="/manager/buses" element={<ManagerBusesPage />} />
+        <Route path="/manager/vehicles" element={<ManagerVehiclesPage />} />
         <Route path="/manager/tracking" element={<ManagerTrackingPage />} />
         <Route path="/manager/accounts" element={<ManagerAccountsPage />} />
         <Route path="/manager/route-approvals" element={<ManagerRouteApprovalsPage />} />

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Activity, Route as RouteIcon, Settings,
-  Bus, MapPin, UserCog, GitPullRequest, Lock, LogOut,
+  Bus as VehicleIcon, MapPin, UserCog, GitPullRequest, Lock, LogOut,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -30,7 +30,7 @@ export const SUPER_ADMIN_NAV = [
 
 export const MANAGER_NAV = [
   { label: 'Overview', path: '/manager/dashboard', icon: LayoutDashboard },
-  { label: 'Vehicles', path: '/manager/buses', icon: Bus },
+  { label: 'Vehicles', path: '/manager/vehicles', icon: VehicleIcon },
   { label: 'Live Tracking', path: '/manager/tracking', icon: MapPin },
   { label: 'Drivers', path: '/manager/accounts', icon: UserCog },
   { label: 'Route Approvals', path: '/manager/route-approvals', icon: GitPullRequest, hasBadge: true },

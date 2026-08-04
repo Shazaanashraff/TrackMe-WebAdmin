@@ -28,7 +28,7 @@ describe('SettingsPage', () => {
   it('shows suggestion items within each section', () => {
     setup();
     expect(screen.getByText(/enforce password rotation/i)).toBeInTheDocument();
-    expect(screen.getByText(/trigger alerts when any bus rating/i)).toBeInTheDocument();
+    expect(screen.getByText(/trigger alerts when any vehicle rating/i)).toBeInTheDocument();
     expect(screen.getByText(/enable audit logging/i)).toBeInTheDocument();
   });
 

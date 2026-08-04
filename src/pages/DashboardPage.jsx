@@ -1,4 +1,4 @@
-import { BarChart3, BookMarked, Bus, Star, Users } from 'lucide-react';
+import { BarChart3, BookMarked, Bus as VehicleIcon, Star, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
@@ -8,7 +8,7 @@ import { TableSkeleton } from '@/components/shared/table-skeleton';
 import { ErrorState } from '@/components/shared/error-state';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSuperAdminDashboard } from '@/hooks/use-dashboard';
-import { useOperationsOverview, usePendingBusRequests } from '@/hooks/use-operations';
+import { useOperationsOverview, usePendingVehicleRequests } from '@/hooks/use-operations';
 
 function SnapshotRow({ label, value, highlight = false }) {
   return (
@@ -24,14 +24,14 @@ function SnapshotRow({ label, value, highlight = false }) {
 export function DashboardPage() {
   const dashQ = useSuperAdminDashboard();
   const opsQ = useOperationsOverview();
-  const pendingQ = usePendingBusRequests({ status: 'PENDING' });
+  const pendingQ = usePendingVehicleRequests({ status: 'PENDING' });
 
   const m = dashQ.data?.data;
   const totalManagers = m?.managers?.totalManagers ?? 0;
-  const activeBuses = m?.buses?.activeBuses ?? 0;
+  const activeVehicles = m?.vehicles?.activeVehicles ?? 0;
   const confirmedBookings = m?.bookings?.confirmedBookings ?? 0;
   const avgRating = m?.reviews?.averageRating;
-  const inactiveBuses = m?.buses?.inactiveBuses ?? 0;
+  const inactiveVehicles = m?.vehicles?.inactiveVehicles ?? 0;
   const pendingCount = (pendingQ.data?.data || []).length;
   const operations = (opsQ.data?.data || []).slice(0, 6);
 
@@ -39,7 +39,7 @@ export function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Fleet operations overview — managers, buses, bookings and performance."
+        description="Fleet operations overview — managers, vehicles, bookings and performance."
       />
 
       {/* KPI stat cards */}
@@ -51,9 +51,9 @@ export function DashboardPage() {
           isLoading={dashQ.isLoading}
         />
         <StatCard
-          label="Active Buses"
-          value={activeBuses}
-          icon={Bus}
+          label="Active Vehicles"
+          value={activeVehicles}
+          icon={VehicleIcon}
           isLoading={dashQ.isLoading}
         />
         <StatCard
@@ -128,7 +128,7 @@ export function DashboardPage() {
                           <StatusBadge status={op.isActive !== false ? 'online' : 'offline'} />
                         </td>
                         <td className="py-3 text-right font-mono text-muted-foreground text-xs">
-                          {op.activeBuses ?? op.buses ?? '—'} buses
+                          {op.activeVehicles ?? op.vehicles ?? '—'} vehicles
                         </td>
                       </tr>
                     ))}
@@ -153,14 +153,14 @@ export function DashboardPage() {
             >
               <div className="space-y-3">
                 <SnapshotRow
-                  label="Pending bus requests"
+                  label="Pending vehicle requests"
                   value={pendingQ.isLoading ? '…' : pendingCount}
                   highlight={pendingCount > 0}
                 />
                 <SnapshotRow
-                  label="Inactive buses"
-                  value={inactiveBuses}
-                  highlight={inactiveBuses > 0}
+                  label="Inactive vehicles"
+                  value={inactiveVehicles}
+                  highlight={inactiveVehicles > 0}
                 />
                 <SnapshotRow
                   label="Confirmed bookings"

@@ -10,7 +10,7 @@ vi.mock('@/hooks/use-dashboard', () => ({
 import { useManagerDashboard } from '@/hooks/use-dashboard';
 
 const DASHBOARD = {
-  fleet: { totalBuses: 8, activeBuses: 6 },
+  fleet: { totalVehicles: 8, activeVehicles: 6 },
   pendingRequests: 2,
   bookings: { confirmedBookings: 40, cancelledBookings: 3, totalRevenue: 12000 },
 };

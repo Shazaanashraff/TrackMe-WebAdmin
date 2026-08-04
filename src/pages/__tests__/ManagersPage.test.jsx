@@ -336,7 +336,7 @@ describe('ManagersPage', () => {
       const dialog = await screen.findByRole('alertdialog');
 
       expect(within(dialog).getByText(/cannot be undone/i)).toBeInTheDocument();
-      // The buses must be described as surviving, not deleted alongside.
+      // The vehicles must be described as surviving, not deleted alongside.
       expect(within(dialog).getByText(/unassigned/i)).toBeInTheDocument();
     });
   });

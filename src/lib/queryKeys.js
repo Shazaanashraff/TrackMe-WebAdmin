@@ -16,19 +16,19 @@ export const qk = {
     all: () => ['managers'],
     list: (params = {}) => ['managers', params],
   },
-  busRequests: {
-    all: () => ['bus-requests'],
-    pending: (params = {}) => ['bus-requests', 'pending', params],
+  vehicleRequests: {
+    all: () => ['vehicle-requests'],
+    pending: (params = {}) => ['vehicle-requests', 'pending', params],
   },
   systemRoutes: {
     all: () => ['system-routes'],
     list: (params = {}) => ['system-routes', params],
   },
-  buses: {
-    all: () => ['buses'],
-    manager: () => ['buses', 'manager'],
-    byId: (busId) => ['buses', busId],
-    location: (busId, minutes) => ['buses', busId, 'location', minutes],
+  vehicles: {
+    all: () => ['vehicles'],
+    manager: () => ['vehicles', 'manager'],
+    byId: (vehicleId) => ['vehicles', vehicleId],
+    location: (vehicleId, minutes) => ['vehicles', vehicleId, 'location', minutes],
     assignableRoutes: () => ['routes', 'assignable'],
     managerRequests: () => ['manager-requests'],
   },

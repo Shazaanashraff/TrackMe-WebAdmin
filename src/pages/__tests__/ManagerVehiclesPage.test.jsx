@@ -2,38 +2,38 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { ManagerBusesPage } from '../ManagerBusesPage';
+import { ManagerVehiclesPage } from '../ManagerVehiclesPage';
 
-vi.mock('@/hooks/use-buses', () => ({
-  useManagerBuses: vi.fn(),
+vi.mock('@/hooks/use-vehicles', () => ({
+  useManagerVehicles: vi.fn(),
   useManagerAssignableRoutes: vi.fn(),
-  useCreateBusAccountRequest: vi.fn(),
-  useUpdateManagerBus: vi.fn(),
-  useRequestDeleteBus: vi.fn(),
+  useCreateVehicleAccountRequest: vi.fn(),
+  useUpdateManagerVehicle: vi.fn(),
+  useRequestDeleteVehicle: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({ toast: vi.fn() }));
 
 import {
-  useManagerBuses,
+  useManagerVehicles,
   useManagerAssignableRoutes,
-  useCreateBusAccountRequest,
-  useUpdateManagerBus,
-  useRequestDeleteBus,
-} from '@/hooks/use-buses';
+  useCreateVehicleAccountRequest,
+  useUpdateManagerVehicle,
+  useRequestDeleteVehicle,
+} from '@/hooks/use-vehicles';
 
 const ROUTES = [{ routeId: 'PUB-1', routeName: 'Public Route', visibility: 'PUBLIC' }];
 
-const BUSES = [
+const VEHICLES = [
   {
-    _id: 'bus-1',
-    busId: 'BUS-1',
-    busName: 'Shuttle 1',
+    _id: 'vehicle-1',
+    vehicleId: 'VEHICLE-1',
+    vehicleName: 'Shuttle 1',
     numberPlate: 'AB-1234',
     routeId: 'PUB-1',
     serviceType: 'PUBLIC',
     seatCapacity: 40,
-    busType: 'AC',
+    vehicleType: 'AC',
     bookingEnabled: true,
     isActive: true,
     maintenanceStatus: 'ACTIVE',
@@ -45,11 +45,11 @@ function makeMutation(overrides = {}) {
 }
 
 function defaultHooks({
-  buses = BUSES, routes = ROUTES, loading = false, error = null,
+  vehicles = VEHICLES, routes = ROUTES, loading = false, error = null,
   createMut, updateMut, deleteMut,
 } = {}) {
-  useManagerBuses.mockReturnValue({
-    data: buses ? { data: buses } : undefined,
+  useManagerVehicles.mockReturnValue({
+    data: vehicles ? { data: vehicles } : undefined,
     isLoading: loading,
     isError: Boolean(error),
     error,
@@ -59,19 +59,19 @@ function defaultHooks({
     data: routes ? { data: routes } : undefined,
     isLoading: false,
   });
-  useCreateBusAccountRequest.mockReturnValue(createMut || makeMutation());
-  useUpdateManagerBus.mockReturnValue(updateMut || makeMutation());
-  useRequestDeleteBus.mockReturnValue(deleteMut || makeMutation());
+  useCreateVehicleAccountRequest.mockReturnValue(createMut || makeMutation());
+  useUpdateManagerVehicle.mockReturnValue(updateMut || makeMutation());
+  useRequestDeleteVehicle.mockReturnValue(deleteMut || makeMutation());
 }
 
 function setup(opts) {
   defaultHooks(opts);
   const user = userEvent.setup();
-  render(<MemoryRouter><ManagerBusesPage /></MemoryRouter>);
+  render(<MemoryRouter><ManagerVehiclesPage /></MemoryRouter>);
   return { user };
 }
 
-describe('ManagerBusesPage', () => {
+describe('ManagerVehiclesPage', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('renders the page heading', () => {
@@ -80,31 +80,31 @@ describe('ManagerBusesPage', () => {
   });
 
   it('shows loading skeletons when fetching', () => {
-    setup({ loading: true, buses: null });
+    setup({ loading: true, vehicles: null });
     expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
   });
 
-  it('shows error state when buses query fails', () => {
-    setup({ error: new Error('Server error'), buses: null });
+  it('shows error state when vehicles query fails', () => {
+    setup({ error: new Error('Server error'), vehicles: null });
     expect(screen.getByText(/failed to load/i)).toBeInTheDocument();
   });
 
   it('renders stat cards with correct counts', () => {
-    setup({ buses: BUSES }); // 1 bus, 1 active
+    setup({ vehicles: VEHICLES }); // 1 vehicle, 1 active
     expect(screen.getByText('Total Vehicles')).toBeInTheDocument();
     expect(screen.getByText('Active Fleet')).toBeInTheDocument();
     expect(screen.getByText('Inactive Fleet')).toBeInTheDocument();
   });
 
-  it('renders bus rows in the table', async () => {
+  it('renders vehicle rows in the table', async () => {
     setup();
     expect(screen.getByText('Shuttle 1')).toBeInTheDocument();
     expect(screen.getByText('AB-1234')).toBeInTheDocument();
-    expect(screen.getByText('BUS-1')).toBeInTheDocument();
+    expect(screen.getByText('VEHICLE-1')).toBeInTheDocument();
   });
 
-  it('shows empty state when no buses', () => {
-    setup({ buses: [] });
+  it('shows empty state when no vehicles', () => {
+    setup({ vehicles: [] });
     expect(screen.getByText(/no vehicles yet/i)).toBeInTheDocument();
   });
 });
@@ -112,14 +112,14 @@ describe('ManagerBusesPage', () => {
 // ----------------------------------------------------------------
 // Route assignment toggle (preserved from original 3 core tests)
 // ----------------------------------------------------------------
-describe('ManagerBusesPage route assignment toggle', () => {
+describe('ManagerVehiclesPage route assignment toggle', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   async function fillStep0(user, { routeMode = 'EXISTING' } = {}) {
     await user.click(screen.getByRole('button', { name: /add vehicle request/i }));
     await screen.findByRole('dialog');
 
-    await user.type(screen.getByLabelText(/vehicle id/i), 'BUS-99');
+    await user.type(screen.getByLabelText(/vehicle id/i), 'VEHICLE-99');
     await user.type(screen.getByLabelText(/vehicle name/i), 'Shuttle 99');
     await user.type(screen.getByLabelText(/number plate/i), 'ABC-123');
 
@@ -207,11 +207,11 @@ describe('ManagerBusesPage route assignment toggle', () => {
 // ----------------------------------------------------------------
 // Booking-enabled removal (preserved from original test)
 // ----------------------------------------------------------------
-describe('ManagerBusesPage booking-enabled removal', () => {
+describe('ManagerVehiclesPage booking-enabled removal', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('renders no booking-enabled controls in the grid, summary, or edit dialog', async () => {
-    const { user } = setup({ buses: BUSES });
+    const { user } = setup({ vehicles: VEHICLES });
 
     expect(screen.getByText('Shuttle 1')).toBeInTheDocument();
     expect(screen.queryByText(/booking enabled/i)).toBeNull();
@@ -228,10 +228,10 @@ describe('ManagerBusesPage booking-enabled removal', () => {
 // ----------------------------------------------------------------
 // Edit + delete flows
 // ----------------------------------------------------------------
-describe('ManagerBusesPage edit and delete', () => {
+describe('ManagerVehiclesPage edit and delete', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('opens edit dialog with bus data pre-populated', async () => {
+  it('opens edit dialog with vehicle data pre-populated', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: /edit/i }));
 
@@ -241,7 +241,7 @@ describe('ManagerBusesPage edit and delete', () => {
     expect(screen.getByLabelText(/number plate/i)).toHaveValue('AB-1234');
   });
 
-  it('calls updateBus mutation on save', async () => {
+  it('calls updateVehicle mutation on save', async () => {
     const updateMut = makeMutation();
     const { user } = setup({ updateMut });
 
@@ -251,7 +251,7 @@ describe('ManagerBusesPage edit and delete', () => {
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
     await waitFor(() => expect(updateMut.mutateAsync).toHaveBeenCalledTimes(1));
-    expect(updateMut.mutateAsync.mock.calls[0][0].busId).toBe('BUS-1');
+    expect(updateMut.mutateAsync.mock.calls[0][0].vehicleId).toBe('VEHICLE-1');
   });
 
   it('opens delete confirmation dialog when Delete Req is clicked', async () => {
@@ -271,13 +271,13 @@ describe('ManagerBusesPage edit and delete', () => {
 
     // ConfirmDialog with requireReason=true — type a reason
     const reasonInput = screen.getByPlaceholderText(/reason \(required\)/i);
-    await user.type(reasonInput, 'Bus retired');
+    await user.type(reasonInput, 'Vehicle retired');
 
     await user.click(screen.getByRole('button', { name: /submit request/i }));
 
     await waitFor(() => expect(deleteMut.mutateAsync).toHaveBeenCalledTimes(1));
     const call = deleteMut.mutateAsync.mock.calls[0][0];
-    expect(call.busId).toBe('BUS-1');
-    expect(call.payload.reason).toBe('Bus retired');
+    expect(call.vehicleId).toBe('VEHICLE-1');
+    expect(call.payload.reason).toBe('Vehicle retired');
   });
 });

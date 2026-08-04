@@ -28,7 +28,7 @@ const ROUTE_LABELS = {
   '/routes': 'Routes',
   '/settings': 'Settings',
   '/manager/dashboard': 'Overview',
-  '/manager/buses': 'Vehicles',
+  '/manager/vehicles': 'Vehicles',
   '/manager/tracking': 'Live Tracking',
   '/manager/accounts': 'Drivers',
   '/manager/route-approvals': 'Route Approvals',

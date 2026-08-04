@@ -43,9 +43,9 @@ export function useDeleteManager() {
   return useMutation({
     mutationFn: ({ managerId }) => adminApi.deleteManager(managerId),
     onSuccess: () => {
-      // Deleting a manager unassigns their buses, so the bus lists go stale too.
+      // Deleting a manager unassigns their vehicles, so the vehicle lists go stale too.
       queryClient.invalidateQueries({ queryKey: qk.managers.all() });
-      queryClient.invalidateQueries({ queryKey: qk.buses.all() });
+      queryClient.invalidateQueries({ queryKey: qk.vehicles.all() });
     },
   });
 }
@@ -56,13 +56,13 @@ export function useResetManagerPassword() {
   });
 }
 
-export function useAssignBusesToManager() {
+export function useAssignVehiclesToManager() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ managerId, busIds }) => adminApi.assignBusesToManager(managerId, busIds),
+    mutationFn: ({ managerId, vehicleIds }) => adminApi.assignVehiclesToManager(managerId, vehicleIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.managers.all() });
-      queryClient.invalidateQueries({ queryKey: qk.buses.all() });
+      queryClient.invalidateQueries({ queryKey: qk.vehicles.all() });
     },
   });
 }

@@ -5,13 +5,13 @@ import { EmptyState } from '../empty-state';
 
 describe('EmptyState', () => {
   it('renders title', () => {
-    render(<EmptyState title="No buses found" />);
-    expect(screen.getByText('No buses found')).toBeInTheDocument();
+    render(<EmptyState title="No vehicles found" />);
+    expect(screen.getByText('No vehicles found')).toBeInTheDocument();
   });
 
   it('renders description when provided', () => {
-    render(<EmptyState title="T" description="Add a bus to get started" />);
-    expect(screen.getByText('Add a bus to get started')).toBeInTheDocument();
+    render(<EmptyState title="T" description="Add a vehicle to get started" />);
+    expect(screen.getByText('Add a vehicle to get started')).toBeInTheDocument();
   });
 
   it('omits description when not provided', () => {
@@ -33,8 +33,8 @@ describe('EmptyState', () => {
   });
 
   it('renders action slot when provided', () => {
-    render(<EmptyState title="T" action={<button>Add Bus</button>} />);
-    expect(screen.getByRole('button', { name: 'Add Bus' })).toBeInTheDocument();
+    render(<EmptyState title="T" action={<button>Add Vehicle</button>} />);
+    expect(screen.getByRole('button', { name: 'Add Vehicle' })).toBeInTheDocument();
   });
 
   it('omits action container when not provided', () => {

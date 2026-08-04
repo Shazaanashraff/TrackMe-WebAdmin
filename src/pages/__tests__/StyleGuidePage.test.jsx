@@ -91,7 +91,7 @@ describe('StyleGuidePage', () => {
 
   it('renders form controls: Input, Textarea, Checkbox, Switch, RadioGroup, Select', () => {
     renderPage();
-    expect(screen.getByLabelText('Bus plate number')).toBeInTheDocument();
+    expect(screen.getByLabelText('Vehicle plate number')).toBeInTheDocument();
     expect(screen.getByLabelText('Review note')).toBeInTheDocument();
     expect(screen.getByLabelText('Allow private routes')).toBeInTheDocument();
     expect(screen.getByLabelText(/GPS tracking/i)).toBeInTheDocument();
@@ -102,11 +102,11 @@ describe('StyleGuidePage', () => {
   it('renders overlay triggers: Dialog, AlertDialog, Sheet', () => {
     renderPage();
     expect(screen.getByRole('button', { name: 'Open Dialog' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete Bus' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete Vehicle' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open Sheet' })).toBeInTheDocument();
   });
 
-  it('renders the Table section with sample bus data', () => {
+  it('renders the Table section with sample vehicle data', () => {
     renderPage();
     expect(screen.getByText('B-042')).toBeInTheDocument();
     expect(screen.getByText('Colombo–Kandy')).toBeInTheDocument();
