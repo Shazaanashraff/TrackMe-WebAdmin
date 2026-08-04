@@ -273,9 +273,6 @@ export const adminApi = {
       body: JSON.stringify(payload)
     }),
 
-  getManagerVehicleLocation: (vehicleId, minutes = 15) =>
-    request(`/api/manager/vehicles/${vehicleId}/location?minutes=${minutes}`),
-
   // Public routes + this manager's own named (ACTIVE) private custom routes —
   // the correct source for any "assign a route to my vehicle" dropdown.
   getManagerAssignableRoutes: () => request('/api/manager/routes'),
@@ -289,58 +286,5 @@ export const adminApi = {
     request(`/api/manager/custom-routes/${routeId}/name`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
-    }),
-
-  getRouteChangeRequests: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return request(`/api/manager/route-change-requests${query ? `?${query}` : ''}`);
-  },
-
-  resolveRouteChangeRequest: (id, payload) =>
-    request(`/api/manager/route-change-requests/${id}/resolve`, {
-      method: 'PATCH',
-      body: JSON.stringify(payload)
-    }),
-
-  getManagerOwnedRoutes: () => request('/api/manager/owned-routes'),
-
-  updateRoutePrivacy: (routeId, payload) =>
-    request(`/api/manager/routes/${routeId}/privacy`, {
-      method: 'PATCH',
-      body: JSON.stringify(payload)
-    }),
-
-  updateRouteQr: (routeId, qrEnabled) =>
-    request(`/api/manager/routes/${routeId}/qr`, {
-      method: 'PATCH',
-      body: JSON.stringify({ qrEnabled })
-    }),
-
-  rotateRoomKey: (routeId) =>
-    request(`/api/manager/routes/${routeId}/room-key/rotate`, {
-      method: 'POST'
-    }),
-
-  revealRoomKey: (routeId) => request(`/api/manager/routes/${routeId}/room-key`),
-
-  getRouteJoinRequests: (routeId, params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return request(`/api/manager/routes/${routeId}/join-requests${query ? `?${query}` : ''}`);
-  },
-
-  decideJoinRequest: (id, payload) =>
-    request(`/api/manager/join-requests/${id}/decision`, {
-      method: 'PATCH',
-      body: JSON.stringify(payload)
-    }),
-
-  getRouteMembers: (routeId, params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return request(`/api/manager/routes/${routeId}/members${query ? `?${query}` : ''}`);
-  },
-
-  revokeRouteMember: (routeId, userId) =>
-    request(`/api/manager/routes/${routeId}/members/${userId}`, {
-      method: 'DELETE'
     })
 };

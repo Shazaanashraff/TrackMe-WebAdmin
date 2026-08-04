@@ -28,17 +28,7 @@ export const qk = {
     all: () => ['vehicles'],
     manager: () => ['vehicles', 'manager'],
     byId: (vehicleId) => ['vehicles', vehicleId],
-    location: (vehicleId, minutes) => ['vehicles', vehicleId, 'location', minutes],
     assignableRoutes: () => ['routes', 'assignable'],
     managerRequests: () => ['manager-requests'],
-  },
-  routeApprovals: {
-    customRoutes: (params = {}) => ['custom-routes', params],
-    changeRequests: (params = {}) => ['route-change-requests', params],
-  },
-  privateRoutes: {
-    owned: () => ['owned-routes'],
-    joinRequests: (routeId, params = {}) => ['route', routeId, 'join-requests', params],
-    members: (routeId, params = {}) => ['route', routeId, 'members', params],
   },
 };

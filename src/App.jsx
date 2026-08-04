@@ -19,11 +19,8 @@ import { RoutesPage } from './pages/RoutesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ManagerDashboardPage } from './pages/ManagerDashboardPage';
 import { ManagerVehiclesPage } from './pages/ManagerVehiclesPage';
-import { ManagerTrackingPage } from './pages/ManagerTrackingPage';
 import { ManagerAccountsPage } from './pages/ManagerAccountsPage';
 import { ManagerSettingsPage } from './pages/ManagerSettingsPage';
-import { ManagerRouteApprovalsPage } from './pages/ManagerRouteApprovalsPage';
-import { ManagerPrivateRoutesPage } from './pages/ManagerPrivateRoutesPage';
 import { adminApi } from './api';
 import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
 import { useRefreshData } from './hooks/use-refresh';
@@ -61,10 +58,7 @@ function ProtectedShell({ auth, onLogout, triggerRefresh }) {
       <Route element={shell}>
         <Route path="/manager/dashboard" element={<ManagerDashboardPage />} />
         <Route path="/manager/vehicles" element={<ManagerVehiclesPage />} />
-        <Route path="/manager/tracking" element={<ManagerTrackingPage />} />
         <Route path="/manager/accounts" element={<ManagerAccountsPage />} />
-        <Route path="/manager/route-approvals" element={<ManagerRouteApprovalsPage />} />
-        <Route path="/manager/private-routes" element={<ManagerPrivateRoutesPage />} />
         <Route path="/manager/settings" element={<ManagerSettingsPage />} />
         <Route path="*" element={<NotFoundPage role="admin" />} />
       </Route>
