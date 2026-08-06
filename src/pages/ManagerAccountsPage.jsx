@@ -562,7 +562,7 @@ export function ManagerAccountsPage() {
                       onChange={(e) => setForm((p) => ({
                         ...p, nicNumber: e.target.value.toUpperCase(),
                       }))}
-                      placeholder="200012345678"
+                      placeholder="2000XXXXXXXX"
                       autoComplete="off"
                     />
                   </div>
@@ -574,7 +574,7 @@ export function ManagerAccountsPage() {
                       onChange={(e) => setForm((p) => ({
                         ...p, licenseCardNumber: e.target.value.toUpperCase(),
                       }))}
-                      placeholder="B1234567"
+                      placeholder="BXXXXXXX"
                       autoComplete="off"
                     />
                   </div>
@@ -930,7 +930,7 @@ export function ManagerAccountsPage() {
                 id="drv-nic"
                 value={form.nicNumber}
                 onChange={(e) => setForm((p) => ({ ...p, nicNumber: e.target.value }))}
-                placeholder="200012345678"
+                placeholder="2000XXXXXXXX"
                 autoComplete="off"
               />
             </div>
@@ -941,7 +941,7 @@ export function ManagerAccountsPage() {
               id="drv-licence"
               value={form.licenseCardNumber}
               onChange={(e) => setForm((p) => ({ ...p, licenseCardNumber: e.target.value }))}
-              placeholder="B1234567"
+              placeholder="BXXXXXXX"
               autoComplete="off"
             />
           </div>

@@ -38,4 +38,6 @@ export const isValidPhone = (value) => formatPhone(value) !== '';
 export const PHONE_FORMAT_MESSAGE =
   'Enter a Sri Lankan phone number, for example 0771234567 or +94771234567';
 
-export const PHONE_PLACEHOLDER = '0771234567';
+// A shape, not a number: a full one in the box reads as real data already
+// entered.
+export const PHONE_PLACEHOLDER = '07X XXX XXXX';
