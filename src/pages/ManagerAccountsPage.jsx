@@ -24,6 +24,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cleanPlateInput, tidyPlate, PLATE_PLACEHOLDER } from '@/lib/number-plate';
 import {
+  cleanPhoneInput, isValidPhone, PHONE_FORMAT_MESSAGE, PHONE_PLACEHOLDER,
+} from '@/lib/phone-number';
+import {
   useOrganizations,
   useManagerDrivers,
   useCreateDriver,
@@ -75,6 +78,11 @@ function validate(form, { requirePassword }) {
   }
   if (form.email.trim() && !emailRegex.test(form.email.trim())) {
     errors.push('Enter a valid email address, or leave it blank.');
+  }
+  // A part-typed number is worth catching here; the field itself already stops
+  // anyone exceeding ten digits (eleven behind a +).
+  if (form.phoneNumber.trim() && !isValidPhone(form.phoneNumber)) {
+    errors.push(`${PHONE_FORMAT_MESSAGE}.`);
   }
   if (requirePassword && !form.password) errors.push('A password is required.');
   if (requirePassword && form.password && form.password.length < 8) {
@@ -527,8 +535,11 @@ export function ManagerAccountsPage() {
                       id="ob-phone"
                       type="tel"
                       value={form.phoneNumber}
-                      onChange={setField('phoneNumber')}
-                      placeholder="07X XXX XXXX"
+                      // Stops at ten digits, or eleven behind a + for +94.
+                      onChange={(e) => setForm((p) => ({
+                        ...p, phoneNumber: cleanPhoneInput(e.target.value),
+                      }))}
+                      placeholder={PHONE_PLACEHOLDER}
                       autoComplete="off"
                     />
                   </div>
@@ -906,8 +917,10 @@ export function ManagerAccountsPage() {
               <Input
                 id="drv-phone"
                 value={form.phoneNumber}
-                onChange={(e) => setForm((p) => ({ ...p, phoneNumber: e.target.value }))}
-                placeholder="07X XXX XXXX"
+                onChange={(e) => setForm((p) => ({
+                  ...p, phoneNumber: cleanPhoneInput(e.target.value),
+                }))}
+                placeholder={PHONE_PLACEHOLDER}
                 autoComplete="off"
               />
             </div>

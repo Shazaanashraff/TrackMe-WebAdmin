@@ -220,6 +220,41 @@ describe('ManagerAccountsPage: add driver form', () => {
     expect(screen.getByLabelText(/Organization name/i)).toBeDisabled();
   });
 
+  it('will not take more than ten digits of phone number', async () => {
+    const { user } = setup();
+    await openForm(user);
+
+    const field = screen.getByLabelText(/Phone number/i);
+    await user.type(field, '0755613572222222222225');
+
+    expect(field).toHaveValue('0755613572');
+  });
+
+  it('takes the longer international number behind a +', async () => {
+    const { user } = setup();
+    await openForm(user);
+
+    const field = screen.getByLabelText(/Phone number/i);
+    await user.type(field, '+94755613572');
+
+    expect(field).toHaveValue('+94755613572');
+  });
+
+  it('refuses a half-typed phone number on submit', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    await user.type(screen.getByLabelText(/Phone number/i), '07712');
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
+
+    expect(await screen.findByText(/Sri Lankan phone number/i)).toBeInTheDocument();
+    expect(createMut.mutateAsync).not.toHaveBeenCalled();
+  });
+
   it('upper-cases the vehicle number as it is typed', async () => {
     const { user } = setup();
     await openForm(user);

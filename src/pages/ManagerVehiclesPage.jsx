@@ -16,6 +16,9 @@ import {
   cleanPlateInput, isValidPlate, tidyPlate, PLATE_FORMAT_MESSAGE, PLATE_PLACEHOLDER,
 } from '@/lib/number-plate';
 import {
+  cleanPhoneInput, isValidPhone, PHONE_FORMAT_MESSAGE, PHONE_PLACEHOLDER,
+} from '@/lib/phone-number';
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
@@ -64,6 +67,9 @@ function validateStep(form, step) {
     if (!form.password.trim()) return 'Initial password is required.';
     if (form.driverEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.driverEmail)) {
       return 'Driver email format looks invalid.';
+    }
+    if (form.driverPhoneNumber && !isValidPhone(form.driverPhoneNumber)) {
+      return `${PHONE_FORMAT_MESSAGE}.`;
     }
   }
   return null;
@@ -348,7 +354,14 @@ export function ManagerVehiclesPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-dphone">Driver Phone</Label>
-                  <Input id="cb-dphone" value={createForm.driverPhoneNumber} onChange={setCreate('driverPhoneNumber')} />
+                  <Input
+                    id="cb-dphone"
+                    value={createForm.driverPhoneNumber}
+                    onChange={(e) => setCreateForm((p) => ({
+                      ...p, driverPhoneNumber: cleanPhoneInput(e.target.value),
+                    }))}
+                    placeholder={PHONE_PLACEHOLDER}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-dnic">Driver NIC</Label>
