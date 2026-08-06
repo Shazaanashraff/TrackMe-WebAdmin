@@ -277,6 +277,17 @@ export const adminApi = {
   // the correct source for any "assign a route to my vehicle" dropdown.
   getManagerAssignableRoutes: () => request('/api/manager/routes'),
 
+  // The schools / universities / offices a driver can be attached to. Same list
+  // the super admin assigns managers to.
+  getManagerOrganizations: (serviceType) =>
+    request(`/api/manager/organizations${serviceType ? `?serviceType=${serviceType}` : ''}`),
+
+  createManagerOrganization: (payload) =>
+    request('/api/manager/organizations', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+
   getManagerDrivers: () => request('/api/manager/drivers'),
 
   createManagerDriver: (payload) =>

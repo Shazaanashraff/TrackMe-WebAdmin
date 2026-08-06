@@ -31,6 +31,10 @@ export const qk = {
     assignableRoutes: () => ['routes', 'assignable'],
     managerRequests: () => ['manager-requests'],
   },
+  organizations: {
+    all: () => ['organizations'],
+    byServiceType: (serviceType) => ['organizations', serviceType || 'all'],
+  },
   drivers: {
     all: () => ['drivers'],
     list: () => ['drivers', 'list'],

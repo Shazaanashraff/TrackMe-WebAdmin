@@ -7,7 +7,6 @@ import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { PasswordInput } from '@/components/shared/password-input';
-import { StepRail } from '@/components/shared/step-rail';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,12 +14,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import {
+  useOrganizations,
   useManagerDrivers,
   useCreateDriver,
   useUpdateDriver,
@@ -32,6 +35,17 @@ import {
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// The categories an organization can belong to. Public service has no
+// organization, so it is not offered here.
+const ORG_CATEGORIES = [
+  { value: 'SCHOOL', label: 'School' },
+  { value: 'UNIVERSITY', label: 'University' },
+  { value: 'OFFICE', label: 'Office' },
+];
+
+const categoryLabel = (value) =>
+  ORG_CATEGORIES.find((c) => c.value === value)?.label || value;
+
 const EMPTY_FORM = {
   name: '',
   email: '',
@@ -39,21 +53,66 @@ const EMPTY_FORM = {
   nicNumber: '',
   licenseCardNumber: '',
   password: '',
+  // 'existing' picks from the organization list, 'new' names one to create.
+  organizationMode: 'existing',
+  organizationCategory: '',
+  organizationId: '',
+  organizationName: '',
+  vehicleNumber: '',
 };
 
+// Only the name and the password are required. An email is optional because
+// every driver gets a driver ID to sign in with, and an organization is
+// optional because public-service drivers have none.
 function validate(form, { requirePassword }) {
   const errors = [];
-  if (!form.name.trim()) errors.push('Name is required.');
-  if (!form.email.trim()) {
-    errors.push('Email is required.');
-  } else if (!emailRegex.test(form.email)) {
-    errors.push('Enter a valid email address.');
+  if (!form.name.trim()) errors.push('Full name is required.');
+  if (form.email.trim() && !emailRegex.test(form.email.trim())) {
+    errors.push('Enter a valid email address, or leave it blank.');
   }
-  if (requirePassword && !form.password) errors.push('Password is required.');
+  if (requirePassword && !form.password) errors.push('A password is required.');
   if (requirePassword && form.password && form.password.length < 8) {
-    errors.push('Password must be at least 8 characters.');
+    errors.push('The password must be at least 8 characters.');
+  }
+  if (requirePassword && form.organizationMode === 'new' && form.organizationName.trim()
+    && !form.organizationCategory) {
+    errors.push('Choose a category for the new organization.');
   }
   return errors;
+}
+
+// Only the fields the manager actually filled in are sent — an empty string
+// would ask the backend to store a blank email rather than none at all.
+function createPayload(form) {
+  const organization = form.organizationMode === 'new'
+    ? {
+      ...(form.organizationName.trim()
+        ? { organizationName: form.organizationName.trim() } : {}),
+      ...(form.organizationCategory ? { organizationCategory: form.organizationCategory } : {}),
+    }
+    : (form.organizationId ? { organizationId: form.organizationId } : {});
+
+  return {
+    name: form.name.trim(),
+    password: form.password,
+    ...(form.email.trim() ? { email: form.email.trim() } : {}),
+    ...(form.phoneNumber.trim() ? { phoneNumber: form.phoneNumber.trim() } : {}),
+    ...(form.nicNumber.trim() ? { nicNumber: form.nicNumber.trim() } : {}),
+    ...(form.licenseCardNumber.trim()
+      ? { licenseCardNumber: form.licenseCardNumber.trim() } : {}),
+    ...(form.vehicleNumber.trim() ? { vehicleNumber: form.vehicleNumber.trim() } : {}),
+    ...organization,
+  };
+}
+
+function SectionHeading({ step, children }) {
+  return (
+    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="text-foreground">{step}</span>
+      {' · '}
+      {children}
+    </h3>
+  );
 }
 
 // A driver is only ready to drive once they have contact details and a vehicle;
@@ -66,6 +125,11 @@ function driverStatus(driver) {
 
 export function ManagerAccountsPage() {
   const driversQ = useManagerDrivers();
+  // Declared before the mutations because the organization query keys off the
+  // category the form is currently on.
+  const [form, setForm] = useState(EMPTY_FORM);
+  // The organization list is per category, so it only loads once one is picked.
+  const organizationsQ = useOrganizations(form.organizationCategory);
   const createM = useCreateDriver();
   const updateM = useUpdateDriver();
   const deleteM = useDeleteDriver();
@@ -78,7 +142,6 @@ export function ManagerAccountsPage() {
   const [onboarding, setOnboarding] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
   const [serverError, setServerError] = useState(null);
   const [lastCreated, setLastCreated] = useState(null);
 
@@ -91,6 +154,10 @@ export function ManagerAccountsPage() {
   const [revealedKeys, setRevealedKeys] = useState({});
 
   const drivers = driversQ.data?.data || [];
+  const organizations = organizationsQ.data?.data || [];
+
+  const setField = (field) => (event) =>
+    setForm((prev) => ({ ...prev, [field]: event.target.value }));
 
   const stats = useMemo(() => {
     const total = drivers.length;
@@ -117,12 +184,14 @@ export function ManagerAccountsPage() {
   const openEdit = (driver) => {
     setEditTarget(driver);
     setForm({
+      ...EMPTY_FORM,
       name: driver.name || '',
       email: driver.email || '',
       phoneNumber: driver.phoneNumber || '',
       nicNumber: driver.nicNumber || '',
       licenseCardNumber: driver.licenseCardNumber || '',
-      password: '',
+      organizationCategory: driver.organization?.serviceType || '',
+      organizationId: driver.organization?._id || '',
     });
     setServerError(null);
     setDialogOpen(true);
@@ -142,23 +211,18 @@ export function ManagerAccountsPage() {
           driverId: editTarget._id,
           payload: {
             name: form.name,
-            email: form.email,
+            // Sent even when blank — that is how an email is removed.
+            email: form.email.trim(),
             phoneNumber: form.phoneNumber,
             nicNumber: form.nicNumber,
             licenseCardNumber: form.licenseCardNumber,
+            organizationId: form.organizationId || null,
           },
         });
         toast('Driver updated successfully');
         setDialogOpen(false);
       } else {
-        const result = await createM.mutateAsync({
-          name: form.name,
-          email: form.email,
-          password: form.password,
-          phoneNumber: form.phoneNumber,
-          nicNumber: form.nicNumber,
-          licenseCardNumber: form.licenseCardNumber,
-        });
+        const result = await createM.mutateAsync(createPayload(form));
         // Shown immediately so the manager can hand it over — it is retrievable
         // later, but surfacing it here saves a round trip.
         if (result?.enrollmentKey) {
@@ -166,12 +230,16 @@ export function ManagerAccountsPage() {
         }
         setLastCreated({
           name: result?.data?.name || form.name,
-          email: result?.data?.email || form.email,
+          email: result?.data?.email || '',
+          driverCode: result?.data?.driverCode || null,
+          vehicle: result?.data?.vehicle || null,
           enrollmentKey: result?.enrollmentKey || null,
         });
         setOnboarding(false);
         setForm(EMPTY_FORM);
-        toast('Driver created');
+        // The server says when the vehicle came off another driver, which is
+        // worth repeating verbatim.
+        toast(result?.message || 'Driver created');
       }
     } catch (err) {
       setServerError(err);
@@ -255,7 +323,39 @@ export function ManagerAccountsPage() {
       accessorKey: 'name',
       cell: (info) => <span className="font-medium text-foreground">{info.getValue()}</span>,
     },
-    { id: 'email', header: 'Email', accessorKey: 'email' },
+    {
+      id: 'driverCode',
+      header: 'Driver ID',
+      accessorKey: 'driverCode',
+      cell: (info) => (info.getValue()
+        ? <code className="whitespace-nowrap text-xs">{info.getValue()}</code>
+        : <span className="text-muted-foreground">—</span>),
+    },
+    {
+      id: 'email',
+      header: 'Email',
+      accessorKey: 'email',
+      cell: (info) => info.getValue() || <span className="text-muted-foreground">—</span>,
+    },
+    {
+      id: 'organization',
+      header: 'Organization',
+      accessorKey: 'organization',
+      enableSorting: false,
+      cell: (info) => {
+        const organization = info.getValue();
+        if (!organization) return <span className="text-muted-foreground">—</span>;
+        return (
+          <span>
+            {organization.name}
+            <span className="text-muted-foreground">
+              {' · '}
+              {categoryLabel(organization.serviceType)}
+            </span>
+          </span>
+        );
+      },
+    },
     {
       id: 'phoneNumber',
       header: 'Phone',
@@ -394,28 +494,24 @@ export function ManagerAccountsPage() {
               Everything below is on one page — fill it in whatever order suits you.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <StepRail
-              steps={[
-                { title: 'Driver', description: 'Identity and contact' },
-                { title: 'Documents', description: 'NIC and licence' },
-                { title: 'Access', description: 'Sign-in and keys' },
-              ]}
-            />
-
+          <CardContent>
+            {/* noValidate so a bad email raises this page's own error banner
+                rather than a native browser tooltip that silently blocks
+                submission. */}
             <form
-              className="space-y-6"
+              noValidate
+              className="divide-y divide-border"
               onSubmit={(e) => { e.preventDefault(); handleSave(); }}
             >
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">1 · Driver details</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
+              <section className="space-y-4 pb-6">
+                <SectionHeading step={1}>Driver details</SectionHeading>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="ob-name">Full name</Label>
                     <Input
                       id="ob-name"
                       value={form.name}
-                      onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                      onChange={setField('name')}
                       placeholder="Enter full name"
                       autoComplete="off"
                     />
@@ -426,68 +522,186 @@ export function ManagerAccountsPage() {
                       id="ob-phone"
                       type="tel"
                       value={form.phoneNumber}
-                      onChange={(e) => setForm((p) => ({ ...p, phoneNumber: e.target.value }))}
+                      onChange={setField('phoneNumber')}
                       placeholder="07X XXX XXXX"
                       autoComplete="off"
                     />
                   </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="ob-email">Email</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ob-email">Email (optional)</Label>
                     <Input
                       id="ob-email"
                       type="email"
                       value={form.email}
-                      onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                      onChange={setField('email')}
                       placeholder="driver@company.com"
                       autoComplete="off"
                     />
                   </div>
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">2 · Documents</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="ob-nic">NIC number</Label>
+                    <Label htmlFor="ob-nic">NIC number (optional)</Label>
                     <Input
                       id="ob-nic"
                       value={form.nicNumber}
-                      onChange={(e) => setForm((p) => ({ ...p, nicNumber: e.target.value.toUpperCase() }))}
-                      placeholder="Optional"
+                      onChange={(e) => setForm((p) => ({
+                        ...p, nicNumber: e.target.value.toUpperCase(),
+                      }))}
+                      placeholder="200012345678"
                       autoComplete="off"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="ob-licence">Licence card number</Label>
+                    <Label htmlFor="ob-licence">Licence card number (optional)</Label>
                     <Input
                       id="ob-licence"
                       value={form.licenseCardNumber}
-                      onChange={(e) => setForm((p) => ({ ...p, licenseCardNumber: e.target.value.toUpperCase() }))}
-                      placeholder="Optional"
+                      onChange={(e) => setForm((p) => ({
+                        ...p, licenseCardNumber: e.target.value.toUpperCase(),
+                      }))}
+                      placeholder="B1234567"
                       autoComplete="off"
                     />
                   </div>
                 </div>
               </section>
 
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">3 · App access</h3>
+              <section className="space-y-4 py-6">
+                <SectionHeading step={2}>Organization</SectionHeading>
+
+                {/* Picking from the list and adding a new one are the same
+                    decision, so they share one control rather than hiding the
+                    second behind a separate dialog. */}
+                <div
+                  role="group"
+                  aria-label="How to set the organization"
+                  className="inline-flex rounded-full bg-surface-muted p-1"
+                >
+                  {[
+                    { value: 'existing', label: 'Choose existing' },
+                    { value: 'new', label: 'Create new' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={form.organizationMode === option.value}
+                      onClick={() => setForm((p) => ({
+                        ...p,
+                        organizationMode: option.value,
+                        organizationId: '',
+                        organizationName: '',
+                      }))}
+                      className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
+                        form.organizationMode === option.value
+                          ? 'bg-foreground text-background'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="ob-password">Temporary password</Label>
+                    <Label htmlFor="ob-org-category">Organization category</Label>
+                    <Select
+                      value={form.organizationCategory}
+                      onValueChange={(value) => setForm((p) => ({
+                        ...p, organizationCategory: value, organizationId: '',
+                      }))}
+                    >
+                      <SelectTrigger id="ob-org-category">
+                        <SelectValue placeholder="Select category…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ORG_CATEGORIES.map((category) => (
+                          <SelectItem key={category.value} value={category.value}>
+                            {category.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {form.organizationMode === 'existing' ? (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ob-org">Organization</Label>
+                      <Select
+                        value={form.organizationId}
+                        onValueChange={(value) => setForm((p) => ({ ...p, organizationId: value }))}
+                        disabled={!form.organizationCategory || organizationsQ.isLoading}
+                      >
+                        <SelectTrigger id="ob-org">
+                          <SelectValue
+                            placeholder={
+                              form.organizationCategory
+                                ? 'Select an organization…'
+                                : 'Choose a category first'
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {organizations.length === 0 ? (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">
+                              No organizations yet — use Create new
+                            </div>
+                          ) : (
+                            organizations.map((organization) => (
+                              <SelectItem key={organization._id} value={organization._id}>
+                                {organization.name}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ob-org-new">Organization name</Label>
+                      <Input
+                        id="ob-org-new"
+                        value={form.organizationName}
+                        onChange={setField('organizationName')}
+                        placeholder={
+                          form.organizationCategory
+                            ? `Name of the ${categoryLabel(form.organizationCategory).toLowerCase()}`
+                            : 'Choose a category first'
+                        }
+                        disabled={!form.organizationCategory}
+                        autoComplete="off"
+                      />
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="space-y-4 pt-6">
+                <SectionHeading step={3}>Vehicle and app access</SectionHeading>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ob-vehicle">Vehicle number (optional)</Label>
+                    <Input
+                      id="ob-vehicle"
+                      value={form.vehicleNumber}
+                      onChange={setField('vehicleNumber')}
+                      placeholder="Vehicle ID or number plate"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ob-password">Password</Label>
                     <PasswordInput
                       id="ob-password"
                       value={form.password}
-                      onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+                      onChange={setField('password')}
                       placeholder="At least 8 characters"
                       autoComplete="new-password"
                     />
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  A passenger enrollment key is generated automatically and shown once the
-                  driver is created. The driver signs in to the app with their email.
+                  A permanent Driver ID is generated automatically. The driver can sign in
+                  with that ID or their email, using this password until they change it.
                 </p>
 
                 {serverError && (
@@ -522,9 +736,25 @@ export function ManagerAccountsPage() {
               <p className="font-medium text-foreground">{lastCreated.name}</p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">Signs in with</p>
-              <p className="font-medium text-foreground">{lastCreated.email}</p>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">Driver ID</p>
+              <code className="whitespace-nowrap text-sm font-medium">
+                {lastCreated.driverCode || '—'}
+              </code>
             </div>
+            {lastCreated.email && (
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Or signs in with
+                </p>
+                <p className="font-medium text-foreground">{lastCreated.email}</p>
+              </div>
+            )}
+            {lastCreated.vehicle && (
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Vehicle</p>
+                <p className="font-medium text-foreground">{lastCreated.vehicle.vehicleId}</p>
+              </div>
+            )}
             {lastCreated.enrollmentKey && (
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -595,7 +825,7 @@ export function ManagerAccountsPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="drv-email">Email</Label>
+            <Label htmlFor="drv-email">Email (optional)</Label>
             <Input
               id="drv-email"
               type="email"
@@ -604,6 +834,61 @@ export function ManagerAccountsPage() {
               placeholder="driver@company.com"
               autoComplete="off"
             />
+            <p className="text-xs text-muted-foreground">
+              Clearing this leaves the driver signing in with their Driver ID
+              {editTarget?.driverCode ? ` (${editTarget.driverCode})` : ''}.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="drv-org-category">Organization category</Label>
+              <Select
+                value={form.organizationCategory}
+                onValueChange={(value) => setForm((p) => ({
+                  ...p, organizationCategory: value, organizationId: '',
+                }))}
+              >
+                <SelectTrigger id="drv-org-category">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ORG_CATEGORIES.map((category) => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="drv-org">Organization</Label>
+              <Select
+                value={form.organizationId}
+                onValueChange={(value) => setForm((p) => ({ ...p, organizationId: value }))}
+                disabled={!form.organizationCategory}
+              >
+                <SelectTrigger id="drv-org">
+                  <SelectValue
+                    placeholder={
+                      form.organizationCategory ? 'Select an organization…' : 'Choose a category first'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      No organizations in this category
+                    </div>
+                  ) : (
+                    organizations.map((organization) => (
+                      <SelectItem key={organization._id} value={organization._id}>
+                        {organization.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -617,23 +902,23 @@ export function ManagerAccountsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="drv-nic">NIC</Label>
+              <Label htmlFor="drv-nic">NIC (optional)</Label>
               <Input
                 id="drv-nic"
                 value={form.nicNumber}
                 onChange={(e) => setForm((p) => ({ ...p, nicNumber: e.target.value }))}
-                placeholder="Optional"
+                placeholder="200012345678"
                 autoComplete="off"
               />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="drv-licence">Licence card number</Label>
+            <Label htmlFor="drv-licence">Licence card number (optional)</Label>
             <Input
               id="drv-licence"
               value={form.licenseCardNumber}
               onChange={(e) => setForm((p) => ({ ...p, licenseCardNumber: e.target.value }))}
-              placeholder="Optional"
+              placeholder="B1234567"
               autoComplete="off"
             />
           </div>
