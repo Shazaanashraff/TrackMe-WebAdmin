@@ -47,7 +47,7 @@ const CREATE_STEPS = ['Vehicle Details', 'Driver (optional)', 'Review & Create']
 const EMPTY_CREATE = {
   vehicleId: '', vehicleName: '', numberPlate: '',
   routeMode: 'EXISTING', routeId: '',
-  seatCapacity: '', vehicleType: 'AC', serviceType: 'PUBLIC',
+  vehicleType: 'AC', serviceType: 'PUBLIC',
   organizationCategory: '', organizationId: '',
   driverName: '', driverEmail: '', driverPhoneNumber: '',
   driverNicNumber: '', driverLicenseCardNumber: '',
@@ -63,9 +63,6 @@ function validateStep(form, step) {
     }
     if (!isValidPlate(form.numberPlate)) {
       return PLATE_FORMAT_MESSAGE;
-    }
-    if (form.seatCapacity && Number(form.seatCapacity) <= 0) {
-      return 'Seat capacity must be a positive number.';
     }
   }
   if (step === 1) {
@@ -147,11 +144,7 @@ export function ManagerVehiclesPage() {
 
   const handleSubmit = async () => {
     try {
-      const result = await createM.mutateAsync({
-        ...createForm,
-        // Left out rather than sent as 0, which would fail the minimum.
-        seatCapacity: createForm.seatCapacity ? Number(createForm.seatCapacity) : undefined,
-      });
+      const result = await createM.mutateAsync({ ...createForm });
       // The driver ID is the only copy the manager gets in passing, so it goes
       // in the toast rather than making them open the drivers page for it.
       const driverCode = result?.data?.driver?.driverCode;
@@ -170,7 +163,6 @@ export function ManagerVehiclesPage() {
       vehicleName: vehicle.vehicleName || '',
       numberPlate: vehicle.numberPlate || '',
       routeId: vehicle.routeId || '',
-      seatCapacity: vehicle.seatCapacity || 40,
       vehicleType: vehicle.vehicleType || 'AC',
       serviceType: vehicle.serviceType || 'PUBLIC',
       isActive: vehicle.isActive !== false,
@@ -185,7 +177,7 @@ export function ManagerVehiclesPage() {
     try {
       await updateVehicleM.mutateAsync({
         vehicleId: editVehicle.vehicleId,
-        payload: { ...editForm, seatCapacity: Number(editForm.seatCapacity) },
+        payload: { ...editForm },
       });
       toast('Vehicle updated');
       setEditVehicle(null);
@@ -419,18 +411,7 @@ export function ManagerVehiclesPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="cb-seats">Seat Capacity (optional)</Label>
-                  <Input
-                    id="cb-seats"
-                    type="number"
-                    min="1"
-                    value={createForm.seatCapacity}
-                    onChange={setCreate('seatCapacity')}
-                    placeholder="Set later"
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-vehicletype">Vehicle Type</Label>
                   <Select value={createForm.vehicleType} onValueChange={(v) => setCreateForm((p) => ({ ...p, vehicleType: v }))}>
@@ -519,11 +500,6 @@ export function ManagerVehiclesPage() {
                   ? 'Driver will record a custom route'
                   : (createForm.routeId || 'Set later')}
               </p>
-              <p>
-                <span className="font-semibold">Capacity:</span>
-                {' '}
-                {createForm.seatCapacity ? `${createForm.seatCapacity} seats` : 'Set later'}
-              </p>
               <p><span className="font-semibold">Type:</span> {createForm.vehicleType} / {createForm.serviceType}</p>
               <p>
                 <span className="font-semibold">Driver:</span>
@@ -580,10 +556,6 @@ export function ManagerVehiclesPage() {
             <div className="space-y-1.5">
               <Label htmlFor="eb-route">Route ID</Label>
               <Input id="eb-route" value={editForm.routeId || ''} onChange={(e) => setEditForm((p) => ({ ...p, routeId: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="eb-seats">Seat Capacity</Label>
-              <Input id="eb-seats" type="number" value={editForm.seatCapacity || ''} onChange={(e) => setEditForm((p) => ({ ...p, seatCapacity: e.target.value }))} />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">

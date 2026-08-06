@@ -157,7 +157,7 @@ export function DataTable({
                     {header.isPlaceholder ? null : header.column.getCanSort() ? (
                       <button
                         type="button"
-                        className="flex items-center gap-1 hover:text-foreground transition-colors"
+                        className="-mx-1 flex items-center gap-1 rounded px-1 py-0.5 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -166,7 +166,9 @@ export function DataTable({
                         ) : header.column.getIsSorted() === 'desc' ? (
                           <ChevronDown className="h-3.5 w-3.5" aria-hidden />
                         ) : (
-                          <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" aria-hidden />
+                          // opacity-40 on an already-muted glyph left the
+                          // "sortable" affordance barely visible in dark mode.
+                          <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" aria-hidden />
                         )}
                       </button>
                     ) : (

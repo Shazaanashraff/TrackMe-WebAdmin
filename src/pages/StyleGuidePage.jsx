@@ -112,6 +112,7 @@ const SURFACE_TOKENS = [
 const TEXT_TOKENS = [
   { name: '--foreground', cssVar: 'var(--foreground)' },
   { name: '--muted-foreground', cssVar: 'var(--muted-foreground)' },
+  { name: '--table-header-foreground', cssVar: 'var(--table-header-foreground)' },
 ];
 
 const BRAND_TOKENS = [

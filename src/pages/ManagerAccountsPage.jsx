@@ -35,6 +35,7 @@ import {
   useResetDriverPassword,
   useDriverEnrollmentKey,
   useRotateDriverEnrollmentKey,
+  useRevertDriverEnrollmentKey,
 } from '@/hooks/use-drivers';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -152,6 +153,7 @@ export function ManagerAccountsPage() {
   const resetPwM = useResetDriverPassword();
   const revealKeyM = useDriverEnrollmentKey();
   const rotateKeyM = useRotateDriverEnrollmentKey();
+  const revertKeyM = useRevertDriverEnrollmentKey();
 
   // Creating expands an inline onboarding card; editing still uses a dialog,
   // since an edit is a quick correction rather than a walk-through.
@@ -163,11 +165,14 @@ export function ManagerAccountsPage() {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [resetTarget, setResetTarget] = useState(null);
+  const [rotateTarget, setRotateTarget] = useState(null);
   const [newPassword, setNewPassword] = useState('');
 
   // Keys are credentials, so they stay hidden until asked for and are held per
   // row rather than fetched with the directory.
   const [revealedKeys, setRevealedKeys] = useState({});
+  // driverId -> the last replacement can still be undone.
+  const [revertable, setRevertable] = useState({});
 
   const drivers = driversQ.data?.data || [];
   const organizations = organizationsQ.data?.data || [];
@@ -274,22 +279,50 @@ export function ManagerAccountsPage() {
     }
   };
 
+  // The server decides whether an undo is still available, so the option
+  // survives a refresh instead of living only in this tab's memory.
+  const rememberRevertable = (driverId, canRevert) =>
+    setRevertable((prev) => ({ ...prev, [driverId]: Boolean(canRevert) }));
+
   const handleRevealKey = async (driver) => {
     try {
       const result = await revealKeyM.mutateAsync({ driverId: driver._id });
       setRevealedKeys((prev) => ({ ...prev, [driver._id]: result?.data?.enrollmentKey }));
+      rememberRevertable(driver._id, result?.data?.canRevert);
     } catch (err) {
       toast(`Failed: ${err?.message || 'Unknown error'}`);
     }
   };
 
-  const handleRotateKey = async (driver) => {
+  const handleConfirmRotateKey = async () => {
+    if (!rotateTarget) return;
+    const driver = rotateTarget;
     try {
       const result = await rotateKeyM.mutateAsync({ driverId: driver._id });
       setRevealedKeys((prev) => ({ ...prev, [driver._id]: result?.data?.enrollmentKey }));
-      toast('Enrollment key rotated. The previous key no longer works.');
+      rememberRevertable(driver._id, result?.data?.canRevert ?? true);
+      setRotateTarget(null);
+      // Offered right here as well as in the row menu, because the moment a
+      // manager realises they rotated the wrong driver is this one.
+      toast('Enrollment key replaced. The old key no longer works.', {
+        action: { label: 'Undo', onClick: () => handleRevertKey(driver) },
+      });
     } catch (err) {
+      setRotateTarget(null);
       toast(`Failed: ${err?.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleRevertKey = async (driver) => {
+    try {
+      const result = await revertKeyM.mutateAsync({ driverId: driver._id });
+      setRevealedKeys((prev) => ({ ...prev, [driver._id]: result?.data?.enrollmentKey }));
+      rememberRevertable(driver._id, false);
+      toast('Previous enrollment key restored. The replacement no longer works.');
+    } catch (err) {
+      // A 409 means the undo was already spent — say that rather than "failed".
+      rememberRevertable(driver._id, false);
+      toast(err?.message || 'Could not restore the previous enrollment key');
     }
   };
 
@@ -386,12 +419,11 @@ export function ManagerAccountsPage() {
       cell: (info) => {
         const vehicle = info.getValue();
         if (!vehicle) return <span className="text-muted-foreground">Unassigned</span>;
-        return (
-          <span className="tabular-nums">
-            {vehicle.vehicleId}
-            <span className="text-muted-foreground"> · {vehicle.numberPlate}</span>
-          </span>
-        );
+        // The plate is what a manager actually recognises a bus by. The internal
+        // vehicleId was the longest string in the row and added no meaning at a
+        // glance — it stays available on the Vehicles page. Fall back to it only
+        // if a record somehow has no plate, so the cell is never blank.
+        return <span className="tabular-nums">{vehicle.numberPlate || vehicle.vehicleId}</span>;
       },
     },
     {
@@ -460,9 +492,17 @@ export function ManagerAccountsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuItem onSelect={() => openEdit(driver)}>Edit driver</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => handleRotateKey(driver)}>
-                Rotate enrollment key
+              {/* "Rotate" is our word, not the manager's. The label says what
+                  happens to the key they hand out; the endpoint keeps the
+                  rotate name. */}
+              <DropdownMenuItem onSelect={() => setRotateTarget(driver)}>
+                Replace enrollment key
               </DropdownMenuItem>
+              {revertable[driver._id] && (
+                <DropdownMenuItem onSelect={() => handleRevertKey(driver)}>
+                  Restore previous key
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onSelect={() => setResetTarget(driver)}>
                 Reset password
               </DropdownMenuItem>
@@ -480,7 +520,7 @@ export function ManagerAccountsPage() {
         );
       },
     },
-  ], [revealedKeys, revealKeyM.isPending, revealKeyM.variables]);
+  ], [revealedKeys, revertable, revealKeyM.isPending, revealKeyM.variables]);
 
   return (
     <div className="space-y-6">
@@ -978,6 +1018,28 @@ export function ManagerAccountsPage() {
         pending={deleteM.isPending}
         onConfirm={handleConfirmDelete}
       />
+
+      {/* Rotating used to be a single click in the row menu, which is far too
+          little friction for an action that invalidates a credential already in
+          passengers' hands. It now states the consequence up front. */}
+      <ConfirmDialog
+        open={Boolean(rotateTarget)}
+        onOpenChange={(open) => { if (!open && !rotateKeyM.isPending) setRotateTarget(null); }}
+        title={`Replace ${rotateTarget?.name || 'this driver'}'s enrollment key?`}
+        description="This gives the driver a brand new key and immediately stops the current one working."
+        confirmLabel="Replace Key"
+        destructive
+        pending={rotateKeyM.isPending}
+        onConfirm={handleConfirmRotateKey}
+      >
+        <ul className="space-y-1.5 rounded-lg border border-border bg-surface-muted p-3 text-sm text-foreground">
+          <li>The key you have already handed out stops working straight away.</li>
+          <li>Anyone still to enrol will need the new key from you instead.</li>
+          <li className="text-muted-foreground">
+            You can undo this once, straight afterwards, to put the old key back.
+          </li>
+        </ul>
+      </ConfirmDialog>
     </div>
   );
 }

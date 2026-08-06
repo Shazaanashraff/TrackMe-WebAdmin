@@ -44,6 +44,11 @@
   --border: #e3e8ee;
   --foreground: #0b1220;
   --muted-foreground: #5b6875;
+  /* Column headers sit between --muted-foreground and --foreground: readable
+     on their own (~10:1 on the header band) but still clearly subordinate to
+     the data rows, so the eye lands on the values first. --muted-foreground is
+     too faint at header sizes; --foreground makes headers compete with data. */
+  --table-header-foreground: #33414f;
   --primary: #0f766e;
   --primary-hover: #115e59;
   --primary-foreground: #ffffff;
@@ -83,6 +88,7 @@
   --border: #1e2733;
   --foreground: #e8eef4;
   --muted-foreground: #8a97a6;
+  --table-header-foreground: #b6c2d0;
   --primary: #2dd4bf;
   --primary-hover: #5eead4;
   --primary-foreground: #04211d;

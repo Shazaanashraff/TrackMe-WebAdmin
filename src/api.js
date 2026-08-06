@@ -321,5 +321,10 @@ export const adminApi = {
   rotateDriverEnrollmentKey: (driverId) =>
     request(`/api/manager/drivers/${driverId}/enrollment-key/rotate`, {
       method: 'POST'
+    }),
+
+  revertDriverEnrollmentKey: (driverId) =>
+    request(`/api/manager/drivers/${driverId}/enrollment-key/revert`, {
+      method: 'POST'
     })
 };

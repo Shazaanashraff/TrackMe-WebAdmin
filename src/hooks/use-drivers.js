@@ -85,3 +85,9 @@ export function useRotateDriverEnrollmentKey() {
     mutationFn: ({ driverId }) => adminApi.rotateDriverEnrollmentKey(driverId),
   });
 }
+
+export function useRevertDriverEnrollmentKey() {
+  return useMutation({
+    mutationFn: ({ driverId }) => adminApi.revertDriverEnrollmentKey(driverId),
+  });
+}

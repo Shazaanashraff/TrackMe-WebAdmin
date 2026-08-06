@@ -99,13 +99,13 @@ export function DashboardPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground py-2 pr-4">
+                      <th className="text-left text-xs font-semibold uppercase tracking-wider text-table-header-foreground py-2 pr-4">
                         Route / Manager
                       </th>
-                      <th className="text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground py-2 pr-4">
+                      <th className="text-left text-xs font-semibold uppercase tracking-wider text-table-header-foreground py-2 pr-4">
                         Status
                       </th>
-                      <th className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground py-2">
+                      <th className="text-right text-xs font-semibold uppercase tracking-wider text-table-header-foreground py-2">
                         Fleet
                       </th>
                     </tr>

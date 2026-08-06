@@ -13,6 +13,7 @@ vi.mock('@/hooks/use-drivers', () => ({
   useResetDriverPassword: vi.fn(),
   useDriverEnrollmentKey: vi.fn(),
   useRotateDriverEnrollmentKey: vi.fn(),
+  useRevertDriverEnrollmentKey: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({ toast: vi.fn() }));
@@ -26,6 +27,7 @@ import {
   useResetDriverPassword,
   useDriverEnrollmentKey,
   useRotateDriverEnrollmentKey,
+  useRevertDriverEnrollmentKey,
 } from '@/hooks/use-drivers';
 
 const ORGANIZATIONS = [
@@ -63,7 +65,14 @@ function makeMutation(overrides = {}) {
   return { mutateAsync: vi.fn().mockResolvedValue({}), isPending: false, ...overrides };
 }
 
-function defaultHooks({ drivers = DRIVERS, organizations = ORGANIZATIONS, createMut } = {}) {
+function defaultHooks({
+  drivers = DRIVERS,
+  organizations = ORGANIZATIONS,
+  createMut,
+  revealMut,
+  rotateMut,
+  revertMut,
+} = {}) {
   useManagerDrivers.mockReturnValue({
     data: { data: drivers }, isLoading: false, error: null, refetch: vi.fn(),
   });
@@ -72,8 +81,9 @@ function defaultHooks({ drivers = DRIVERS, organizations = ORGANIZATIONS, create
   useUpdateDriver.mockReturnValue(makeMutation());
   useDeleteDriver.mockReturnValue(makeMutation());
   useResetDriverPassword.mockReturnValue(makeMutation());
-  useDriverEnrollmentKey.mockReturnValue(makeMutation());
-  useRotateDriverEnrollmentKey.mockReturnValue(makeMutation());
+  useDriverEnrollmentKey.mockReturnValue(revealMut || makeMutation());
+  useRotateDriverEnrollmentKey.mockReturnValue(rotateMut || makeMutation());
+  useRevertDriverEnrollmentKey.mockReturnValue(revertMut || makeMutation());
 }
 
 function setup(opts) {
@@ -109,6 +119,128 @@ describe('ManagerAccountsPage: driver directory', () => {
     // Email, organization and phone are all empty for this driver. Written out
     // as words: the UI carries no em dashes.
     expect(screen.getAllByText('None').length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('identifies the vehicle by its plate alone, not its internal ID', () => {
+    setup();
+
+    expect(screen.getByText('AB-1234')).toBeInTheDocument();
+    expect(screen.queryByText(/BUS-1/)).not.toBeInTheDocument();
+  });
+
+  it('falls back to the vehicle ID when a record carries no plate', () => {
+    const noPlate = { ...DRIVERS[0], vehicle: { _id: 'v9', vehicleId: 'BUS-9' } };
+    setup({ drivers: [noPlate] });
+
+    expect(screen.getByText('BUS-9')).toBeInTheDocument();
+  });
+
+  it('names the empty vehicle cell rather than leaving it blank', () => {
+    setup({ drivers: [{ ...DRIVERS[0], vehicle: null }] });
+
+    expect(screen.getByText('Unassigned')).toBeInTheDocument();
+  });
+});
+
+describe('ManagerAccountsPage: enrollment key rotation', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  const openRowMenu = (user, name = 'Kamal Perera') =>
+    user.click(screen.getByRole('button', { name: `Actions for ${name}` }));
+
+  const rotated = (canRevert = true) => makeMutation({
+    mutateAsync: vi.fn().mockResolvedValue({ data: { enrollmentKey: 'TMD-NEW-KEY-0001', canRevert } }),
+  });
+
+  it('warns before rotating instead of rotating on the click itself', async () => {
+    const rotateMut = rotated();
+    const { user } = setup({ rotateMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /replace enrollment key/i }));
+
+    // The menu click opens the warning; nothing has been rotated yet.
+    expect(rotateMut.mutateAsync).not.toHaveBeenCalled();
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+  });
+
+  it('says what rotating will do to the key already handed out', async () => {
+    const { user } = setup({ rotateMut: rotated() });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /replace enrollment key/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(/stops working straight away/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/undo this once/i)).toBeInTheDocument();
+  });
+
+  it('rotates nothing when the manager backs out', async () => {
+    const rotateMut = rotated();
+    const { user } = setup({ rotateMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /replace enrollment key/i }));
+    await user.click(await screen.findByRole('button', { name: /cancel/i }));
+
+    expect(rotateMut.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('rotates once the warning is confirmed', async () => {
+    const rotateMut = rotated();
+    const { user } = setup({ rotateMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /replace enrollment key/i }));
+    await user.click(await screen.findByRole('button', { name: /replace key/i }));
+
+    expect(rotateMut.mutateAsync).toHaveBeenCalledWith({ driverId: 'driver-1' });
+  });
+
+  it('offers the undo only after a rotation has happened', async () => {
+    const { user } = setup({ rotateMut: rotated() });
+
+    await openRowMenu(user);
+    expect(screen.queryByRole('menuitem', { name: /restore previous key/i })).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole('menuitem', { name: /replace enrollment key/i }));
+    await user.click(await screen.findByRole('button', { name: /replace key/i }));
+
+    await openRowMenu(user);
+    expect(await screen.findByRole('menuitem', { name: /restore previous key/i })).toBeInTheDocument();
+  });
+
+  it('restores the previous key through the undo, then withdraws the offer', async () => {
+    const revertMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({ data: { enrollmentKey: 'TMD-OLD-KEY-0001', canRevert: false } }),
+    });
+    const { user } = setup({ rotateMut: rotated(), revertMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /replace enrollment key/i }));
+    await user.click(await screen.findByRole('button', { name: /replace key/i }));
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /restore previous key/i }));
+
+    expect(revertMut.mutateAsync).toHaveBeenCalledWith({ driverId: 'driver-1' });
+
+    // Spent: the server allows one undo per rotation, so the option goes away.
+    await openRowMenu(user);
+    expect(screen.queryByRole('menuitem', { name: /restore previous key/i })).not.toBeInTheDocument();
+  });
+
+  it('offers the undo when the server reports a rotation is still recoverable', async () => {
+    const revealMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({ data: { enrollmentKey: 'TMD-CUR-KEY-0001', canRevert: true } }),
+    });
+    const { user } = setup({ revealMut });
+
+    // A reveal after a page refresh is how the option comes back.
+    await user.click(screen.getAllByRole('button', { name: /show key/i })[0]);
+
+    await openRowMenu(user);
+    expect(await screen.findByRole('menuitem', { name: /restore previous key/i })).toBeInTheDocument();
   });
 });
 

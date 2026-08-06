@@ -21,6 +21,10 @@ export function ConfirmDialog({
   pending = false,
   onConfirm,
   requireReason = false,
+  // Extra warning detail, rendered as a sibling of the description rather than
+  // inside it: AlertDialogDescription is a <p>, so lists and callouts cannot
+  // legally nest there.
+  children,
 }) {
   const [reason, setReason] = useState('');
   const canConfirm = !requireReason || reason.trim().length > 0;
@@ -43,6 +47,7 @@ export function ConfirmDialog({
             <AlertDialogDescription>{description}</AlertDialogDescription>
           )}
         </AlertDialogHeader>
+        {children}
         {requireReason && (
           <Textarea
             placeholder="Reason (required)"
