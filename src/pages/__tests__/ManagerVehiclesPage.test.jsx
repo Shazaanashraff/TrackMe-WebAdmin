@@ -12,6 +12,11 @@ vi.mock('@/hooks/use-vehicles', () => ({
   useRequestDeleteVehicle: vi.fn(),
 }));
 
+// The page reads the organization list for its category selects.
+vi.mock('@/hooks/use-drivers', () => ({
+  useOrganizations: vi.fn(() => ({ data: { data: [] }, isLoading: false })),
+}));
+
 vi.mock('sonner', () => ({ toast: vi.fn() }));
 
 import {
@@ -142,8 +147,7 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
 
     await fillStep0(user, { routeMode: 'CUSTOM' });
 
-    // Step 1: password required
-    await user.type(screen.getByLabelText(/initial password/i), 'Sup3rSecret!');
+    // Step 1 is the driver, which a vehicle can go without.
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
     // Step 2: submit
@@ -197,8 +201,7 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
 
     await fillStep0(user, { routeMode: 'EXISTING' });
 
-    // Step 1
-    await user.type(screen.getByLabelText(/initial password/i), 'Sup3rSecret!');
+    // Step 1, left blank: the vehicle is created unassigned.
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
     // Step 2
@@ -223,15 +226,37 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     expect(screen.getByText(/please complete/i)).toBeInTheDocument();
   });
 
-  it('shows validation error when step 1 password is empty', async () => {
+  it('lets the whole driver step be skipped, leaving the vehicle unassigned', async () => {
     const { user } = setup();
 
     await fillStep0(user, { routeMode: 'CUSTOM' });
-
-    // Step 1: skip password, try to advance
     await user.click(screen.getByRole('button', { name: /continue/i }));
-    expect(screen.getByText(/initial password is required/i)).toBeInTheDocument();
-  });
+
+    // Reached the review step rather than being held back, and it says the
+    // vehicle is going in without a driver.
+    expect(screen.getByRole('button', { name: /create vehicle/i })).toBeInTheDocument();
+    expect(screen.getAllByText(/unassigned/i).length).toBeGreaterThan(0);
+  }, 20000);
+
+  it('asks for a password once a driver is named', async () => {
+    const { user } = setup();
+
+    await fillStep0(user, { routeMode: 'CUSTOM' });
+    await user.type(screen.getByLabelText(/driver name/i), 'Kamal');
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+
+    expect(screen.getByText(/a driver needs an initial password/i)).toBeInTheDocument();
+  }, 20000);
+
+  it('will not take a password with nobody to give it to', async () => {
+    const { user } = setup();
+
+    await fillStep0(user, { routeMode: 'CUSTOM' });
+    await user.type(screen.getByLabelText(/initial password/i), 'Sup3rSecret!');
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+
+    expect(screen.getByText(/name the driver this password belongs to/i)).toBeInTheDocument();
+  }, 20000);
 });
 
 // ----------------------------------------------------------------

@@ -31,40 +31,51 @@ import {
   useUpdateManagerVehicle,
   useRequestDeleteVehicle,
 } from '@/hooks/use-vehicles';
+import { useOrganizations } from '@/hooks/use-drivers';
 
 const SERVICE_TYPES = ['PUBLIC', 'SCHOOL', 'UNIVERSITY', 'OFFICE'];
+// Public service has no organization, so it is not offered here.
+const ORG_CATEGORIES = [
+  { value: 'SCHOOL', label: 'School' },
+  { value: 'UNIVERSITY', label: 'University' },
+  { value: 'OFFICE', label: 'Office' },
+];
 const VEHICLE_TYPES = ['AC', 'NON-AC', 'DELUXE', 'SLEEPER'];
 const MAINTENANCE_STATUSES = ['ACTIVE', 'MAINTENANCE', 'OUT_OF_SERVICE'];
-const CREATE_STEPS = ['Vehicle Details', 'Driver & Access', 'Review & Submit'];
+const CREATE_STEPS = ['Vehicle Details', 'Driver (optional)', 'Review & Create'];
 
 const EMPTY_CREATE = {
   vehicleId: '', vehicleName: '', numberPlate: '',
   routeMode: 'EXISTING', routeId: '',
-  seatCapacity: 40, vehicleType: 'AC', serviceType: 'PUBLIC',
+  seatCapacity: '', vehicleType: 'AC', serviceType: 'PUBLIC',
+  organizationCategory: '', organizationId: '',
   driverName: '', driverEmail: '', driverPhoneNumber: '',
   driverNicNumber: '', driverLicenseCardNumber: '',
   password: '', reason: '',
 };
 
+// A vehicle needs an ID and a plate; everything else about it, including who
+// drives it, can be filled in later from this same page.
 function validateStep(form, step) {
   if (step === 0) {
-    if (!form.vehicleId.trim() || !form.vehicleName.trim() || !form.numberPlate.trim()) {
-      return form.routeMode === 'CUSTOM'
-        ? 'Please complete Vehicle ID, Vehicle Name, and Number Plate.'
-        : 'Please complete Vehicle ID, Vehicle Name, Number Plate, and Route.';
+    if (!form.vehicleId.trim() || !form.numberPlate.trim()) {
+      return 'Please complete Vehicle ID and Number Plate.';
     }
     if (!isValidPlate(form.numberPlate)) {
       return PLATE_FORMAT_MESSAGE;
     }
-    if (form.routeMode !== 'CUSTOM' && !form.routeId) {
-      return 'Please select a route.';
-    }
-    if (!Number(form.seatCapacity) || Number(form.seatCapacity) <= 0) {
+    if (form.seatCapacity && Number(form.seatCapacity) <= 0) {
       return 'Seat capacity must be a positive number.';
     }
   }
   if (step === 1) {
-    if (!form.password.trim()) return 'Initial password is required.';
+    // Naming a driver is what makes the rest of this step apply.
+    if (form.driverName.trim() && !form.password.trim()) {
+      return 'A driver needs an initial password.';
+    }
+    if (!form.driverName.trim() && form.password.trim()) {
+      return 'Name the driver this password belongs to, or clear it.';
+    }
     if (form.driverEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.driverEmail)) {
       return 'Driver email format looks invalid.';
     }
@@ -78,13 +89,15 @@ function validateStep(form, step) {
 export function ManagerVehiclesPage() {
   const vehiclesQ = useManagerVehicles();
   const routesQ = useManagerAssignableRoutes();
+  const [createForm, setCreateForm] = useState(EMPTY_CREATE);
+  // Per category, so it only loads once one is picked.
+  const organizationsQ = useOrganizations(createForm.organizationCategory);
   const createM = useCreateManagerVehicle();
   const updateVehicleM = useUpdateManagerVehicle();
   const deleteReqM = useRequestDeleteVehicle();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createStep, setCreateStep] = useState(0);
-  const [createForm, setCreateForm] = useState(EMPTY_CREATE);
   const [createError, setCreateError] = useState(null);
 
   const [editVehicle, setEditVehicle] = useState(null);
@@ -95,6 +108,7 @@ export function ManagerVehiclesPage() {
 
   const vehicles = vehiclesQ.data?.data || [];
   const routes = routesQ.data?.data || [];
+  const organizations = organizationsQ.data?.data || [];
 
   const summary = useMemo(() => {
     const total = vehicles.length;
@@ -134,12 +148,16 @@ export function ManagerVehiclesPage() {
   const handleSubmit = async () => {
     try {
       const result = await createM.mutateAsync({
-        ...createForm, seatCapacity: Number(createForm.seatCapacity),
+        ...createForm,
+        // Left out rather than sent as 0, which would fail the minimum.
+        seatCapacity: createForm.seatCapacity ? Number(createForm.seatCapacity) : undefined,
       });
       // The driver ID is the only copy the manager gets in passing, so it goes
       // in the toast rather than making them open the drivers page for it.
       const driverCode = result?.data?.driver?.driverCode;
-      toast(driverCode ? `Vehicle created. Driver ID ${driverCode}` : 'Vehicle created');
+      toast(driverCode
+        ? `Vehicle created. Driver ID ${driverCode}`
+        : 'Vehicle created, unassigned');
       closeCreate();
     } catch (err) {
       setCreateError(err);
@@ -192,7 +210,30 @@ export function ManagerVehiclesPage() {
     { id: 'vehicleId', header: 'Vehicle ID', accessorKey: 'vehicleId' },
     { id: 'vehicleName', header: 'Vehicle Name', accessorKey: 'vehicleName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
     { id: 'plate', header: 'Plate', accessorKey: 'numberPlate' },
-    { id: 'route', header: 'Route', accessorKey: 'routeId' },
+    {
+      id: 'driver',
+      header: 'Driver',
+      accessorKey: 'driverId',
+      enableSorting: false,
+      cell: (i) => (i.getValue()?.name
+        ? i.getValue().name
+        : <span className="text-muted-foreground">Unassigned</span>),
+    },
+    {
+      id: 'organization',
+      header: 'Organization',
+      accessorKey: 'organization',
+      enableSorting: false,
+      cell: (i) => (i.getValue()?.name
+        ? i.getValue().name
+        : <span className="text-muted-foreground">None</span>),
+    },
+    {
+      id: 'route',
+      header: 'Route',
+      accessorKey: 'routeId',
+      cell: (i) => i.getValue() || <span className="text-muted-foreground">Not set</span>,
+    },
     { id: 'service', header: 'Service', accessorKey: 'serviceType' },
     { id: 'state', header: 'Status', accessorKey: 'isActive', enableSorting: false, cell: (i) => <StatusBadge status={i.getValue() !== false ? 'active' : 'inactive'} /> },
     {
@@ -263,8 +304,13 @@ export function ManagerVehiclesPage() {
                   <Input id="cb-vehicleid" value={createForm.vehicleId} onChange={setCreate('vehicleId')} placeholder="VEHICLE-001" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="cb-vehiclename">Vehicle Name</Label>
-                  <Input id="cb-vehiclename" value={createForm.vehicleName} onChange={setCreate('vehicleName')} placeholder="Express Kandy" />
+                  <Label htmlFor="cb-vehiclename">Vehicle Name (optional)</Label>
+                  <Input
+                    id="cb-vehiclename"
+                    value={createForm.vehicleName}
+                    onChange={setCreate('vehicleName')}
+                    placeholder="Named after its plate if left blank"
+                  />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -278,8 +324,59 @@ export function ManagerVehiclesPage() {
                 />
               </div>
 
+              {/* The same organization the vehicle's drivers belong to. */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-org-category">Organization category (optional)</Label>
+                  <Select
+                    value={createForm.organizationCategory}
+                    onValueChange={(v) => setCreateForm((p) => ({
+                      ...p, organizationCategory: v, organizationId: '',
+                    }))}
+                  >
+                    <SelectTrigger id="cb-org-category">
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ORG_CATEGORIES.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-org">Organization</Label>
+                  <Select
+                    value={createForm.organizationId}
+                    onValueChange={(v) => setCreateForm((p) => ({ ...p, organizationId: v }))}
+                    disabled={!createForm.organizationCategory}
+                  >
+                    <SelectTrigger id="cb-org">
+                      <SelectValue
+                        placeholder={
+                          createForm.organizationCategory
+                            ? 'Select an organization…'
+                            : 'Choose a category first'
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {organizations.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          No organizations in this category
+                        </div>
+                      ) : (
+                        organizations.map((o) => (
+                          <SelectItem key={o._id} value={o._id}>{o.name}</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label>Route Assignment</Label>
+                <Label>Route Assignment (optional)</Label>
                 <RadioGroup
                   value={createForm.routeMode}
                   onValueChange={(v) => setCreateForm((p) => ({ ...p, routeMode: v, routeId: v === 'CUSTOM' ? '' : p.routeId }))}
@@ -324,8 +421,15 @@ export function ManagerVehiclesPage() {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="cb-seats">Seat Capacity</Label>
-                  <Input id="cb-seats" type="number" min="1" value={createForm.seatCapacity} onChange={setCreate('seatCapacity')} />
+                  <Label htmlFor="cb-seats">Seat Capacity (optional)</Label>
+                  <Input
+                    id="cb-seats"
+                    type="number"
+                    min="1"
+                    value={createForm.seatCapacity}
+                    onChange={setCreate('seatCapacity')}
+                    placeholder="Set later"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-vehicletype">Vehicle Type</Label>
@@ -345,9 +449,15 @@ export function ManagerVehiclesPage() {
             </div>
           )}
 
-          {/* Step 1: Driver & Access */}
+          {/* Step 1: Driver, which the vehicle can go without */}
           {createStep === 1 && (
             <div className="space-y-3">
+              <Alert>
+                <AlertDescription>
+                  Leave this blank to add the vehicle unassigned. It gets its driver when you
+                  add one on the Drivers page with this vehicle number.
+                </AlertDescription>
+              </Alert>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-dname">Driver Name</Label>
@@ -391,13 +501,36 @@ export function ManagerVehiclesPage() {
           {/* Step 2: Review */}
           {createStep === 2 && (
             <div className="rounded-lg border border-border bg-surface-muted p-4 space-y-1.5 text-sm">
-              <p><span className="font-semibold">Vehicle:</span> {createForm.vehicleId} · {createForm.vehicleName}</p>
+              <p>
+                <span className="font-semibold">Vehicle:</span>
+                {' '}
+                {createForm.vehicleId} · {createForm.vehicleName || createForm.numberPlate}
+              </p>
               <p><span className="font-semibold">Number Plate:</span> {createForm.numberPlate}</p>
-              <p><span className="font-semibold">Route:</span> {createForm.routeMode === 'CUSTOM' ? 'Driver will record a custom route' : createForm.routeId}</p>
-              <p><span className="font-semibold">Capacity:</span> {createForm.seatCapacity} seats</p>
+              <p>
+                <span className="font-semibold">Organization:</span>
+                {' '}
+                {organizations.find((o) => o._id === createForm.organizationId)?.name || 'None'}
+              </p>
+              <p>
+                <span className="font-semibold">Route:</span>
+                {' '}
+                {createForm.routeMode === 'CUSTOM'
+                  ? 'Driver will record a custom route'
+                  : (createForm.routeId || 'Set later')}
+              </p>
+              <p>
+                <span className="font-semibold">Capacity:</span>
+                {' '}
+                {createForm.seatCapacity ? `${createForm.seatCapacity} seats` : 'Set later'}
+              </p>
               <p><span className="font-semibold">Type:</span> {createForm.vehicleType} / {createForm.serviceType}</p>
-              <p><span className="font-semibold">Driver:</span> {createForm.driverName || 'Not provided'}</p>
-              <p><span className="font-semibold">Driver Email:</span> {createForm.driverEmail || 'Not provided'}</p>
+              <p>
+                <span className="font-semibold">Driver:</span>
+                {' '}
+                {createForm.driverName || 'Unassigned'}
+              </p>
+              <p><span className="font-semibold">Driver Email:</span> {createForm.driverEmail || 'None'}</p>
               <p><span className="font-semibold">Reason:</span> {createForm.reason || 'Not provided'}</p>
             </div>
           )}
