@@ -4,6 +4,9 @@
 @import '@fontsource/inter/400.css';
 @import '@fontsource/inter/500.css';
 @import '@fontsource/inter/600.css';
+/* 700 is needed wherever Inter carries a `font-bold` heading — `font-synthesis:
+   none` below means a missing weight is not faked, it just renders lighter. */
+@import '@fontsource/inter/700.css';
 @import '@fontsource/fira-code/400.css';
 @import '@fontsource/fira-code/500.css';
 
@@ -95,6 +98,28 @@
   --status-danger: #f87171;
 
   --shadow-float: 0 1px 3px rgb(0 0 0 / 0.6), 0 12px 32px -14px rgb(0 0 0 / 0.8);
+}
+
+/* ─── Manager portal typography ─────────────────────────────────────────────
+   Managers get one typeface throughout, the way ShuttleGo-WebAdmin does it —
+   a single family everything inherits, headings included. Uber Move stays the
+   brand face on the super-admin side.
+   Set on <html> (see hooks/use-typography-scope.js) rather than a page
+   wrapper, so Radix portals — dialog, select, dropdown — inherit it too.
+   Must stay after the :root block: a class and :root have equal specificity,
+   so source order is what decides. */
+.type-single {
+  --font-sans: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: var(--font-sans);
+}
+
+/* MUI's CssBaseline injects `body { font-family: "Uber Move", sans-serif }` at
+   runtime from theme.js, which outranks the family on <html> — so every label,
+   input, button and paragraph inherits the brand face rather than --font-sans.
+   One class up the tree is enough to outrank it (0,1,1 vs 0,0,1), whatever
+   order the emotion <style> tags land in. */
+.type-single body {
+  font-family: var(--font-sans);
 }
 
 :root {

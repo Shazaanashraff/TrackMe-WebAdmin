@@ -207,7 +207,9 @@ export function StyleGuidePage() {
           <Section id="typography" title="Typography">
             <div className="space-y-6">
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Headings — Uber Move</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Headings — Uber Move (super-admin; the manager portal renders these in Inter)
+                </p>
                 <div className="space-y-1">
                   <p className="font-heading text-[26px] font-semibold leading-tight tracking-tight text-foreground">Fleet Operations Dashboard</p>
                   <p className="font-heading text-[22px] font-semibold leading-tight tracking-tight text-foreground">Route Management</p>

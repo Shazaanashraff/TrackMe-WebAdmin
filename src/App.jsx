@@ -24,6 +24,7 @@ import { ManagerSettingsPage } from './pages/ManagerSettingsPage';
 import { adminApi } from './api';
 import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
 import { useRefreshData } from './hooks/use-refresh';
+import { useTypographyScope } from './hooks/use-typography-scope';
 import { StyleGuidePage } from './pages/StyleGuidePage';
 
 function ProtectedShell({ auth, onLogout, triggerRefresh }) {
@@ -31,6 +32,9 @@ function ProtectedShell({ auth, onLogout, triggerRefresh }) {
   const userRole = auth?.user?.role;
   const isSuperAdmin = userRole === 'super-admin';
   const isManager = userRole === 'admin';
+
+  // Above the early return below — a hook may not be called conditionally.
+  useTypographyScope(isManager);
 
   if (!authToken || (!isSuperAdmin && !isManager)) {
     return <Navigate to="/login" replace />;

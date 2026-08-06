@@ -94,7 +94,13 @@ Both themes are designed together and every screen is checked in each.
 ## Typography
 
 - **Headings / wordmark:** Uber Move (500/700) — self-hosted, keeps TrackMe brand.
-- **Body / UI:** Inter (400/500/600) — self-hosted via `@fontsource`.
+  **Super-admin only.** The manager portal runs on a single typeface: `.type-single`
+  in `index.css` points `--font-heading` at `--font-sans`, and
+  `hooks/use-typography-scope.js` puts that class on `<html>` while a manager is
+  signed in (on `<html>`, not a wrapper, so Radix portals inherit it).
+- **Body / UI:** Inter (400/500/600/700) — self-hosted via `@fontsource`. 700 exists
+  because `font-synthesis: none` means a missing weight renders lighter rather than
+  being faked, and manager headings are `font-bold`.
 - **Numbers, plates, IDs, room keys, coordinates, money:** Fira Code (500) with
   `tabular-nums`, right-aligned in numeric table columns.
 - Scale (px): 12 · 13 · 14(base UI) · 16 · 22 · 26. Body line-height 1.5.

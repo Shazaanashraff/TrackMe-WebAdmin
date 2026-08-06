@@ -39,7 +39,7 @@ Every component handles: populated, loading, empty, error. Tests cover all state
 
 | Component | Props (core) | Spec |
 |---|---|---|
-| `PageHeader` | `title, description?, actions?` | h1 (Uber Move, 24px) + muted description + right action slot. `mb-6`. Every page starts with this — the giant centered ghost heading dies |
+| `PageHeader` | `title, description?, actions?` | h1 (24px, `font-heading` — Uber Move for super-admin, Inter on the manager side) + muted description + right action slot. `mb-6`. Every page starts with this — the giant centered ghost heading dies |
 | `StatCard` | `label, value, icon, hint?, trend?, isLoading, href?` | KPI tile: muted 12px uppercase label, 32px Fira Code tabular value, 20px Lucide icon in a muted square. `isLoading` → skeleton lines. NO fake deltas — `trend` renders only when a real series exists |
 | `DataTable` | `columns, data, isLoading, error, onRetry, onRowClick?, emptyTitle/Description/Action, skeletonRows=8, renderMobileCard?, totalCount?` | TanStack wrapper, ported from Shabeer: sorting (chevron affordances), pagination footer (count + page buttons), column visibility menu, hover `bg-surface-muted/60`, row-action column revealed on hover/focus. State machine: loading→TableSkeleton, error→ErrorState, empty→EmptyState, else table |
 | `TableSkeleton` | `rows=8, cols` | Header bar + N rows of skeleton lines, `role="status"`, sr-only "Loading…" |
