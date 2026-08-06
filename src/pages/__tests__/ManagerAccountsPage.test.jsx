@@ -220,6 +220,34 @@ describe('ManagerAccountsPage: add driver form', () => {
     expect(screen.getByLabelText(/Organization name/i)).toBeDisabled();
   });
 
+  it('upper-cases the vehicle number as it is typed', async () => {
+    const { user } = setup();
+    await openForm(user);
+
+    const field = screen.getByLabelText(/Vehicle number/i);
+    await user.type(field, 'pf2327');
+
+    // Still focused: the hyphen waits for blur, but the case does not.
+    expect(field).toHaveValue('PF2327');
+  });
+
+  it('canonicalises the plate even when the field never loses focus', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({ data: { _id: 'new-7', name: 'Nimal' } }),
+    });
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    // Typed last and submitted with Enter, so no blur ever fires.
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'pf2327{Enter}');
+
+    expect(createMut.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ vehicleNumber: 'PF-2327' })
+    );
+  });
+
   it('tidies a Sri Lankan plate into its canonical form on blur', async () => {
     const createMut = makeMutation({
       mutateAsync: vi.fn().mockResolvedValue({ data: { _id: 'new-6', name: 'Nimal' } }),

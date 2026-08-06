@@ -22,7 +22,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
-import { formatPlate, PLATE_PLACEHOLDER } from '@/lib/number-plate';
+import { cleanPlateInput, tidyPlate, PLATE_PLACEHOLDER } from '@/lib/number-plate';
 import {
   useOrganizations,
   useManagerDrivers,
@@ -106,7 +106,9 @@ function createPayload(form) {
     ...(form.nicNumber.trim() ? { nicNumber: form.nicNumber.trim() } : {}),
     ...(form.licenseCardNumber.trim()
       ? { licenseCardNumber: form.licenseCardNumber.trim() } : {}),
-    ...(form.vehicleNumber.trim() ? { vehicleNumber: form.vehicleNumber.trim() } : {}),
+    // Canonicalised here as well as on blur, since the form can be submitted
+    // with Enter while the field still has focus.
+    ...(form.vehicleNumber.trim() ? { vehicleNumber: tidyPlate(form.vehicleNumber) } : {}),
     ...organization,
   };
 }
@@ -686,11 +688,16 @@ export function ManagerAccountsPage() {
                     <Input
                       id="ob-vehicle"
                       value={form.vehicleNumber}
-                      onChange={setField('vehicleNumber')}
-                      // Tidied only when it reads as a plate: this field also
-                      // takes a vehicle ID, which has no format to impose.
+                      // Plates and vehicle IDs are both upper case, so "pf2327"
+                      // becomes "PF2327" as it is typed.
+                      onChange={(e) => setForm((p) => ({
+                        ...p, vehicleNumber: cleanPlateInput(e.target.value),
+                      }))}
+                      // The hyphen goes in on blur, and only when the value
+                      // reads as a plate: this field also takes a vehicle ID,
+                      // which has no format to impose.
                       onBlur={(e) => setForm((p) => ({
-                        ...p, vehicleNumber: formatPlate(e.target.value) || e.target.value.trim(),
+                        ...p, vehicleNumber: tidyPlate(e.target.value),
                       }))}
                       placeholder={`${PLATE_PLACEHOLDER} or a vehicle ID`}
                       autoComplete="off"
