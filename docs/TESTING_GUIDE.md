@@ -26,6 +26,8 @@
 | adminApi.createBusAccountRequest() | unit (fetch) | src/__tests__/api.test.js | POST payload | request schema changes |
 | adminApi.reviewBusRequest() | unit (fetch) | src/__tests__/api.test.js | PATCH payload | review rules change |
 | Operations flow | RTL | src/__tests__/pages/OperationsPage.test.jsx | review + edit bus | operations UI changes |
+| lib/number-plate.js (Sri Lankan plates) | unit (Vitest) | src/lib/__tests__/number-plate.test.js | CAB-1234, WP CAB-1234 and 62-1234 canonicalised from any spacing or case; "WP-1234" read as a plate not a province; wrong digit or letter counts and unknown provinces rejected; cleanPlateInput keeps spaces and hyphens while typing; tidyPlate hands back unparseable text so it can be corrected | the accepted plate formats change (keep in step with TrackMe-backend/src/utils/numberPlate.js) |
+| Plate fields on the vehicle and driver forms | RTL (Vitest) | src/pages/__tests__/ManagerVehiclesPage.test.jsx, src/pages/__tests__/ManagerAccountsPage.test.jsx | vehicle create blocks a malformed plate at step 0; the driver form's vehicle number tidies a plate on blur ("pf- 2327" → "PF-2327") but leaves a vehicle ID untouched | plate inputs move, or the field stops accepting a vehicle ID |
 
 ## Tracking
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |

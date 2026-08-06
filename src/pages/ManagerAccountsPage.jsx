@@ -22,6 +22,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+import { formatPlate, PLATE_PLACEHOLDER } from '@/lib/number-plate';
 import {
   useOrganizations,
   useManagerDrivers,
@@ -681,7 +682,12 @@ export function ManagerAccountsPage() {
                       id="ob-vehicle"
                       value={form.vehicleNumber}
                       onChange={setField('vehicleNumber')}
-                      placeholder="Vehicle ID or number plate"
+                      // Tidied only when it reads as a plate: this field also
+                      // takes a vehicle ID, which has no format to impose.
+                      onBlur={(e) => setForm((p) => ({
+                        ...p, vehicleNumber: formatPlate(e.target.value) || e.target.value.trim(),
+                      }))}
+                      placeholder={`${PLATE_PLACEHOLDER} or a vehicle ID`}
                       autoComplete="off"
                     />
                   </div>

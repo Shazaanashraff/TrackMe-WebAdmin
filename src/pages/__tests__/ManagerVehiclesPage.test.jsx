@@ -121,7 +121,8 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
 
     await user.type(screen.getByLabelText(/vehicle id/i), 'VEHICLE-99');
     await user.type(screen.getByLabelText(/vehicle name/i), 'Shuttle 99');
-    await user.type(screen.getByLabelText(/number plate/i), 'ABC-123');
+    // A real Sri Lankan plate: two or three letters, then four digits.
+    await user.type(screen.getByLabelText(/number plate/i), 'ABC-1234');
 
     if (routeMode === 'CUSTOM') {
       await user.click(screen.getByLabelText(/custom route/i));
@@ -154,6 +155,33 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     expect(payload.routeId).toBe('');
   }, 20000);
 
+  it('will not advance past step 0 with a plate that is not Sri Lankan', async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole('button', { name: /add vehicle request/i }));
+    await screen.findByRole('dialog');
+    await user.type(screen.getByLabelText(/vehicle id/i), 'VEHICLE-98');
+    await user.type(screen.getByLabelText(/vehicle name/i), 'Shuttle 98');
+    // Three digits where a plate needs four.
+    await user.type(screen.getByLabelText(/number plate/i), 'ABC-123');
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+
+    expect(await screen.findByText(/Sri Lankan number plate/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/initial password/i)).not.toBeInTheDocument();
+  }, 20000);
+
+  it('tidies an accepted plate into its canonical form on blur', async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole('button', { name: /add vehicle request/i }));
+    await screen.findByRole('dialog');
+    const plate = screen.getByLabelText(/number plate/i);
+    await user.type(plate, 'wp cab 4321');
+    await user.tab();
+
+    expect(plate).toHaveValue('WP CAB-4321');
+  }, 20000);
+
   it('does not require a routeId to advance past step 0 in Custom mode', async () => {
     const { user } = setup();
 
@@ -176,11 +204,13 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     // Step 2
     await user.click(screen.getByRole('button', { name: /submit request/i }));
 
-    await waitFor(() => expect(createMut.mutateAsync).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(createMut.mutateAsync).toHaveBeenCalledTimes(1), { timeout: 15000 });
     const payload = createMut.mutateAsync.mock.calls[0][0];
     expect(payload.routeMode).toBe('EXISTING');
     expect(payload.routeId).toBe('PUB-1');
-  });
+    // Same 20s allowance as the other full-wizard runs: driving three Radix
+    // steps through jsdom does not fit in the 5s default.
+  }, 20000);
 
   it('shows validation error when required step 0 fields are empty', async () => {
     const { user } = setup();

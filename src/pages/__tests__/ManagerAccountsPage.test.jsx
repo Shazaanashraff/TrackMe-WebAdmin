@@ -211,6 +211,31 @@ describe('ManagerAccountsPage: add driver form', () => {
     expect(screen.getByLabelText(/Organization name/i)).toBeDisabled();
   });
 
+  it('tidies a Sri Lankan plate into its canonical form on blur', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({ data: { _id: 'new-6', name: 'Nimal' } }),
+    });
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    const field = screen.getByLabelText(/Vehicle number/i);
+    await user.type(field, 'pf- 2327');
+    await user.tab();
+
+    expect(field).toHaveValue('PF-2327');
+  });
+
+  it('leaves a vehicle ID alone, since only plates have a format', async () => {
+    const { user } = setup();
+    await openForm(user);
+
+    const field = screen.getByLabelText(/Vehicle number/i);
+    await user.type(field, 'BUS-1');
+    await user.tab();
+
+    expect(field).toHaveValue('BUS-1');
+  });
+
   it('sends the vehicle number when one is given', async () => {
     const createMut = makeMutation({
       mutateAsync: vi.fn().mockResolvedValue({ data: { _id: 'new-4', name: 'Nimal' } }),

@@ -13,6 +13,9 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
+  cleanPlateInput, isValidPlate, tidyPlate, PLATE_FORMAT_MESSAGE, PLATE_PLACEHOLDER,
+} from '@/lib/number-plate';
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
@@ -46,6 +49,9 @@ function validateStep(form, step) {
       return form.routeMode === 'CUSTOM'
         ? 'Please complete Vehicle ID, Vehicle Name, and Number Plate.'
         : 'Please complete Vehicle ID, Vehicle Name, Number Plate, and Route.';
+    }
+    if (!isValidPlate(form.numberPlate)) {
+      return PLATE_FORMAT_MESSAGE;
     }
     if (form.routeMode !== 'CUSTOM' && !form.routeId) {
       return 'Please select a route.';
@@ -252,7 +258,13 @@ export function ManagerVehiclesPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="cb-plate">Number Plate</Label>
-                <Input id="cb-plate" value={createForm.numberPlate} onChange={(e) => setCreateForm((p) => ({ ...p, numberPlate: e.target.value.toUpperCase() }))} placeholder="ABC-1234" />
+                <Input
+                  id="cb-plate"
+                  value={createForm.numberPlate}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, numberPlate: cleanPlateInput(e.target.value) }))}
+                  onBlur={(e) => setCreateForm((p) => ({ ...p, numberPlate: tidyPlate(e.target.value) }))}
+                  placeholder={PLATE_PLACEHOLDER}
+                />
               </div>
 
               <div className="space-y-2">
@@ -406,7 +418,13 @@ export function ManagerVehiclesPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="eb-plate">Number Plate</Label>
-              <Input id="eb-plate" value={editForm.numberPlate || ''} onChange={(e) => setEditForm((p) => ({ ...p, numberPlate: e.target.value.toUpperCase() }))} />
+              <Input
+                id="eb-plate"
+                value={editForm.numberPlate || ''}
+                onChange={(e) => setEditForm((p) => ({ ...p, numberPlate: cleanPlateInput(e.target.value) }))}
+                onBlur={(e) => setEditForm((p) => ({ ...p, numberPlate: tidyPlate(e.target.value) }))}
+                placeholder={PLATE_PLACEHOLDER}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="eb-route">Route ID</Label>
