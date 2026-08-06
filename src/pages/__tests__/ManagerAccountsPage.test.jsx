@@ -135,15 +135,7 @@ describe('ManagerAccountsPage: add driver form', () => {
     expect(screen.queryByLabelText(/temporary password/i)).not.toBeInTheDocument();
   });
 
-  it('says the password lasts until the driver changes it', async () => {
-    const { user } = setup();
-    await openForm(user);
-
-    expect(screen.getByText(/permanent Driver ID is generated automatically/i)).toBeInTheDocument();
-    expect(screen.getByText(/until they change it/i)).toBeInTheDocument();
-  });
-
-  it('creates a driver from the name and password alone', async () => {
+  it('creates a driver from a name, a vehicle and a password', async () => {
     const createMut = makeMutation({
       mutateAsync: vi.fn().mockResolvedValue({
         data: { _id: 'new-1', name: 'Nimal', email: '', driverCode: 'DRV-1111-2222' },
@@ -154,13 +146,28 @@ describe('ManagerAccountsPage: add driver form', () => {
     await openForm(user);
 
     await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
     await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
     await user.click(screen.getByRole('button', { name: /create driver/i }));
 
     expect(createMut.mutateAsync).toHaveBeenCalledWith({
       name: 'Nimal',
       password: 'DriverPass1!',
+      vehicleNumber: 'CAB-1234',
     });
+  });
+
+  it('will not create a driver with no vehicle', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
+
+    expect(await screen.findByText(/vehicle number is required/i)).toBeInTheDocument();
+    expect(createMut.mutateAsync).not.toHaveBeenCalled();
   });
 
   it('sends the organization chosen from the list', async () => {
@@ -171,6 +178,7 @@ describe('ManagerAccountsPage: add driver form', () => {
     await openForm(user);
 
     await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
     await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
     await chooseOption(user, /Organization category/i, 'School');
     await chooseOption(user, /^Organization$/i, 'Royal College');
@@ -189,6 +197,7 @@ describe('ManagerAccountsPage: add driver form', () => {
     await openForm(user);
 
     await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
     await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
     await user.click(screen.getByRole('button', { name: /create new/i }));
     await chooseOption(user, /Organization category/i, 'University');
@@ -259,6 +268,7 @@ describe('ManagerAccountsPage: add driver form', () => {
     await openForm(user);
 
     await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
     await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
     await user.type(screen.getByLabelText(/Email \(optional\)/i), 'not-an-email');
     await user.click(screen.getByRole('button', { name: /create driver/i }));
@@ -273,6 +283,7 @@ describe('ManagerAccountsPage: add driver form', () => {
     await openForm(user);
 
     await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
     await user.type(screen.getByLabelText(/^Password$/i), 'short');
     await user.click(screen.getByRole('button', { name: /create driver/i }));
 
@@ -294,6 +305,7 @@ describe('ManagerAccountsPage: add driver form', () => {
     await openForm(user);
 
     await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'BUS-1');
     await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
     await user.click(screen.getByRole('button', { name: /create driver/i }));
 

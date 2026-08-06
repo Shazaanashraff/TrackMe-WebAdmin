@@ -62,12 +62,17 @@ const EMPTY_FORM = {
   vehicleNumber: '',
 };
 
-// Only the name and the password are required. An email is optional because
-// every driver gets a driver ID to sign in with, and an organization is
-// optional because public-service drivers have none.
+// A new driver needs a name, a password and the vehicle they will drive. An
+// email is optional because every driver gets a driver ID to sign in with, and
+// an organization is optional because public-service drivers have none.
 function validate(form, { requirePassword }) {
   const errors = [];
   if (!form.name.trim()) errors.push('Full name is required.');
+  // Only on create: the edit dialog has no vehicle field, since a vehicle is
+  // reassigned from the Vehicles page.
+  if (requirePassword && !form.vehicleNumber.trim()) {
+    errors.push('A vehicle number is required.');
+  }
   if (form.email.trim() && !emailRegex.test(form.email.trim())) {
     errors.push('Enter a valid email address, or leave it blank.');
   }
@@ -677,7 +682,7 @@ export function ManagerAccountsPage() {
                 <SectionHeading step={3}>Vehicle and app access</SectionHeading>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="ob-vehicle">Vehicle number (optional)</Label>
+                    <Label htmlFor="ob-vehicle">Vehicle number</Label>
                     <Input
                       id="ob-vehicle"
                       value={form.vehicleNumber}
@@ -702,11 +707,6 @@ export function ManagerAccountsPage() {
                     />
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  A permanent Driver ID is generated automatically. The driver can sign in
-                  with that ID or their email, using this password until they change it.
-                </p>
-
                 {serverError && (
                   <Alert variant="destructive">
                     <AlertDescription>
