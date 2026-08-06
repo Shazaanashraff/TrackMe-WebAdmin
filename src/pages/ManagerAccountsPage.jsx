@@ -490,9 +490,6 @@ export function ManagerAccountsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Add a driver</CardTitle>
-            <CardDescription>
-              Everything below is on one page — fill it in whatever order suits you.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             {/* noValidate so a bad email raises this page's own error banner
