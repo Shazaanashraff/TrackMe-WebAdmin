@@ -27,7 +27,7 @@ import {
 import {
   useManagerVehicles,
   useManagerAssignableRoutes,
-  useCreateVehicleAccountRequest,
+  useCreateManagerVehicle,
   useUpdateManagerVehicle,
   useRequestDeleteVehicle,
 } from '@/hooks/use-vehicles';
@@ -78,7 +78,7 @@ function validateStep(form, step) {
 export function ManagerVehiclesPage() {
   const vehiclesQ = useManagerVehicles();
   const routesQ = useManagerAssignableRoutes();
-  const createM = useCreateVehicleAccountRequest();
+  const createM = useCreateManagerVehicle();
   const updateVehicleM = useUpdateManagerVehicle();
   const deleteReqM = useRequestDeleteVehicle();
 
@@ -133,8 +133,13 @@ export function ManagerVehiclesPage() {
 
   const handleSubmit = async () => {
     try {
-      await createM.mutateAsync({ ...createForm, seatCapacity: Number(createForm.seatCapacity) });
-      toast('Vehicle account request submitted');
+      const result = await createM.mutateAsync({
+        ...createForm, seatCapacity: Number(createForm.seatCapacity),
+      });
+      // The driver ID is the only copy the manager gets in passing, so it goes
+      // in the toast rather than making them open the drivers page for it.
+      const driverCode = result?.data?.driver?.driverCode;
+      toast(driverCode ? `Vehicle created. Driver ID ${driverCode}` : 'Vehicle created');
       closeCreate();
     } catch (err) {
       setCreateError(err);
@@ -208,11 +213,11 @@ export function ManagerVehiclesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Vehicle Management"
-        description="Review managed vehicles, monitor availability, and submit new vehicle account requests."
+        description="Review managed vehicles, monitor availability, and add new ones to your fleet."
         actions={
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4 mr-1.5" />
-            Add Vehicle Request
+            Add Vehicle
           </Button>
         }
       />
@@ -230,14 +235,14 @@ export function ManagerVehiclesPage() {
         error={vehiclesQ.error}
         onRetry={vehiclesQ.refetch}
         emptyTitle="No vehicles yet"
-        emptyDescription="Submit a vehicle account request to get started."
+        emptyDescription="Add your first vehicle to get started."
       />
 
       {/* Multi-step create dialog */}
       <Dialog open={createOpen} onOpenChange={(v) => { if (!v) closeCreate(); }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Add Vehicle Request</DialogTitle>
+            <DialogTitle>Add Vehicle</DialogTitle>
             <DialogDescription>
               Step {createStep + 1} of {CREATE_STEPS.length}: {CREATE_STEPS[createStep]}
             </DialogDescription>
@@ -406,7 +411,7 @@ export function ManagerVehiclesPage() {
               <Button onClick={handleNext}>Continue</Button>
             ) : (
               <Button onClick={handleSubmit} disabled={createM.isPending}>
-                {createM.isPending ? 'Submitting…' : 'Submit Request'}
+                {createM.isPending ? 'Creating…' : 'Create Vehicle'}
               </Button>
             )}
           </DialogFooter>

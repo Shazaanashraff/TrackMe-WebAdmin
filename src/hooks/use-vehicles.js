@@ -36,13 +36,15 @@ function useInvalidateVehicles() {
   return () => queryClient.invalidateQueries({ queryKey: qk.vehicles.all() });
 }
 
-export function useCreateVehicleAccountRequest() {
+export function useCreateManagerVehicle() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload) => adminApi.createVehicleAccountRequest(payload),
+    mutationFn: (payload) => adminApi.createManagerVehicle(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.vehicles.all() });
       queryClient.invalidateQueries({ queryKey: qk.vehicles.managerRequests() });
+      // The vehicle comes with a driver, so the directory is stale too.
+      queryClient.invalidateQueries({ queryKey: qk.drivers.all() });
     },
   });
 }

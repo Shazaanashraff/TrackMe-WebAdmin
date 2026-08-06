@@ -7,7 +7,7 @@ import { ManagerVehiclesPage } from '../ManagerVehiclesPage';
 vi.mock('@/hooks/use-vehicles', () => ({
   useManagerVehicles: vi.fn(),
   useManagerAssignableRoutes: vi.fn(),
-  useCreateVehicleAccountRequest: vi.fn(),
+  useCreateManagerVehicle: vi.fn(),
   useUpdateManagerVehicle: vi.fn(),
   useRequestDeleteVehicle: vi.fn(),
 }));
@@ -17,7 +17,7 @@ vi.mock('sonner', () => ({ toast: vi.fn() }));
 import {
   useManagerVehicles,
   useManagerAssignableRoutes,
-  useCreateVehicleAccountRequest,
+  useCreateManagerVehicle,
   useUpdateManagerVehicle,
   useRequestDeleteVehicle,
 } from '@/hooks/use-vehicles';
@@ -59,7 +59,7 @@ function defaultHooks({
     data: routes ? { data: routes } : undefined,
     isLoading: false,
   });
-  useCreateVehicleAccountRequest.mockReturnValue(createMut || makeMutation());
+  useCreateManagerVehicle.mockReturnValue(createMut || makeMutation());
   useUpdateManagerVehicle.mockReturnValue(updateMut || makeMutation());
   useRequestDeleteVehicle.mockReturnValue(deleteMut || makeMutation());
 }
@@ -116,7 +116,7 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   async function fillStep0(user, { routeMode = 'EXISTING' } = {}) {
-    await user.click(screen.getByRole('button', { name: /add vehicle request/i }));
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
     await screen.findByRole('dialog');
 
     await user.type(screen.getByLabelText(/vehicle id/i), 'VEHICLE-99');
@@ -147,7 +147,7 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
     // Step 2: submit
-    await user.click(screen.getByRole('button', { name: /submit request/i }));
+    await user.click(screen.getByRole('button', { name: /create vehicle/i }));
 
     await waitFor(() => expect(createMut.mutateAsync).toHaveBeenCalledTimes(1), { timeout: 15000 });
     const payload = createMut.mutateAsync.mock.calls[0][0];
@@ -158,7 +158,7 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
   it('will not advance past step 0 with a plate that is not Sri Lankan', async () => {
     const { user } = setup();
 
-    await user.click(screen.getByRole('button', { name: /add vehicle request/i }));
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
     await screen.findByRole('dialog');
     await user.type(screen.getByLabelText(/vehicle id/i), 'VEHICLE-98');
     await user.type(screen.getByLabelText(/vehicle name/i), 'Shuttle 98');
@@ -173,7 +173,7 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
   it('tidies an accepted plate into its canonical form on blur', async () => {
     const { user } = setup();
 
-    await user.click(screen.getByRole('button', { name: /add vehicle request/i }));
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
     await screen.findByRole('dialog');
     const plate = screen.getByLabelText(/number plate/i);
     await user.type(plate, 'wp cab 4321');
@@ -202,7 +202,7 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
     // Step 2
-    await user.click(screen.getByRole('button', { name: /submit request/i }));
+    await user.click(screen.getByRole('button', { name: /create vehicle/i }));
 
     await waitFor(() => expect(createMut.mutateAsync).toHaveBeenCalledTimes(1), { timeout: 15000 });
     const payload = createMut.mutateAsync.mock.calls[0][0];
@@ -215,7 +215,7 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
   it('shows validation error when required step 0 fields are empty', async () => {
     const { user } = setup();
 
-    await user.click(screen.getByRole('button', { name: /add vehicle request/i }));
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
     await screen.findByRole('dialog');
 
     // Click Continue without filling anything
@@ -303,6 +303,8 @@ describe('ManagerVehiclesPage edit and delete', () => {
     const reasonInput = screen.getByPlaceholderText(/reason \(required\)/i);
     await user.type(reasonInput, 'Vehicle retired');
 
+    // Deleting a vehicle still goes to the super admin as a request, so this
+    // dialog keeps its Submit Request button.
     await user.click(screen.getByRole('button', { name: /submit request/i }));
 
     await waitFor(() => expect(deleteMut.mutateAsync).toHaveBeenCalledTimes(1));
