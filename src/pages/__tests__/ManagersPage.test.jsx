@@ -297,7 +297,7 @@ describe('ManagersPage', () => {
       );
     });
 
-    it('does not delete immediately — it asks for confirmation first', async () => {
+    it('does not delete immediately, it asks for confirmation first', async () => {
       const deleteMut = makeMutation();
       const { user } = setup({ deleteMut });
 

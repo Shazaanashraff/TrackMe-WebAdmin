@@ -9,7 +9,7 @@ export function useManagerDrivers() {
   });
 }
 
-// Only fetched once a category is picked — the list is per category, and an
+// Only fetched once a category is picked. The list is per category, so an
 // unfiltered fetch would be thrown away as soon as one is chosen.
 export function useOrganizations(serviceType) {
   return useQuery({

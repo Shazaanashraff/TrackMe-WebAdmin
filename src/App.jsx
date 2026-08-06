@@ -33,7 +33,7 @@ function ProtectedShell({ auth, onLogout, triggerRefresh }) {
   const isSuperAdmin = userRole === 'super-admin';
   const isManager = userRole === 'admin';
 
-  // Above the early return below — a hook may not be called conditionally.
+  // Above the early return below, because a hook may not be called conditionally.
   useTypographyScope(isManager);
 
   if (!authToken || (!isSuperAdmin && !isManager)) {

@@ -91,7 +91,7 @@ export function CustomRoutePreviewModal({ open, route, saving, error, onClose, o
               placeholder="e.g. Morning School Run"
             />
             <p className="text-xs text-muted-foreground">
-              This name is private to your account — reusable for other drivers, never shown publicly.
+              This name is private to your account, reusable for other drivers and never shown publicly.
             </p>
           </div>
         </div>

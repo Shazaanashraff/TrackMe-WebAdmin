@@ -92,7 +92,7 @@ async function chooseOption(user, triggerName, optionName) {
   await user.click(await screen.findByRole('option', { name: optionName }));
 }
 
-describe('ManagerAccountsPage — driver directory', () => {
+describe('ManagerAccountsPage: driver directory', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('shows the driver ID and organization for each driver', () => {
@@ -102,16 +102,17 @@ describe('ManagerAccountsPage — driver directory', () => {
     expect(screen.getByText('Royal College')).toBeInTheDocument();
   });
 
-  it('shows a dash rather than a blank cell for a driver with no email', () => {
+  it('names the empty state rather than leaving a blank cell', () => {
     setup({ drivers: [DRIVERS[1]] });
 
     expect(screen.getByText('DRV-8H2N-5TRW')).toBeInTheDocument();
-    // Email and organization are both empty for this driver.
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    // Email, organization and phone are all empty for this driver. Written out
+    // as words: the UI carries no em dashes.
+    expect(screen.getAllByText('None').length).toBeGreaterThanOrEqual(3);
   });
 });
 
-describe('ManagerAccountsPage — add driver form', () => {
+describe('ManagerAccountsPage: add driver form', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('lays the form out in the three numbered sections', async () => {

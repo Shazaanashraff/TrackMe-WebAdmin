@@ -178,7 +178,7 @@ export function ManagersPage() {
       const freed = result?.data?.unassignedVehicles ?? 0;
       toast(
         freed > 0
-          ? `Manager deleted — ${freed} vehicle${freed === 1 ? '' : 'es'} unassigned`
+          ? `Manager deleted. ${freed} vehicle${freed === 1 ? '' : 'es'} unassigned.`
           : 'Manager deleted'
       );
       setDeleteTarget(null);

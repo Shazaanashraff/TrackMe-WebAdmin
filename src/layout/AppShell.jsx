@@ -177,7 +177,7 @@ export function AppShell({ user, onLogout, onRefresh }) {
           />
         </aside>
 
-        {/* Mobile nav sheet — only mount content when open (avoids duplicate nav in JSDOM) */}
+        {/* Mobile nav sheet: only mount content when open (avoids duplicate nav in JSDOM) */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           {mobileOpen && (
             <SheetContent side="left" className="w-56 p-0 flex flex-col">

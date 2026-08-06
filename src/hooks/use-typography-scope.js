@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 // which side it is rendering on.
 //
 // The class goes on <html> rather than a page wrapper because Radix renders
-// dialogs, selects and dropdown menus through portals into document.body — a
+// dialogs, selects and dropdown menus through portals into document.body, so a
 // wrapper-scoped variable would leave every popup on the other font. This is the
 // same mechanism the dark-mode toggle uses (theme/ColorMode.jsx).
 export const SINGLE_TYPE_CLASS = 'type-single';
@@ -16,8 +16,8 @@ export function useTypographyScope(enabled) {
     const root = document.documentElement;
     root.classList.toggle(SINGLE_TYPE_CLASS, Boolean(enabled));
 
-    // Signing out (or switching roles) unmounts the shell — drop the scope so
-    // the login screen and the other role start from the base tokens.
+    // Signing out (or switching roles) unmounts the shell, so drop the scope
+    // and let the login screen and the other role start from the base tokens.
     return () => root.classList.remove(SINGLE_TYPE_CLASS);
   }, [enabled]);
 }

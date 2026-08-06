@@ -114,7 +114,7 @@ export function OperationsPage() {
     { id: 'name', header: 'Vehicle', accessorKey: 'vehicleName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
     { id: 'service', header: 'Service', accessorKey: 'serviceType', cell: (i) => <Badge variant="secondary">{i.getValue() || 'PUBLIC'}</Badge> },
     { id: 'state', header: 'State', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'online' : 'offline'} /> },
-    { id: 'rating', header: 'Rating', accessorKey: 'reviewMetrics', cell: (i) => i.getValue()?.averageRating?.toFixed(1) ?? '—' },
+    { id: 'rating', header: 'Rating', accessorKey: 'reviewMetrics', cell: (i) => i.getValue()?.averageRating?.toFixed(1) ?? 'None' },
     { id: 'bookings', header: 'Bookings', accessorKey: 'bookingMetrics', cell: (i) => i.getValue()?.totalBookings ?? 0 },
     {
       id: 'actions', header: '', accessorKey: '_id', enableSorting: false,
@@ -128,10 +128,10 @@ export function OperationsPage() {
 
   const requestColumns = useMemo(() => [
     { id: 'type', header: 'Type', accessorKey: 'type' },
-    { id: 'manager', header: 'Manager', accessorKey: 'managerId', cell: (i) => i.getValue()?.name || '—' },
+    { id: 'manager', header: 'Manager', accessorKey: 'managerId', cell: (i) => i.getValue()?.name || 'None' },
     { id: 'vehicleId', header: 'Vehicle', accessorKey: 'vehicleId' },
-    { id: 'submitted', header: 'Submitted', accessorKey: 'createdAt', cell: (i) => i.getValue() ? <RelativeTime date={i.getValue()} /> : '—' },
-    { id: 'reason', header: 'Reason', accessorKey: 'reason', cell: (i) => i.getValue() || '—' },
+    { id: 'submitted', header: 'Submitted', accessorKey: 'createdAt', cell: (i) => i.getValue() ? <RelativeTime date={i.getValue()} /> : 'None' },
+    { id: 'reason', header: 'Reason', accessorKey: 'reason', cell: (i) => i.getValue() || 'None' },
     {
       id: 'actions', header: '', accessorKey: '_id', enableSorting: false,
       cell: (i) => {
@@ -153,11 +153,11 @@ export function OperationsPage() {
   ], [reviewM.isPending, reviewM.variables]);
 
   const auditColumns = useMemo(() => [
-    { id: 'time', header: 'Time', accessorKey: 'createdAt', cell: (i) => i.getValue() ? <RelativeTime date={i.getValue()} /> : '—' },
-    { id: 'manager', header: 'Manager', accessorKey: 'managerId', cell: (i) => i.getValue()?.name || '—' },
+    { id: 'time', header: 'Time', accessorKey: 'createdAt', cell: (i) => i.getValue() ? <RelativeTime date={i.getValue()} /> : 'None' },
+    { id: 'manager', header: 'Manager', accessorKey: 'managerId', cell: (i) => i.getValue()?.name || 'None' },
     { id: 'action', header: 'Action', accessorKey: 'action' },
     { id: 'entity', header: 'Entity', accessorKey: 'entityType' },
-    { id: 'actor', header: 'Actor', accessorKey: 'actorId', cell: (i) => i.getValue()?.email || '—' },
+    { id: 'actor', header: 'Actor', accessorKey: 'actorId', cell: (i) => i.getValue()?.email || 'None' },
   ], []);
 
   const managerFilterOptions = useMemo(() => overview.map((o) => ({ id: o.managerId, name: o.managerName })), [overview]);
@@ -203,7 +203,7 @@ export function OperationsPage() {
           <CardHeader>
             <CardTitle className="text-base">Manager Detail</CardTitle>
             <CardDescription>
-              {detail?.manager ? `${detail.manager.name} — ${detail.manager.email}` : 'Select a manager to view details'}
+              {detail?.manager ? `${detail.manager.name} · ${detail.manager.email}` : 'Select a manager to view details'}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0 space-y-4">
@@ -332,7 +332,7 @@ export function OperationsPage() {
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Vehicle</Label>
-            <p className="text-sm text-foreground font-medium">{editVehicle?.vehicleName || '—'}</p>
+            <p className="text-sm text-foreground font-medium">{editVehicle?.vehicleName || 'Unnamed'}</p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="service-type">Service Type</Label>

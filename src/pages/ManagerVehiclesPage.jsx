@@ -275,7 +275,7 @@ export function ManagerVehiclesPage() {
 
               {createForm.routeMode === 'CUSTOM' ? (
                 <Alert>
-                  <AlertDescription>No route needed yet — the driver will record the route by driving it.</AlertDescription>
+                  <AlertDescription>No route needed yet. The driver will record the route by driving it.</AlertDescription>
                 </Alert>
               ) : (
                 <div className="space-y-1.5">
@@ -290,7 +290,7 @@ export function ManagerVehiclesPage() {
                       ) : (
                         routes.map((r) => (
                           <SelectItem key={r.routeId} value={r.routeId}>
-                            {r.routeName || r.routeId} ({r.routeId}){r.visibility === 'PRIVATE' ? ' — Custom' : ''}
+                            {r.routeName || r.routeId} ({r.routeId}){r.visibility === 'PRIVATE' ? ' · Custom' : ''}
                           </SelectItem>
                         ))
                       )}
@@ -361,7 +361,7 @@ export function ManagerVehiclesPage() {
           {/* Step 2: Review */}
           {createStep === 2 && (
             <div className="rounded-lg border border-border bg-surface-muted p-4 space-y-1.5 text-sm">
-              <p><span className="font-semibold">Vehicle:</span> {createForm.vehicleId} — {createForm.vehicleName}</p>
+              <p><span className="font-semibold">Vehicle:</span> {createForm.vehicleId} · {createForm.vehicleName}</p>
               <p><span className="font-semibold">Number Plate:</span> {createForm.numberPlate}</p>
               <p><span className="font-semibold">Route:</span> {createForm.routeMode === 'CUSTOM' ? 'Driver will record a custom route' : createForm.routeId}</p>
               <p><span className="font-semibold">Capacity:</span> {createForm.seatCapacity} seats</p>

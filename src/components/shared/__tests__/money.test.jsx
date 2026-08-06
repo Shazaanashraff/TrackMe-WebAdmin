@@ -2,17 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Money, formatLKR } from '../money';
 
+// A missing amount is written out as a word; the UI carries no em dashes.
 describe('formatLKR', () => {
-  it('returns — for null', () => {
-    expect(formatLKR(null)).toBe('—');
+  it('returns None for null', () => {
+    expect(formatLKR(null)).toBe('None');
   });
 
-  it('returns — for undefined', () => {
-    expect(formatLKR(undefined)).toBe('—');
+  it('returns None for undefined', () => {
+    expect(formatLKR(undefined)).toBe('None');
   });
 
-  it('returns — for NaN', () => {
-    expect(formatLKR(NaN)).toBe('—');
+  it('returns None for NaN', () => {
+    expect(formatLKR(NaN)).toBe('None');
   });
 
   it('formats a number amount (contains the digits)', () => {
@@ -32,9 +33,9 @@ describe('Money', () => {
     expect(screen.getByText(/2[,.]?500/)).toBeInTheDocument();
   });
 
-  it('renders — for null amount', () => {
+  it('renders None for a null amount', () => {
     render(<Money amount={null} />);
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('None')).toBeInTheDocument();
   });
 
   it('applies tabular-nums class', () => {

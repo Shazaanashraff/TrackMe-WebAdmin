@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 export function formatLKR(amount) {
-  if (amount == null || isNaN(Number(amount))) return '—';
+  if (amount == null || isNaN(Number(amount))) return 'None';
   return new Intl.NumberFormat('en-LK', {
     style: 'currency',
     currency: 'LKR',

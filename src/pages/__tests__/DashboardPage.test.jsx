@@ -80,9 +80,9 @@ describe('DashboardPage', () => {
     expect(screen.queryByText(/updated \d+ min ago/i)).toBeNull();
   });
 
-  it('shows dash when average rating is absent', () => {
+  it('names the empty state when average rating is absent', () => {
     setup({ metrics: { ...METRICS, reviews: undefined } });
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('None')).toBeInTheDocument();
   });
 
   it('shows error banner when dashboard query fails', () => {

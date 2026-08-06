@@ -81,7 +81,7 @@ function validate(form, { requirePassword }) {
   return errors;
 }
 
-// Only the fields the manager actually filled in are sent — an empty string
+// Only the fields the manager actually filled in are sent. An empty string
 // would ask the backend to store a blank email rather than none at all.
 function createPayload(form) {
   const organization = form.organizationMode === 'new'
@@ -211,7 +211,7 @@ export function ManagerAccountsPage() {
           driverId: editTarget._id,
           payload: {
             name: form.name,
-            // Sent even when blank — that is how an email is removed.
+            // Sent even when blank, because that is how an email is removed.
             email: form.email.trim(),
             phoneNumber: form.phoneNumber,
             nicNumber: form.nicNumber,
@@ -223,7 +223,7 @@ export function ManagerAccountsPage() {
         setDialogOpen(false);
       } else {
         const result = await createM.mutateAsync(createPayload(form));
-        // Shown immediately so the manager can hand it over — it is retrievable
+        // Shown immediately so the manager can hand it over. It is retrievable
         // later, but surfacing it here saves a round trip.
         if (result?.enrollmentKey) {
           setRevealedKeys((prev) => ({ ...prev, [result.data._id]: result.enrollmentKey }));
@@ -271,7 +271,7 @@ export function ManagerAccountsPage() {
     try {
       const result = await rotateKeyM.mutateAsync({ driverId: driver._id });
       setRevealedKeys((prev) => ({ ...prev, [driver._id]: result?.data?.enrollmentKey }));
-      toast('Enrollment key rotated — the previous key no longer works');
+      toast('Enrollment key rotated. The previous key no longer works.');
     } catch (err) {
       toast(`Failed: ${err?.message || 'Unknown error'}`);
     }
@@ -329,13 +329,13 @@ export function ManagerAccountsPage() {
       accessorKey: 'driverCode',
       cell: (info) => (info.getValue()
         ? <code className="whitespace-nowrap text-xs">{info.getValue()}</code>
-        : <span className="text-muted-foreground">—</span>),
+        : <span className="text-muted-foreground">Not issued</span>),
     },
     {
       id: 'email',
       header: 'Email',
       accessorKey: 'email',
-      cell: (info) => info.getValue() || <span className="text-muted-foreground">—</span>,
+      cell: (info) => info.getValue() || <span className="text-muted-foreground">None</span>,
     },
     {
       id: 'organization',
@@ -344,7 +344,7 @@ export function ManagerAccountsPage() {
       enableSorting: false,
       cell: (info) => {
         const organization = info.getValue();
-        if (!organization) return <span className="text-muted-foreground">—</span>;
+        if (!organization) return <span className="text-muted-foreground">None</span>;
         return (
           <span>
             {organization.name}
@@ -360,7 +360,7 @@ export function ManagerAccountsPage() {
       id: 'phoneNumber',
       header: 'Phone',
       accessorKey: 'phoneNumber',
-      cell: (info) => info.getValue() || '—',
+      cell: (info) => info.getValue() || 'None',
     },
     {
       id: 'vehicle',
@@ -398,8 +398,8 @@ export function ManagerAccountsPage() {
 
         return (
           <div className="flex items-center gap-1.5">
-            {/* The key is one token — wrapping it mid-code makes it unreadable
-                and hard to transcribe over the phone. */}
+            {/* The key is one token, and wrapping it mid-code makes it
+                unreadable and hard to transcribe over the phone. */}
             <code className="whitespace-nowrap rounded bg-surface-muted px-1.5 py-0.5 text-xs">
               {key}
             </code>
@@ -640,7 +640,7 @@ export function ManagerAccountsPage() {
                         <SelectContent>
                           {organizations.length === 0 ? (
                             <div className="px-3 py-2 text-sm text-muted-foreground">
-                              No organizations yet — use Create new
+                              No organizations yet. Use Create new.
                             </div>
                           ) : (
                             organizations.map((organization) => (
@@ -735,7 +735,7 @@ export function ManagerAccountsPage() {
             <div>
               <p className="text-xs uppercase tracking-wider text-muted-foreground">Driver ID</p>
               <code className="whitespace-nowrap text-sm font-medium">
-                {lastCreated.driverCode || '—'}
+                {lastCreated.driverCode || 'Not issued'}
               </code>
             </div>
             {lastCreated.email && (

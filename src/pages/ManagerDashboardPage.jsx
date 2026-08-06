@@ -33,7 +33,7 @@ export function ManagerDashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Total Vehicles"
-          value={fleet.totalVehicles ?? '—'}
+          value={fleet.totalVehicles ?? 'None'}
           icon={VehicleIcon}
           isLoading={dashQ.isLoading}
         />
@@ -42,7 +42,7 @@ export function ManagerDashboardPage() {
           value={
             utilizationPct != null
               ? `${fleet.activeVehicles} (${utilizationPct}%)`
-              : (fleet.activeVehicles ?? '—')
+              : (fleet.activeVehicles ?? 'None')
           }
           icon={VehicleIcon}
           isLoading={dashQ.isLoading}
@@ -90,7 +90,7 @@ export function ManagerDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Analytics placeholder — no time-series data available yet */}
+      {/* Analytics placeholder: no time-series data available yet */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Booking Trend</CardTitle>

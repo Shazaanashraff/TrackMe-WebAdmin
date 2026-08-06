@@ -39,7 +39,7 @@ export function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Fleet operations overview — managers, vehicles, bookings and performance."
+        description="Fleet operations overview: managers, vehicles, bookings and performance."
       />
 
       {/* KPI stat cards */}
@@ -64,7 +64,7 @@ export function DashboardPage() {
         />
         <StatCard
           label="Avg Rating"
-          value={avgRating != null ? avgRating.toFixed(1) : '—'}
+          value={avgRating != null ? avgRating.toFixed(1) : 'None'}
           icon={Star}
           isLoading={dashQ.isLoading}
         />
@@ -118,7 +118,7 @@ export function DashboardPage() {
                       >
                         <td className="py-3 pr-4">
                           <p className="font-medium text-foreground truncate max-w-[200px]">
-                            {op.routeName || op.name || '—'}
+                            {op.routeName || op.name || 'Unnamed'}
                           </p>
                           <p className="text-xs text-muted-foreground truncate">
                             {op.managerName || op.manager || 'System managed'}
@@ -128,7 +128,7 @@ export function DashboardPage() {
                           <StatusBadge status={op.isActive !== false ? 'online' : 'offline'} />
                         </td>
                         <td className="py-3 text-right font-mono text-muted-foreground text-xs">
-                          {op.activeVehicles ?? op.vehicles ?? '—'} vehicles
+                          {op.activeVehicles ?? op.vehicles ?? 0} vehicles
                         </td>
                       </tr>
                     ))}
