@@ -16,29 +16,28 @@ export const qk = {
     all: () => ['managers'],
     list: (params = {}) => ['managers', params],
   },
-  busRequests: {
-    all: () => ['bus-requests'],
-    pending: (params = {}) => ['bus-requests', 'pending', params],
+  vehicleRequests: {
+    all: () => ['vehicle-requests'],
+    pending: (params = {}) => ['vehicle-requests', 'pending', params],
   },
   systemRoutes: {
     all: () => ['system-routes'],
     list: (params = {}) => ['system-routes', params],
   },
-  buses: {
-    all: () => ['buses'],
-    manager: () => ['buses', 'manager'],
-    byId: (busId) => ['buses', busId],
-    location: (busId, minutes) => ['buses', busId, 'location', minutes],
+  vehicles: {
+    all: () => ['vehicles'],
+    manager: () => ['vehicles', 'manager'],
+    byId: (vehicleId) => ['vehicles', vehicleId],
     assignableRoutes: () => ['routes', 'assignable'],
     managerRequests: () => ['manager-requests'],
   },
-  routeApprovals: {
-    customRoutes: (params = {}) => ['custom-routes', params],
-    changeRequests: (params = {}) => ['route-change-requests', params],
+  organizations: {
+    all: () => ['organizations'],
+    byServiceType: (serviceType) => ['organizations', serviceType || 'all'],
   },
-  privateRoutes: {
-    owned: () => ['owned-routes'],
-    joinRequests: (routeId, params = {}) => ['route', routeId, 'join-requests', params],
-    members: (routeId, params = {}) => ['route', routeId, 'members', params],
+  drivers: {
+    all: () => ['drivers'],
+    list: () => ['drivers', 'list'],
+    enrollmentKey: (driverId) => ['drivers', driverId, 'enrollment-key'],
   },
 };

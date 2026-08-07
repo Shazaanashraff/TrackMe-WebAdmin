@@ -9,8 +9,8 @@ describe('PageHeader', () => {
   });
 
   it('renders description when provided', () => {
-    render(<PageHeader title="T" description="Real-time bus data" />);
-    expect(screen.getByText('Real-time bus data')).toBeInTheDocument();
+    render(<PageHeader title="T" description="Real-time vehicle data" />);
+    expect(screen.getByText('Real-time vehicle data')).toBeInTheDocument();
   });
 
   it('omits description element when not provided', () => {

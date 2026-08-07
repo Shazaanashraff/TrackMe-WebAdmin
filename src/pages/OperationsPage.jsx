@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Activity, Bus, CheckCircle, ClipboardList } from 'lucide-react';
+import { Activity, Bus as VehicleIcon, CheckCircle, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
@@ -21,10 +21,10 @@ import {
 import {
   useOperationsOverview,
   useOperationManagerDetail,
-  usePendingBusRequests,
+  usePendingVehicleRequests,
   useAuditLogs,
-  useReviewBusRequest,
-  useUpdateBus,
+  useReviewVehicleRequest,
+  useUpdateVehicle,
 } from '@/hooks/use-operations';
 
 const SERVICE_TYPES = ['PUBLIC', 'SCHOOL', 'UNIVERSITY', 'OFFICE'];
@@ -33,18 +33,18 @@ export function OperationsPage() {
   const [searchParams] = useSearchParams();
   const [selectedManagerId, setSelectedManagerId] = useState(searchParams.get('managerId') || '');
   const [reviewTarget, setReviewTarget] = useState(null); // { id, decision }
-  const [editBus, setEditBus] = useState(null);
+  const [editVehicle, setEditVehicle] = useState(null);
   const [editServiceType, setEditServiceType] = useState('PUBLIC');
   const [requestStatus, setRequestStatus] = useState('PENDING');
   const [auditManagerId, setAuditManagerId] = useState('');
-  const [busDialogError, setBusDialogError] = useState(null);
+  const [vehicleDialogError, setVehicleDialogError] = useState(null);
 
   const overviewQ = useOperationsOverview();
   const detailQ = useOperationManagerDetail(selectedManagerId);
-  const requestsQ = usePendingBusRequests({ status: requestStatus });
+  const requestsQ = usePendingVehicleRequests({ status: requestStatus });
   const auditQ = useAuditLogs({ limit: 60, managerId: auditManagerId });
-  const reviewM = useReviewBusRequest();
-  const updateBusM = useUpdateBus();
+  const reviewM = useReviewVehicleRequest();
+  const updateVehicleM = useUpdateVehicle();
 
   // Auto-select first manager once overview loads
   useEffect(() => {
@@ -67,12 +67,12 @@ export function OperationsPage() {
   }), [overview, requests, auditLogs]);
 
   const detailStats = useMemo(() => {
-    const buses = detail?.buses || [];
+    const vehicles = detail?.vehicles || [];
     return {
-      total: buses.length,
-      active: buses.filter((b) => b.isActive).length,
-      bookings: buses.reduce((s, b) => s + (b.bookingMetrics?.totalBookings || 0), 0),
-      revenue: buses.reduce((s, b) => s + (b.bookingMetrics?.totalRevenue || 0), 0),
+      total: vehicles.length,
+      active: vehicles.filter((b) => b.isActive).length,
+      bookings: vehicles.reduce((s, b) => s + (b.bookingMetrics?.totalBookings || 0), 0),
+      revenue: vehicles.reduce((s, b) => s + (b.bookingMetrics?.totalRevenue || 0), 0),
     };
   }, [detail]);
 
@@ -91,35 +91,35 @@ export function OperationsPage() {
     }
   };
 
-  const handleSaveBus = async () => {
-    if (!editBus) return;
-    setBusDialogError(null);
+  const handleSaveVehicle = async () => {
+    if (!editVehicle) return;
+    setVehicleDialogError(null);
     try {
-      await updateBusM.mutateAsync({ busId: editBus.busId || editBus._id, payload: { serviceType: editServiceType } });
-      toast('Bus updated');
-      setEditBus(null);
+      await updateVehicleM.mutateAsync({ vehicleId: editVehicle.vehicleId || editVehicle._id, payload: { serviceType: editServiceType } });
+      toast('Vehicle updated');
+      setEditVehicle(null);
     } catch (err) {
-      setBusDialogError(err);
+      setVehicleDialogError(err);
     }
   };
 
   const overviewColumns = useMemo(() => [
     { id: 'manager', header: 'Manager', accessorKey: 'managerName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
-    { id: 'buses', header: 'Buses', accessorKey: 'fleet', cell: (i) => i.getValue()?.totalBuses ?? 0 },
+    { id: 'vehicles', header: 'Vehicles', accessorKey: 'fleet', cell: (i) => i.getValue()?.totalVehicles ?? 0 },
     { id: 'bookings', header: 'Bookings', accessorKey: 'bookings', cell: (i) => i.getValue()?.totalBookings ?? 0 },
     { id: 'status', header: 'Status', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'online' : 'offline'} /> },
   ], []);
 
-  const busColumns = useMemo(() => [
-    { id: 'name', header: 'Bus', accessorKey: 'busName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
+  const vehicleColumns = useMemo(() => [
+    { id: 'name', header: 'Vehicle', accessorKey: 'vehicleName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
     { id: 'service', header: 'Service', accessorKey: 'serviceType', cell: (i) => <Badge variant="secondary">{i.getValue() || 'PUBLIC'}</Badge> },
     { id: 'state', header: 'State', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'online' : 'offline'} /> },
-    { id: 'rating', header: 'Rating', accessorKey: 'reviewMetrics', cell: (i) => i.getValue()?.averageRating?.toFixed(1) ?? '—' },
+    { id: 'rating', header: 'Rating', accessorKey: 'reviewMetrics', cell: (i) => i.getValue()?.averageRating?.toFixed(1) ?? 'None' },
     { id: 'bookings', header: 'Bookings', accessorKey: 'bookingMetrics', cell: (i) => i.getValue()?.totalBookings ?? 0 },
     {
       id: 'actions', header: '', accessorKey: '_id', enableSorting: false,
       cell: (i) => (
-        <Button size="sm" variant="ghost" onClick={() => { setEditBus(i.row.original); setEditServiceType(i.row.original.serviceType || 'PUBLIC'); setBusDialogError(null); }}>
+        <Button size="sm" variant="ghost" onClick={() => { setEditVehicle(i.row.original); setEditServiceType(i.row.original.serviceType || 'PUBLIC'); setVehicleDialogError(null); }}>
           Edit
         </Button>
       ),
@@ -128,10 +128,10 @@ export function OperationsPage() {
 
   const requestColumns = useMemo(() => [
     { id: 'type', header: 'Type', accessorKey: 'type' },
-    { id: 'manager', header: 'Manager', accessorKey: 'managerId', cell: (i) => i.getValue()?.name || '—' },
-    { id: 'busId', header: 'Bus', accessorKey: 'busId' },
-    { id: 'submitted', header: 'Submitted', accessorKey: 'createdAt', cell: (i) => i.getValue() ? <RelativeTime date={i.getValue()} /> : '—' },
-    { id: 'reason', header: 'Reason', accessorKey: 'reason', cell: (i) => i.getValue() || '—' },
+    { id: 'manager', header: 'Manager', accessorKey: 'managerId', cell: (i) => i.getValue()?.name || 'None' },
+    { id: 'vehicleId', header: 'Vehicle', accessorKey: 'vehicleId' },
+    { id: 'submitted', header: 'Submitted', accessorKey: 'createdAt', cell: (i) => i.getValue() ? <RelativeTime date={i.getValue()} /> : 'None' },
+    { id: 'reason', header: 'Reason', accessorKey: 'reason', cell: (i) => i.getValue() || 'None' },
     {
       id: 'actions', header: '', accessorKey: '_id', enableSorting: false,
       cell: (i) => {
@@ -153,11 +153,11 @@ export function OperationsPage() {
   ], [reviewM.isPending, reviewM.variables]);
 
   const auditColumns = useMemo(() => [
-    { id: 'time', header: 'Time', accessorKey: 'createdAt', cell: (i) => i.getValue() ? <RelativeTime date={i.getValue()} /> : '—' },
-    { id: 'manager', header: 'Manager', accessorKey: 'managerId', cell: (i) => i.getValue()?.name || '—' },
+    { id: 'time', header: 'Time', accessorKey: 'createdAt', cell: (i) => i.getValue() ? <RelativeTime date={i.getValue()} /> : 'None' },
+    { id: 'manager', header: 'Manager', accessorKey: 'managerId', cell: (i) => i.getValue()?.name || 'None' },
     { id: 'action', header: 'Action', accessorKey: 'action' },
     { id: 'entity', header: 'Entity', accessorKey: 'entityType' },
-    { id: 'actor', header: 'Actor', accessorKey: 'actorId', cell: (i) => i.getValue()?.email || '—' },
+    { id: 'actor', header: 'Actor', accessorKey: 'actorId', cell: (i) => i.getValue()?.email || 'None' },
   ], []);
 
   const managerFilterOptions = useMemo(() => overview.map((o) => ({ id: o.managerId, name: o.managerName })), [overview]);
@@ -174,7 +174,7 @@ export function OperationsPage() {
         <StatCard label="Total Managers" value={stats.total} icon={Activity} isLoading={overviewQ.isLoading} />
         <StatCard label="Active Managers" value={stats.active} icon={CheckCircle} isLoading={overviewQ.isLoading} />
         <StatCard label="Pending Requests" value={stats.pending} icon={ClipboardList} isLoading={requestsQ.isLoading} />
-        <StatCard label="Audit Records" value={stats.audit} icon={Bus} isLoading={auditQ.isLoading} />
+        <StatCard label="Audit Records" value={stats.audit} icon={VehicleIcon} isLoading={auditQ.isLoading} />
       </div>
 
       {/* Managers overview + detail */}
@@ -203,7 +203,7 @@ export function OperationsPage() {
           <CardHeader>
             <CardTitle className="text-base">Manager Detail</CardTitle>
             <CardDescription>
-              {detail?.manager ? `${detail.manager.name} — ${detail.manager.email}` : 'Select a manager to view details'}
+              {detail?.manager ? `${detail.manager.name} · ${detail.manager.email}` : 'Select a manager to view details'}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-0 space-y-4">
@@ -217,8 +217,8 @@ export function OperationsPage() {
             >
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {[
-                  { label: 'Total Buses', value: detailStats.total },
-                  { label: 'Active Buses', value: detailStats.active },
+                  { label: 'Total Vehicles', value: detailStats.total },
+                  { label: 'Active Vehicles', value: detailStats.active },
                   { label: 'Bookings', value: detailStats.bookings },
                   { label: 'Revenue', value: <Money amount={detailStats.revenue} /> },
                 ].map(({ label, value }) => (
@@ -230,9 +230,9 @@ export function OperationsPage() {
               </div>
 
               <DataTable
-                columns={busColumns}
-                data={detail?.buses || []}
-                emptyTitle="No buses assigned"
+                columns={vehicleColumns}
+                data={detail?.vehicles || []}
+                emptyTitle="No vehicles assigned"
               />
             </AsyncSection>
           </CardContent>
@@ -243,8 +243,8 @@ export function OperationsPage() {
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-base">Bus Requests</CardTitle>
-            <CardDescription>Pending bus account requests from managers</CardDescription>
+            <CardTitle className="text-base">Vehicle Requests</CardTitle>
+            <CardDescription>Pending vehicle account requests from managers</CardDescription>
           </div>
           <Select value={requestStatus} onValueChange={setRequestStatus}>
             <SelectTrigger className="w-32 h-8 text-xs">
@@ -265,7 +265,7 @@ export function OperationsPage() {
             error={requestsQ.error}
             onRetry={requestsQ.refetch}
             emptyTitle="No requests"
-            emptyDescription="There are no bus requests matching the current filter."
+            emptyDescription="There are no vehicle requests matching the current filter."
           />
         </CardContent>
       </Card>
@@ -310,7 +310,7 @@ export function OperationsPage() {
         title={reviewTarget?.decision === 'APPROVE' ? 'Approve Request' : 'Reject Request'}
         description={
           reviewTarget?.decision === 'APPROVE'
-            ? 'This will approve the bus account request.'
+            ? 'This will approve the vehicle account request.'
             : 'This will reject the request. A reason is required.'
         }
         confirmLabel={reviewTarget?.decision === 'APPROVE' ? 'Approve' : 'Reject'}
@@ -319,20 +319,20 @@ export function OperationsPage() {
         onConfirm={handleReview}
       />
 
-      {/* Bus edit dialog */}
+      {/* Vehicle edit dialog */}
       <FormDialog
-        open={Boolean(editBus)}
-        onOpenChange={(open) => { if (!open) setEditBus(null); }}
-        title="Edit Bus"
+        open={Boolean(editVehicle)}
+        onOpenChange={(open) => { if (!open) setEditVehicle(null); }}
+        title="Edit Vehicle"
         submitLabel="Save Changes"
-        onSubmit={handleSaveBus}
-        pending={updateBusM.isPending}
-        error={busDialogError}
+        onSubmit={handleSaveVehicle}
+        pending={updateVehicleM.isPending}
+        error={vehicleDialogError}
       >
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Bus</Label>
-            <p className="text-sm text-foreground font-medium">{editBus?.busName || '—'}</p>
+            <Label>Vehicle</Label>
+            <p className="text-sm text-foreground font-medium">{editVehicle?.vehicleName || 'Unnamed'}</p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="service-type">Service Type</Label>

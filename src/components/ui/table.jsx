@@ -9,7 +9,10 @@ const Table = React.forwardRef(({ className, ...props }, ref) => (
 Table.displayName = 'Table';
 
 const TableHeader = React.forwardRef(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn('border-b border-border bg-surface-muted/50', className)} {...props} />
+  // Full-strength surface-muted, not /50: the header needs to read as its own
+  // band against the rows. At 50% it half-dissolved into --surface and the
+  // labels lost the backdrop that separates them from the data.
+  <thead ref={ref} className={cn('border-b border-border bg-surface-muted', className)} {...props} />
 ));
 TableHeader.displayName = 'TableHeader';
 
@@ -36,7 +39,11 @@ const TableHead = React.forwardRef(({ className, ...props }, ref) => (
   <th
     ref={ref}
     className={cn(
-      'h-11 px-4 text-left align-middle text-xs font-medium tracking-wide text-muted-foreground [&:has([role=checkbox])]:pr-0',
+      // 13px/semibold on --table-header-foreground. text-xs + font-medium +
+      // muted-foreground cleared WCAG AA on paper but still read as washed-out
+      // next to the bold row values; tracking-wide is dropped because these are
+      // sentence-case labels, not small caps.
+      'h-11 px-4 text-left align-middle text-[0.8125rem] font-semibold text-table-header-foreground [&:has([role=checkbox])]:pr-0',
       className
     )}
     {...props}

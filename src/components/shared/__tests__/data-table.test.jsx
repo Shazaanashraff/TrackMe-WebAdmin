@@ -24,7 +24,7 @@ function setup(props = {}) {
 
 // ── state machine ─────────────────────────────────────────────────────────────
 
-describe('DataTable — state machine', () => {
+describe('DataTable: state machine', () => {
   it('renders TableSkeleton when isLoading', () => {
     render(<DataTable columns={COLS} data={[]} isLoading />);
     expect(screen.getByRole('status')).toBeInTheDocument();

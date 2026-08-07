@@ -10,7 +10,7 @@ vi.mock('@/hooks/use-dashboard', () => ({
 import { useManagerDashboard } from '@/hooks/use-dashboard';
 
 const DASHBOARD = {
-  fleet: { totalBuses: 8, activeBuses: 6 },
+  fleet: { totalVehicles: 8, activeVehicles: 6 },
   pendingRequests: 2,
   bookings: { confirmedBookings: 40, cancelledBookings: 3, totalRevenue: 12000 },
 };
@@ -50,8 +50,8 @@ describe('ManagerDashboardPage', () => {
 
   it('renders real KPI values without fabricated deltas', () => {
     setup();
-    expect(screen.getByText('Total Buses')).toBeInTheDocument();
-    expect(screen.getByText('Active Buses')).toBeInTheDocument();
+    expect(screen.getByText('Total Vehicles')).toBeInTheDocument();
+    expect(screen.getByText('Active Vehicles')).toBeInTheDocument();
     expect(screen.getByText('Pending Requests')).toBeInTheDocument();
     expect(screen.getByText('Total Revenue')).toBeInTheDocument();
 

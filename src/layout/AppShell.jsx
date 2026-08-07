@@ -1,21 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Activity, Route as RouteIcon, Settings,
-  Bus, MapPin, UserCog, GitPullRequest, Lock, LogOut,
+  Bus as VehicleIcon, UserCog, LogOut,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Tooltip, TooltipProvider, TooltipTrigger, TooltipContent,
 } from '@/components/ui/tooltip';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
-import {
-  useManagerCustomRoutes,
-  useRouteChangeRequests,
-} from '@/hooks/use-route-approvals';
 import { Topbar } from './Topbar';
 
 const SIDEBAR_KEY = 'webadmin-sidebar-collapsed';
@@ -30,15 +25,12 @@ export const SUPER_ADMIN_NAV = [
 
 export const MANAGER_NAV = [
   { label: 'Overview', path: '/manager/dashboard', icon: LayoutDashboard },
-  { label: 'Buses', path: '/manager/buses', icon: Bus },
-  { label: 'Live Tracking', path: '/manager/tracking', icon: MapPin },
+  { label: 'Vehicles', path: '/manager/vehicles', icon: VehicleIcon },
   { label: 'Drivers', path: '/manager/accounts', icon: UserCog },
-  { label: 'Route Approvals', path: '/manager/route-approvals', icon: GitPullRequest, hasBadge: true },
-  { label: 'Private Routes', path: '/manager/private-routes', icon: Lock },
   { label: 'Settings', path: '/manager/settings', icon: Settings },
 ];
 
-function NavItem({ item, active, collapsed, badge, onNavigate }) {
+function NavItem({ item, active, collapsed, onNavigate }) {
   const Icon = item.icon;
 
   const link = (
@@ -57,16 +49,7 @@ function NavItem({ item, active, collapsed, badge, onNavigate }) {
       )}
     >
       <Icon className="h-5 w-5 shrink-0" />
-      {!collapsed && (
-        <>
-          <span className="flex-1 truncate">{item.label}</span>
-          {badge > 0 && (
-            <Badge variant="danger" className="ml-auto h-4 px-1.5 py-0 text-[10px]">
-              {badge > 99 ? '99+' : badge}
-            </Badge>
-          )}
-        </>
-      )}
+      {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
     </Link>
   );
 
@@ -74,12 +57,7 @@ function NavItem({ item, active, collapsed, badge, onNavigate }) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>{link}</TooltipTrigger>
-        <TooltipContent side="right" className="flex items-center gap-2">
-          <span>{item.label}</span>
-          {badge > 0 && (
-            <Badge variant="danger" className="h-4 px-1.5 py-0 text-[10px]">{badge}</Badge>
-          )}
-        </TooltipContent>
+        <TooltipContent side="right">{item.label}</TooltipContent>
       </Tooltip>
     );
   }
@@ -87,7 +65,7 @@ function NavItem({ item, active, collapsed, badge, onNavigate }) {
   return link;
 }
 
-function SidebarNav({ navItems, location, collapsed, onLogout, onNavigate, pendingCount }) {
+function SidebarNav({ navItems, location, collapsed, onLogout, onNavigate }) {
   return (
     <>
       <nav aria-label="Main navigation" className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
@@ -97,7 +75,6 @@ function SidebarNav({ navItems, location, collapsed, onLogout, onNavigate, pendi
             item={item}
             active={location.pathname.startsWith(item.path)}
             collapsed={collapsed}
-            badge={item.hasBadge ? pendingCount : 0}
             onNavigate={onNavigate}
           />
         ))}
@@ -147,19 +124,8 @@ export function AppShell({ user, onLogout, onRefresh }) {
   const location = useLocation();
 
   const isSuperAdmin = user?.role === 'super-admin';
-  const isManager = user?.role === 'admin';
   const navItems = isSuperAdmin ? SUPER_ADMIN_NAV : MANAGER_NAV;
   const wordmark = isSuperAdmin ? 'TRACKME ADMIN' : 'TRACKME MGR';
-
-  const routesQ = useManagerCustomRoutes({ status: 'PENDING_NAMING' }, { enabled: isManager });
-  const changesQ = useRouteChangeRequests({ status: 'PENDING' }, { enabled: isManager });
-
-  const pendingCount = useMemo(() => {
-    if (!isManager) return 0;
-    const routes = routesQ.data?.data || [];
-    const changes = changesQ.data?.data || [];
-    return routes.filter((r) => r.pathPolyline).length + changes.length;
-  }, [isManager, routesQ.data, changesQ.data]);
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -208,11 +174,10 @@ export function AppShell({ user, onLogout, onRefresh }) {
             collapsed={collapsed}
             onLogout={onLogout}
             onNavigate={undefined}
-            pendingCount={pendingCount}
           />
         </aside>
 
-        {/* Mobile nav sheet — only mount content when open (avoids duplicate nav in JSDOM) */}
+        {/* Mobile nav sheet: only mount content when open (avoids duplicate nav in JSDOM) */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           {mobileOpen && (
             <SheetContent side="left" className="w-56 p-0 flex flex-col">
@@ -230,7 +195,6 @@ export function AppShell({ user, onLogout, onRefresh }) {
                 collapsed={false}
                 onLogout={() => { setMobileOpen(false); onLogout(); }}
                 onNavigate={() => setMobileOpen(false)}
-                pendingCount={pendingCount}
               />
             </SheetContent>
           )}
@@ -248,7 +212,7 @@ export function AppShell({ user, onLogout, onRefresh }) {
 
           <main className="flex-1 overflow-y-auto">
             <div className="max-w-screen-2xl mx-auto px-6 py-6">
-              <Outlet />
+              <Outlet context={{ user }} />
             </div>
           </main>
         </div>

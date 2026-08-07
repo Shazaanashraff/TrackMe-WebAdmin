@@ -1,36 +1,89 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ManagerAccountsPage } from '../ManagerAccountsPage';
 
-vi.mock('@/hooks/use-buses', () => ({
-  useManagerBuses: vi.fn(),
-  useResetBusAccountPassword: vi.fn(),
+vi.mock('@/hooks/use-drivers', () => ({
+  useOrganizations: vi.fn(),
+  useManagerDrivers: vi.fn(),
+  useCreateDriver: vi.fn(),
+  useUpdateDriver: vi.fn(),
+  useDeleteDriver: vi.fn(),
+  useResetDriverPassword: vi.fn(),
+  useDriverEnrollmentKey: vi.fn(),
+  useRotateDriverEnrollmentKey: vi.fn(),
+  useRevertDriverEnrollmentKey: vi.fn(),
 }));
+
 vi.mock('sonner', () => ({ toast: vi.fn() }));
 
-import { useManagerBuses, useResetBusAccountPassword } from '@/hooks/use-buses';
-import { toast } from 'sonner';
+import {
+  useOrganizations,
+  useManagerDrivers,
+  useCreateDriver,
+  useUpdateDriver,
+  useDeleteDriver,
+  useResetDriverPassword,
+  useDriverEnrollmentKey,
+  useRotateDriverEnrollmentKey,
+  useRevertDriverEnrollmentKey,
+} from '@/hooks/use-drivers';
 
-const BUSES = [
-  { _id: 'b1', busId: 'BUS-1', busName: 'Shuttle 1', numberPlate: 'AB-1234', routeId: 'PUB-1', driverId: { email: 'driver@test.com' } },
-  { _id: 'b2', busId: 'BUS-2', busName: 'Express 2', numberPlate: 'CD-5678', routeId: 'PUB-2' },
+const ORGANIZATIONS = [
+  { _id: 'org-1', name: 'Royal College', serviceType: 'SCHOOL' },
+  { _id: 'org-2', name: 'St. Peters', serviceType: 'SCHOOL' },
+];
+
+const DRIVERS = [
+  {
+    _id: 'driver-1',
+    driverCode: 'DRV-4K7P-9XQ2',
+    name: 'Kamal Perera',
+    email: 'kamal@t.com',
+    organization: { _id: 'org-1', name: 'Royal College', serviceType: 'SCHOOL' },
+    phoneNumber: '0771234567',
+    isActive: true,
+    setupComplete: true,
+    vehicle: { _id: 'v1', vehicleId: 'BUS-1', numberPlate: 'AB-1234' },
+  },
+  {
+    // A driver created without an email, signing in with the ID alone.
+    _id: 'driver-2',
+    driverCode: 'DRV-8H2N-5TRW',
+    name: 'Sunil Silva',
+    email: '',
+    organization: null,
+    phoneNumber: '',
+    isActive: true,
+    setupComplete: false,
+    vehicle: null,
+  },
 ];
 
 function makeMutation(overrides = {}) {
   return { mutateAsync: vi.fn().mockResolvedValue({}), isPending: false, ...overrides };
 }
 
-function defaultHooks({ buses = BUSES, loading = false, error = null, resetMut } = {}) {
-  useManagerBuses.mockReturnValue({
-    data: buses ? { data: buses } : undefined,
-    isLoading: loading,
-    isError: Boolean(error),
-    error,
-    refetch: vi.fn(),
+function defaultHooks({
+  drivers = DRIVERS,
+  organizations = ORGANIZATIONS,
+  createMut,
+  revealMut,
+  rotateMut,
+  revertMut,
+} = {}) {
+  useManagerDrivers.mockReturnValue({
+    data: { data: drivers }, isLoading: false, error: null, refetch: vi.fn(),
   });
-  useResetBusAccountPassword.mockReturnValue(resetMut || makeMutation());
+  useOrganizations.mockReturnValue({ data: { data: organizations }, isLoading: false });
+  useCreateDriver.mockReturnValue(createMut || makeMutation());
+  useUpdateDriver.mockReturnValue(makeMutation());
+  useDeleteDriver.mockReturnValue(makeMutation());
+  useResetDriverPassword.mockReturnValue(makeMutation());
+  useDriverEnrollmentKey.mockReturnValue(revealMut || makeMutation());
+  useRotateDriverEnrollmentKey.mockReturnValue(rotateMut || makeMutation());
+  useRevertDriverEnrollmentKey.mockReturnValue(revertMut || makeMutation());
 }
 
 function setup(opts) {
@@ -40,89 +93,422 @@ function setup(opts) {
   return { user };
 }
 
-describe('ManagerAccountsPage', () => {
+const openForm = async (user) => user.click(screen.getByRole('button', { name: /add driver/i }));
+
+// The Radix select trigger is a button; picking an option is click-trigger,
+// click-option.
+async function chooseOption(user, triggerName, optionName) {
+  await user.click(screen.getByRole('combobox', { name: triggerName }));
+  await user.click(await screen.findByRole('option', { name: optionName }));
+}
+
+describe('ManagerAccountsPage: driver directory', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('renders the page heading', () => {
+  it('shows the driver ID and organization for each driver', () => {
     setup();
-    expect(screen.getByRole('heading', { level: 1, name: /account management/i })).toBeInTheDocument();
+
+    expect(screen.getByText('DRV-4K7P-9XQ2')).toBeInTheDocument();
+    expect(screen.getByText('Royal College')).toBeInTheDocument();
   });
 
-  it('shows managed buses count stat card', () => {
+  it('names the empty state rather than leaving a blank cell', () => {
+    setup({ drivers: [DRIVERS[1]] });
+
+    expect(screen.getByText('DRV-8H2N-5TRW')).toBeInTheDocument();
+    // Email, organization and phone are all empty for this driver. Written out
+    // as words: the UI carries no em dashes.
+    expect(screen.getAllByText('None').length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('identifies the vehicle by its plate alone, not its internal ID', () => {
     setup();
-    expect(screen.getByText('Managed Buses')).toBeInTheDocument();
-    expect(screen.getAllByText('2').length).toBeGreaterThan(0);
+
+    expect(screen.getByText('AB-1234')).toBeInTheDocument();
+    expect(screen.queryByText(/BUS-1/)).not.toBeInTheDocument();
   });
 
-  it('renders the form during load (loading does not crash)', () => {
-    setup({ loading: true, buses: null });
-    // Page heading and form remain visible during load
-    expect(screen.getByRole('heading', { level: 1, name: /account management/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /update password/i })).toBeInTheDocument();
+  it('falls back to the vehicle ID when a record carries no plate', () => {
+    const noPlate = { ...DRIVERS[0], vehicle: { _id: 'v9', vehicleId: 'BUS-9' } };
+    setup({ drivers: [noPlate] });
+
+    expect(screen.getByText('BUS-9')).toBeInTheDocument();
   });
 
-  it('renders reset form with bus select and password input', () => {
-    setup();
-    expect(screen.getByLabelText(/^bus$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/new password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /update password/i })).toBeInTheDocument();
+  it('names the empty vehicle cell rather than leaving it blank', () => {
+    setup({ drivers: [{ ...DRIVERS[0], vehicle: null }] });
+
+    expect(screen.getByText('Unassigned')).toBeInTheDocument();
+  });
+});
+
+describe('ManagerAccountsPage: enrollment key rotation', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  const openRowMenu = (user, name = 'Kamal Perera') =>
+    user.click(screen.getByRole('button', { name: `Actions for ${name}` }));
+
+  const rotated = (canRevert = true) => makeMutation({
+    mutateAsync: vi.fn().mockResolvedValue({ data: { enrollmentKey: 'TMD-NEW-KEY-0001', canRevert } }),
   });
 
-  it('renders context panel with selected bus details', () => {
-    setup();
-    // Auto-selects first bus → context shows BUS-1 details
-    expect(screen.getByText(/Selected Account Context/i)).toBeInTheDocument();
+  it('warns before rotating instead of rotating on the click itself', async () => {
+    const rotateMut = rotated();
+    const { user } = setup({ rotateMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /replace enrollment key/i }));
+
+    // The menu click opens the warning; nothing has been rotated yet.
+    expect(rotateMut.mutateAsync).not.toHaveBeenCalled();
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
   });
 
-  it('shows validation error when no bus is selected', async () => {
-    const { user } = setup({ buses: [] }); // empty = no auto-select
-    await user.type(screen.getByLabelText(/new password/i), 'password123');
-    await user.click(screen.getByRole('button', { name: /update password/i }));
-    expect(screen.getByText(/please select a bus/i)).toBeInTheDocument();
+  it('says what rotating will do to the key already handed out', async () => {
+    const { user } = setup({ rotateMut: rotated() });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /replace enrollment key/i }));
+
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(/stops working straight away/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/undo this once/i)).toBeInTheDocument();
   });
 
-  it('shows validation error when password is empty', async () => {
+  it('rotates nothing when the manager backs out', async () => {
+    const rotateMut = rotated();
+    const { user } = setup({ rotateMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /replace enrollment key/i }));
+    await user.click(await screen.findByRole('button', { name: /cancel/i }));
+
+    expect(rotateMut.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('rotates once the warning is confirmed', async () => {
+    const rotateMut = rotated();
+    const { user } = setup({ rotateMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /replace enrollment key/i }));
+    await user.click(await screen.findByRole('button', { name: /replace key/i }));
+
+    expect(rotateMut.mutateAsync).toHaveBeenCalledWith({ driverId: 'driver-1' });
+  });
+
+  it('offers the undo only after a rotation has happened', async () => {
+    const { user } = setup({ rotateMut: rotated() });
+
+    await openRowMenu(user);
+    expect(screen.queryByRole('menuitem', { name: /restore previous key/i })).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole('menuitem', { name: /replace enrollment key/i }));
+    await user.click(await screen.findByRole('button', { name: /replace key/i }));
+
+    await openRowMenu(user);
+    expect(await screen.findByRole('menuitem', { name: /restore previous key/i })).toBeInTheDocument();
+  });
+
+  it('restores the previous key through the undo, then withdraws the offer', async () => {
+    const revertMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({ data: { enrollmentKey: 'TMD-OLD-KEY-0001', canRevert: false } }),
+    });
+    const { user } = setup({ rotateMut: rotated(), revertMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /replace enrollment key/i }));
+    await user.click(await screen.findByRole('button', { name: /replace key/i }));
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /restore previous key/i }));
+
+    expect(revertMut.mutateAsync).toHaveBeenCalledWith({ driverId: 'driver-1' });
+
+    // Spent: the server allows one undo per rotation, so the option goes away.
+    await openRowMenu(user);
+    expect(screen.queryByRole('menuitem', { name: /restore previous key/i })).not.toBeInTheDocument();
+  });
+
+  it('offers the undo when the server reports a rotation is still recoverable', async () => {
+    const revealMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({ data: { enrollmentKey: 'TMD-CUR-KEY-0001', canRevert: true } }),
+    });
+    const { user } = setup({ revealMut });
+
+    // A reveal after a page refresh is how the option comes back.
+    await user.click(screen.getAllByRole('button', { name: /show key/i })[0]);
+
+    await openRowMenu(user);
+    expect(await screen.findByRole('menuitem', { name: /restore previous key/i })).toBeInTheDocument();
+  });
+});
+
+describe('ManagerAccountsPage: add driver form', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('lays the form out in the three numbered sections', async () => {
     const { user } = setup();
-    await user.click(screen.getByRole('button', { name: /update password/i }));
-    expect(screen.getByText(/new password is required/i)).toBeInTheDocument();
+    await openForm(user);
+
+    expect(screen.getByRole('heading', { name: /1 · Driver details/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /2 · Organization/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /3 · Vehicle and app access/i })).toBeInTheDocument();
   });
 
-  it('shows validation error when password is too short', async () => {
+  it('marks email, NIC and licence as optional and does not call the password temporary', async () => {
     const { user } = setup();
-    await user.type(screen.getByLabelText(/new password/i), 'short');
-    await user.click(screen.getByRole('button', { name: /update password/i }));
-    expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument();
+    await openForm(user);
+
+    expect(screen.getByLabelText(/Email \(optional\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/NIC number \(optional\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Licence card number \(optional\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Password$/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/temporary password/i)).not.toBeInTheDocument();
   });
 
-  it('calls resetBusAccountPassword mutation with correct payload', async () => {
-    const resetMut = makeMutation();
-    const { user } = setup({ resetMut });
+  it('creates a driver from a name, a vehicle and a password', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({
+        data: { _id: 'new-1', name: 'Nimal', email: '', driverCode: 'DRV-1111-2222' },
+        enrollmentKey: 'TMD-AAAA-BBBB-CCCC',
+      }),
+    });
+    const { user } = setup({ createMut });
+    await openForm(user);
 
-    await user.type(screen.getByLabelText(/new password/i), 'Secure1234!');
-    await user.click(screen.getByRole('button', { name: /update password/i }));
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
 
-    await waitFor(() => expect(resetMut.mutateAsync).toHaveBeenCalledTimes(1));
-    const call = resetMut.mutateAsync.mock.calls[0][0];
-    expect(call.busId).toBe('BUS-1'); // auto-selected first bus
-    expect(call.payload.password).toBe('Secure1234!');
+    expect(createMut.mutateAsync).toHaveBeenCalledWith({
+      name: 'Nimal',
+      password: 'DriverPass1!',
+      vehicleNumber: 'CAB-1234',
+    });
   });
 
-  it('shows success toast and clears password on success', async () => {
+  it('will not create a driver with no vehicle', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
+
+    expect(await screen.findByText(/vehicle number is required/i)).toBeInTheDocument();
+    expect(createMut.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('sends the organization chosen from the list', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({ data: { _id: 'new-2', name: 'Nimal' } }),
+    });
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    await chooseOption(user, /Organization category/i, 'School');
+    await chooseOption(user, /^Organization$/i, 'Royal College');
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
+
+    expect(createMut.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: 'org-1' })
+    );
+  });
+
+  it('sends a new organization by name and category when Create new is picked', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({ data: { _id: 'new-3', name: 'Nimal' } }),
+    });
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    await user.click(screen.getByRole('button', { name: /create new/i }));
+    await chooseOption(user, /Organization category/i, 'University');
+    await user.type(screen.getByLabelText(/Organization name/i), 'Colombo Uni');
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
+
+    expect(createMut.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationName: 'Colombo Uni',
+        organizationCategory: 'UNIVERSITY',
+      })
+    );
+  });
+
+  it('cannot name a new organization before a category is chosen', async () => {
     const { user } = setup();
-    await user.type(screen.getByLabelText(/new password/i), 'Secure1234!');
-    await user.click(screen.getByRole('button', { name: /update password/i }));
+    await openForm(user);
+    await user.click(screen.getByRole('button', { name: /create new/i }));
 
-    await waitFor(() => expect(toast).toHaveBeenCalledWith(expect.stringMatching(/updated successfully/i)));
-    expect(screen.getByLabelText(/new password/i)).toHaveValue('');
+    expect(screen.getByLabelText(/Organization name/i)).toBeDisabled();
   });
 
-  it('shows server error on mutation failure', async () => {
-    const resetMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(new Error('Server error')) });
-    const { user } = setup({ resetMut });
+  it('will not take more than ten digits of phone number', async () => {
+    const { user } = setup();
+    await openForm(user);
 
-    await user.type(screen.getByLabelText(/new password/i), 'Secure1234!');
-    await user.click(screen.getByRole('button', { name: /update password/i }));
+    const field = screen.getByLabelText(/Phone number/i);
+    await user.type(field, '0755613572222222222225');
 
-    await waitFor(() => expect(screen.getByText(/server error/i)).toBeInTheDocument());
+    expect(field).toHaveValue('0755613572');
+  });
+
+  it('takes the longer international number behind a +', async () => {
+    const { user } = setup();
+    await openForm(user);
+
+    const field = screen.getByLabelText(/Phone number/i);
+    await user.type(field, '+94755613572');
+
+    expect(field).toHaveValue('+94755613572');
+  });
+
+  it('refuses a half-typed phone number on submit', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    await user.type(screen.getByLabelText(/Phone number/i), '07712');
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
+
+    expect(await screen.findByText(/Sri Lankan phone number/i)).toBeInTheDocument();
+    expect(createMut.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('upper-cases the vehicle number as it is typed', async () => {
+    const { user } = setup();
+    await openForm(user);
+
+    const field = screen.getByLabelText(/Vehicle number/i);
+    await user.type(field, 'pf2327');
+
+    // Still focused: the hyphen waits for blur, but the case does not.
+    expect(field).toHaveValue('PF2327');
+  });
+
+  it('canonicalises the plate even when the field never loses focus', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({ data: { _id: 'new-7', name: 'Nimal' } }),
+    });
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    // Typed last and submitted with Enter, so no blur ever fires.
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'pf2327{Enter}');
+
+    expect(createMut.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ vehicleNumber: 'PF-2327' })
+    );
+  });
+
+  it('tidies a Sri Lankan plate into its canonical form on blur', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({ data: { _id: 'new-6', name: 'Nimal' } }),
+    });
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    const field = screen.getByLabelText(/Vehicle number/i);
+    await user.type(field, 'pf- 2327');
+    await user.tab();
+
+    expect(field).toHaveValue('PF-2327');
+  });
+
+  it('leaves a vehicle ID alone, since only plates have a format', async () => {
+    const { user } = setup();
+    await openForm(user);
+
+    const field = screen.getByLabelText(/Vehicle number/i);
+    await user.type(field, 'BUS-1');
+    await user.tab();
+
+    expect(field).toHaveValue('BUS-1');
+  });
+
+  it('sends the vehicle number when one is given', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({ data: { _id: 'new-4', name: 'Nimal' } }),
+    });
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'BUS-1');
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
+
+    expect(createMut.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ vehicleNumber: 'BUS-1' })
+    );
+  });
+
+  it('refuses a malformed email but accepts a blank one', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    await user.type(screen.getByLabelText(/Email \(optional\)/i), 'not-an-email');
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
+
+    expect(await screen.findByText(/valid email address, or leave it blank/i)).toBeInTheDocument();
+    expect(createMut.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('requires a password of at least 8 characters', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
+    await user.type(screen.getByLabelText(/^Password$/i), 'short');
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
+
+    expect(await screen.findByText(/at least 8 characters/i)).toBeInTheDocument();
+    expect(createMut.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('hands back the driver ID after creating', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({
+        data: {
+          _id: 'new-5', name: 'Nimal', email: '', driverCode: 'DRV-1111-2222',
+          vehicle: { _id: 'v1', vehicleId: 'BUS-1', numberPlate: 'AB-1234' },
+        },
+        enrollmentKey: 'TMD-AAAA-BBBB-CCCC',
+      }),
+    });
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'BUS-1');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
+
+    // "Driver ID" is also a column header, so the summary card is found by the
+    // code it shows.
+    const driverCode = await screen.findByText('DRV-1111-2222');
+    const summary = driverCode.closest('div').parentElement;
+    expect(within(summary).getByText('Driver ID')).toBeInTheDocument();
+    expect(screen.getByText('TMD-AAAA-BBBB-CCCC')).toBeInTheDocument();
   });
 });

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { Bus } from 'lucide-react';
+import { Bus as VehicleIcon } from 'lucide-react';
 import { StatCard } from '../stat-card';
 
 function wrap(ui) {
@@ -10,8 +10,8 @@ function wrap(ui) {
 
 describe('StatCard', () => {
   it('renders label and value', () => {
-    wrap(<StatCard label="Total Buses" value="42" />);
-    expect(screen.getByText('Total Buses')).toBeInTheDocument();
+    wrap(<StatCard label="Total Vehicles" value="42" />);
+    expect(screen.getByText('Total Vehicles')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
@@ -26,7 +26,7 @@ describe('StatCard', () => {
   });
 
   it('renders icon when provided', () => {
-    wrap(<StatCard label="L" value="0" icon={Bus} />);
+    wrap(<StatCard label="L" value="0" icon={VehicleIcon} />);
     // icon is aria-hidden svg — verify container renders (no error thrown)
     const svgs = document.querySelectorAll('svg');
     expect(svgs.length).toBeGreaterThan(0);

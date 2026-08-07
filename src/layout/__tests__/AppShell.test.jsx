@@ -6,11 +6,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ColorModeProvider } from '@/theme/ColorMode';
 import { AppShell } from '../AppShell';
 
-vi.mock('@/hooks/use-route-approvals', () => ({
-  useManagerCustomRoutes: vi.fn(() => ({ data: { data: [] } })),
-  useRouteChangeRequests: vi.fn(() => ({ data: { data: [] } })),
-}));
-
 function makeClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
@@ -59,11 +54,8 @@ describe('AppShell', () => {
   it('renders manager nav links', () => {
     renderShell({ role: 'admin', path: '/manager/dashboard' });
     expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Buses' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Live Tracking' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Vehicles' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Drivers' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Route Approvals' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Private Routes' })).toBeInTheDocument();
   });
 
   it('marks the active route with aria-current="page"', () => {
@@ -150,17 +142,4 @@ describe('AppShell', () => {
     expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
   });
 
-  it('shows a pending badge count for manager when approvals exist', async () => {
-    const { useManagerCustomRoutes, useRouteChangeRequests } = await import('@/hooks/use-route-approvals');
-    useManagerCustomRoutes.mockReturnValue({
-      data: { data: [{ pathPolyline: 'encoded123' }, { pathPolyline: null }] },
-    });
-    useRouteChangeRequests.mockReturnValue({
-      data: { data: [{ id: 'r1' }, { id: 'r2' }] },
-    });
-
-    renderShell({ role: 'admin', path: '/manager/dashboard' });
-    // 1 recorded route (has pathPolyline) + 2 change requests = 3
-    expect(screen.getByText('3')).toBeInTheDocument();
-  });
 });

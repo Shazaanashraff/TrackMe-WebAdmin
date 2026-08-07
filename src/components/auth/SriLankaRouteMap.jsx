@@ -134,7 +134,7 @@ export function SriLankaRouteMap() {
         {/*
           Two-pass render: a thick outline stroke drawn first, then every district's fill drawn
           again on top with no stroke. Adjacent districts share exact vertices, so the second
-          pass paints over every internal province border — only the true coastline (nothing
+          pass paints over every internal province border, so only the true coastline (nothing
           to paint over it) stays visible as an outline. Avoids needing a polygon-union
           library just to get an "outer border only" outline from per-district paths.
         */}

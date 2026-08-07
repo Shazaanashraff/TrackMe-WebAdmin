@@ -96,7 +96,11 @@ const request = async (path, options = {}) => {
     const fieldErrors = Array.isArray(data.errors)
       ? data.errors.map((item) => item.message || item.msg).filter(Boolean)
       : [];
-    throw new Error(fieldErrors[0] || data.message || 'Request failed');
+    const error = new Error(fieldErrors[0] || data.message || 'Request failed');
+    // Callers need to tell "the server rejected this" apart from "the request
+    // never got through" — a network failure must not be treated as a rejection.
+    error.status = response.status;
+    throw error;
   }
 
   return data;
@@ -140,6 +144,22 @@ export const adminApi = {
       retryAfterRefresh: false
     }),
 
+  // Consumes the invite/reset link emailed to a manager (buildSetupLink on the
+  // backend). Both are public — no auth token exists yet at this point.
+  validateAccountSetup: (token) =>
+    request('/api/auth/account-setup/validate', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+      retryAfterRefresh: false
+    }),
+
+  completeAccountSetup: (token, password) =>
+    request('/api/auth/account-setup/complete', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+      retryAfterRefresh: false
+    }),
+
   getSuperAdminDashboard: () => request('/api/super-admin/dashboard'),
 
   getSystemRoutes: (params = {}) => {
@@ -180,25 +200,30 @@ export const adminApi = {
       body: JSON.stringify(payload)
     }),
 
+  deleteManager: (managerId) =>
+    request(`/api/super-admin/managers/${managerId}`, {
+      method: 'DELETE'
+    }),
+
   resetManagerPassword: (managerId, payload) =>
     request(`/api/super-admin/managers/${managerId}/reset-password`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     }),
 
-  assignBusesToManager: (managerId, busIds) =>
-    request(`/api/super-admin/managers/${managerId}/assign-buses`, {
+  assignVehiclesToManager: (managerId, vehicleIds) =>
+    request(`/api/super-admin/managers/${managerId}/assign-vehicles`, {
       method: 'PATCH',
-      body: JSON.stringify({ busIds })
+      body: JSON.stringify({ vehicleIds })
     }),
 
-  getPendingBusRequests: (params = {}) => {
+  getPendingVehicleRequests: (params = {}) => {
     const query = new URLSearchParams(params).toString();
-    return request(`/api/super-admin/bus-requests${query ? `?${query}` : ''}`);
+    return request(`/api/super-admin/vehicle-requests${query ? `?${query}` : ''}`);
   },
 
-  reviewBusRequest: (requestId, payload) =>
-    request(`/api/super-admin/bus-requests/${requestId}/review`, {
+  reviewVehicleRequest: (requestId, payload) =>
+    request(`/api/super-admin/vehicle-requests/${requestId}/review`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     }),
@@ -208,114 +233,98 @@ export const adminApi = {
     return request(`/api/super-admin/audit-logs${query ? `?${query}` : ''}`);
   },
 
-  updateBus: (busId, payload) =>
-    request(`/api/bus/${busId}`, {
+  updateVehicle: (vehicleId, payload) =>
+    request(`/api/vehicle/${vehicleId}`, {
       method: 'PUT',
       body: JSON.stringify(payload)
     }),
 
   getManagerDashboard: () => request('/api/manager/dashboard'),
 
-  getBusRoutes: () => request('/api/bus/routes'),
+  getVehicleRoutes: () => request('/api/vehicle/routes'),
 
-  getManagerBuses: () => request('/api/manager/buses'),
+  getManagerVehicles: () => request('/api/manager/vehicles'),
 
-  getManagerBusById: (busId) => request(`/api/manager/buses/${busId}`),
+  getManagerVehicleById: (vehicleId) => request(`/api/manager/vehicles/${vehicleId}`),
 
-  updateManagerBus: (busId, payload) =>
-    request(`/api/manager/buses/${busId}`, {
+  updateManagerVehicle: (vehicleId, payload) =>
+    request(`/api/manager/vehicles/${vehicleId}`, {
       method: 'PUT',
       body: JSON.stringify(payload)
     }),
 
-  createBusAccountRequest: (payload) =>
-    request('/api/manager/bus-accounts', {
+  // Creates the vehicle and its first driver outright; a manager owns their own
+  // fleet, so there is no approval step.
+  createManagerVehicle: (payload) =>
+    request('/api/manager/vehicle-accounts', {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
 
-  requestDeleteBus: (busId, payload) =>
-    request(`/api/manager/buses/${busId}/delete-request`, {
+  requestDeleteVehicle: (vehicleId, payload) =>
+    request(`/api/manager/vehicles/${vehicleId}/delete-request`, {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
 
   getManagerRequests: () => request('/api/manager/requests'),
 
-  resetManagerBusAccountPassword: (busId, payload) =>
-    request(`/api/manager/bus-accounts/${busId}/reset-password`, {
+  resetManagerVehicleAccountPassword: (vehicleId, payload) =>
+    request(`/api/manager/vehicle-accounts/${vehicleId}/reset-password`, {
       method: 'PATCH',
       body: JSON.stringify(payload)
     }),
-
-  getManagerBusLocation: (busId, minutes = 15) =>
-    request(`/api/manager/buses/${busId}/location?minutes=${minutes}`),
 
   // Public routes + this manager's own named (ACTIVE) private custom routes —
-  // the correct source for any "assign a route to my bus" dropdown.
+  // the correct source for any "assign a route to my vehicle" dropdown.
   getManagerAssignableRoutes: () => request('/api/manager/routes'),
 
-  getManagerCustomRoutes: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return request(`/api/manager/custom-routes${query ? `?${query}` : ''}`);
-  },
+  // The schools / universities / offices a driver can be attached to. Same list
+  // the super admin assigns managers to.
+  getManagerOrganizations: (serviceType) =>
+    request(`/api/manager/organizations${serviceType ? `?serviceType=${serviceType}` : ''}`),
 
-  nameCustomRoute: (routeId, payload) =>
-    request(`/api/manager/custom-routes/${routeId}/name`, {
-      method: 'PATCH',
+  createManagerOrganization: (payload) =>
+    request('/api/manager/organizations', {
+      method: 'POST',
       body: JSON.stringify(payload)
     }),
 
-  getRouteChangeRequests: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return request(`/api/manager/route-change-requests${query ? `?${query}` : ''}`);
-  },
+  getManagerDrivers: () => request('/api/manager/drivers'),
 
-  resolveRouteChangeRequest: (id, payload) =>
-    request(`/api/manager/route-change-requests/${id}/resolve`, {
-      method: 'PATCH',
+  createManagerDriver: (payload) =>
+    request('/api/manager/drivers', {
+      method: 'POST',
       body: JSON.stringify(payload)
     }),
 
-  getManagerOwnedRoutes: () => request('/api/manager/owned-routes'),
-
-  updateRoutePrivacy: (routeId, payload) =>
-    request(`/api/manager/routes/${routeId}/privacy`, {
-      method: 'PATCH',
+  updateManagerDriver: (driverId, payload) =>
+    request(`/api/manager/drivers/${driverId}`, {
+      method: 'PUT',
       body: JSON.stringify(payload)
     }),
 
-  updateRouteQr: (routeId, qrEnabled) =>
-    request(`/api/manager/routes/${routeId}/qr`, {
-      method: 'PATCH',
-      body: JSON.stringify({ qrEnabled })
+  deleteManagerDriver: (driverId) =>
+    request(`/api/manager/drivers/${driverId}`, {
+      method: 'DELETE'
     }),
 
-  rotateRoomKey: (routeId) =>
-    request(`/api/manager/routes/${routeId}/room-key/rotate`, {
+  resetManagerDriverPassword: (driverId, password) =>
+    request(`/api/manager/drivers/${driverId}/password`, {
+      method: 'PUT',
+      body: JSON.stringify({ password })
+    }),
+
+  getDriverEnrollmentKey: (driverId) =>
+    request(`/api/manager/drivers/${driverId}/enrollment-key`),
+
+  rotateDriverEnrollmentKey: (driverId) =>
+    request(`/api/manager/drivers/${driverId}/enrollment-key/rotate`, {
       method: 'POST'
     }),
 
-  revealRoomKey: (routeId) => request(`/api/manager/routes/${routeId}/room-key`),
-
-  getRouteJoinRequests: (routeId, params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return request(`/api/manager/routes/${routeId}/join-requests${query ? `?${query}` : ''}`);
-  },
-
-  decideJoinRequest: (id, payload) =>
-    request(`/api/manager/join-requests/${id}/decision`, {
-      method: 'PATCH',
-      body: JSON.stringify(payload)
-    }),
-
-  getRouteMembers: (routeId, params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return request(`/api/manager/routes/${routeId}/members${query ? `?${query}` : ''}`);
-  },
-
-  revokeRouteMember: (routeId, userId) =>
-    request(`/api/manager/routes/${routeId}/members/${userId}`, {
-      method: 'DELETE'
+  revertDriverEnrollmentKey: (driverId) =>
+    request(`/api/manager/drivers/${driverId}/enrollment-key/revert`, {
+      method: 'POST'
     })
 };

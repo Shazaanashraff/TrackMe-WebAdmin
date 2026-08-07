@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { Bus, BookOpen, Hourglass, Wallet } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
+import { Bus as VehicleIcon, BookOpen, Hourglass, Wallet } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
 import { AsyncSection } from '@/components/shared/async-section';
@@ -8,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useManagerDashboard } from '@/hooks/use-dashboard';
 
 export function ManagerDashboardPage() {
+  const { user } = useOutletContext() ?? {};
   const dashQ = useManagerDashboard();
   const d = dashQ.data?.data;
 
@@ -16,33 +18,33 @@ export function ManagerDashboardPage() {
   const pending = d?.pendingRequests ?? 0;
 
   const utilizationPct = useMemo(() => {
-    if (!fleet.totalBuses) return null;
-    return Math.round((fleet.activeBuses / fleet.totalBuses) * 100);
-  }, [fleet.activeBuses, fleet.totalBuses]);
+    if (!fleet.totalVehicles) return null;
+    return Math.round((fleet.activeVehicles / fleet.totalVehicles) * 100);
+  }, [fleet.activeVehicles, fleet.totalVehicles]);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Manager Dashboard"
+        title={user?.name || user?.email || 'Manager Dashboard'}
         description="Live overview of your fleet, bookings, and pending requests."
       />
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Total Buses"
-          value={fleet.totalBuses ?? '—'}
-          icon={Bus}
+          label="Total Vehicles"
+          value={fleet.totalVehicles ?? 'None'}
+          icon={VehicleIcon}
           isLoading={dashQ.isLoading}
         />
         <StatCard
-          label="Active Buses"
+          label="Active Vehicles"
           value={
             utilizationPct != null
-              ? `${fleet.activeBuses} (${utilizationPct}%)`
-              : (fleet.activeBuses ?? '—')
+              ? `${fleet.activeVehicles} (${utilizationPct}%)`
+              : (fleet.activeVehicles ?? 'None')
           }
-          icon={Bus}
+          icon={VehicleIcon}
           isLoading={dashQ.isLoading}
         />
         <StatCard
@@ -63,7 +65,7 @@ export function ManagerDashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Booking Summary</CardTitle>
-          <CardDescription>Confirmed and cancelled journeys across all your buses</CardDescription>
+          <CardDescription>Confirmed and cancelled journeys across all your vehicles</CardDescription>
         </CardHeader>
         <CardContent>
           <AsyncSection
@@ -88,7 +90,7 @@ export function ManagerDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Analytics placeholder — no time-series data available yet */}
+      {/* Analytics placeholder: no time-series data available yet */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Booking Trend</CardTitle>

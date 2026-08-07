@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { StatusBadge } from '../status-badge';
 
-describe('StatusBadge — bus domain', () => {
+describe('StatusBadge — vehicle domain', () => {
   it('online → settled badge', () => {
     render(<StatusBadge status="online" />);
     expect(screen.getByText('Online')).toBeInTheDocument();
@@ -75,8 +75,8 @@ describe('StatusBadge — edge cases', () => {
   });
 
   it('custom label overrides default label', () => {
-    render(<StatusBadge status="online" label="Bus is live" />);
-    expect(screen.getByText('Bus is live')).toBeInTheDocument();
+    render(<StatusBadge status="online" label="Vehicle is live" />);
+    expect(screen.getByText('Vehicle is live')).toBeInTheDocument();
     expect(screen.queryByText('Online')).toBeNull();
   });
 

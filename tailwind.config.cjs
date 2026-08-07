@@ -14,6 +14,7 @@ module.exports = {
         border: 'var(--border)',
         foreground: 'var(--foreground)',
         'muted-foreground': 'var(--muted-foreground)',
+        'table-header-foreground': 'var(--table-header-foreground)',
         primary: {
           DEFAULT: 'var(--primary)',
           hover: 'var(--primary-hover)',

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, Bus, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Bus as VehicleIcon, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
@@ -13,82 +13,105 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
+  cleanPlateInput, isValidPlate, tidyPlate, PLATE_FORMAT_MESSAGE, PLATE_PLACEHOLDER,
+} from '@/lib/number-plate';
+import {
+  cleanPhoneInput, isValidPhone, PHONE_FORMAT_MESSAGE, PHONE_PLACEHOLDER,
+} from '@/lib/phone-number';
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  useManagerBuses,
+  useManagerVehicles,
   useManagerAssignableRoutes,
-  useCreateBusAccountRequest,
-  useUpdateManagerBus,
-  useRequestDeleteBus,
-} from '@/hooks/use-buses';
+  useCreateManagerVehicle,
+  useUpdateManagerVehicle,
+  useRequestDeleteVehicle,
+} from '@/hooks/use-vehicles';
+import { useOrganizations } from '@/hooks/use-drivers';
 
 const SERVICE_TYPES = ['PUBLIC', 'SCHOOL', 'UNIVERSITY', 'OFFICE'];
-const BUS_TYPES = ['AC', 'NON-AC', 'DELUXE', 'SLEEPER'];
+// Public service has no organization, so it is not offered here.
+const ORG_CATEGORIES = [
+  { value: 'SCHOOL', label: 'School' },
+  { value: 'UNIVERSITY', label: 'University' },
+  { value: 'OFFICE', label: 'Office' },
+];
+const VEHICLE_TYPES = ['AC', 'NON-AC', 'DELUXE', 'SLEEPER'];
 const MAINTENANCE_STATUSES = ['ACTIVE', 'MAINTENANCE', 'OUT_OF_SERVICE'];
-const CREATE_STEPS = ['Bus Details', 'Driver & Access', 'Review & Submit'];
+const CREATE_STEPS = ['Vehicle Details', 'Driver (optional)', 'Review & Create'];
 
 const EMPTY_CREATE = {
-  busId: '', busName: '', numberPlate: '',
+  vehicleId: '', vehicleName: '', numberPlate: '',
   routeMode: 'EXISTING', routeId: '',
-  seatCapacity: 40, busType: 'AC', serviceType: 'PUBLIC',
+  vehicleType: 'AC', serviceType: 'PUBLIC',
+  organizationCategory: '', organizationId: '',
   driverName: '', driverEmail: '', driverPhoneNumber: '',
   driverNicNumber: '', driverLicenseCardNumber: '',
   password: '', reason: '',
 };
 
+// A vehicle needs an ID and a plate; everything else about it, including who
+// drives it, can be filled in later from this same page.
 function validateStep(form, step) {
   if (step === 0) {
-    if (!form.busId.trim() || !form.busName.trim() || !form.numberPlate.trim()) {
-      return form.routeMode === 'CUSTOM'
-        ? 'Please complete Bus ID, Bus Name, and Number Plate.'
-        : 'Please complete Bus ID, Bus Name, Number Plate, and Route.';
+    if (!form.vehicleId.trim() || !form.numberPlate.trim()) {
+      return 'Please complete Vehicle ID and Number Plate.';
     }
-    if (form.routeMode !== 'CUSTOM' && !form.routeId) {
-      return 'Please select a route.';
-    }
-    if (!Number(form.seatCapacity) || Number(form.seatCapacity) <= 0) {
-      return 'Seat capacity must be a positive number.';
+    if (!isValidPlate(form.numberPlate)) {
+      return PLATE_FORMAT_MESSAGE;
     }
   }
   if (step === 1) {
-    if (!form.password.trim()) return 'Initial password is required.';
+    // Naming a driver is what makes the rest of this step apply.
+    if (form.driverName.trim() && !form.password.trim()) {
+      return 'A driver needs an initial password.';
+    }
+    if (!form.driverName.trim() && form.password.trim()) {
+      return 'Name the driver this password belongs to, or clear it.';
+    }
     if (form.driverEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.driverEmail)) {
       return 'Driver email format looks invalid.';
+    }
+    if (form.driverPhoneNumber && !isValidPhone(form.driverPhoneNumber)) {
+      return `${PHONE_FORMAT_MESSAGE}.`;
     }
   }
   return null;
 }
 
-export function ManagerBusesPage() {
-  const busesQ = useManagerBuses();
+export function ManagerVehiclesPage() {
+  const vehiclesQ = useManagerVehicles();
   const routesQ = useManagerAssignableRoutes();
-  const createM = useCreateBusAccountRequest();
-  const updateBusM = useUpdateManagerBus();
-  const deleteReqM = useRequestDeleteBus();
+  const [createForm, setCreateForm] = useState(EMPTY_CREATE);
+  // Per category, so it only loads once one is picked.
+  const organizationsQ = useOrganizations(createForm.organizationCategory);
+  const createM = useCreateManagerVehicle();
+  const updateVehicleM = useUpdateManagerVehicle();
+  const deleteReqM = useRequestDeleteVehicle();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createStep, setCreateStep] = useState(0);
-  const [createForm, setCreateForm] = useState(EMPTY_CREATE);
   const [createError, setCreateError] = useState(null);
 
-  const [editBus, setEditBus] = useState(null);
+  const [editVehicle, setEditVehicle] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [editError, setEditError] = useState(null);
 
-  const [deleteTarget, setDeleteTarget] = useState(null); // bus object
+  const [deleteTarget, setDeleteTarget] = useState(null); // vehicle object
 
-  const buses = busesQ.data?.data || [];
+  const vehicles = vehiclesQ.data?.data || [];
   const routes = routesQ.data?.data || [];
+  const organizations = organizationsQ.data?.data || [];
 
   const summary = useMemo(() => {
-    const total = buses.length;
-    const active = buses.filter((b) => b.isActive !== false).length;
+    const total = vehicles.length;
+    const active = vehicles.filter((b) => b.isActive !== false).length;
     return { total, active, inactive: total - active };
-  }, [buses]);
+  }, [vehicles]);
 
   const setCreate = (key) => (e) => setCreateForm((p) => ({ ...p, [key]: e.target.value }));
 
@@ -121,39 +144,43 @@ export function ManagerBusesPage() {
 
   const handleSubmit = async () => {
     try {
-      await createM.mutateAsync({ ...createForm, seatCapacity: Number(createForm.seatCapacity) });
-      toast('Bus account request submitted');
+      const result = await createM.mutateAsync({ ...createForm });
+      // The driver ID is the only copy the manager gets in passing, so it goes
+      // in the toast rather than making them open the drivers page for it.
+      const driverCode = result?.data?.driver?.driverCode;
+      toast(driverCode
+        ? `Vehicle created. Driver ID ${driverCode}`
+        : 'Vehicle created, unassigned');
       closeCreate();
     } catch (err) {
       setCreateError(err);
     }
   };
 
-  const openEdit = (bus) => {
-    setEditBus(bus);
+  const openEdit = (vehicle) => {
+    setEditVehicle(vehicle);
     setEditForm({
-      busName: bus.busName || '',
-      numberPlate: bus.numberPlate || '',
-      routeId: bus.routeId || '',
-      seatCapacity: bus.seatCapacity || 40,
-      busType: bus.busType || 'AC',
-      serviceType: bus.serviceType || 'PUBLIC',
-      isActive: bus.isActive !== false,
-      maintenanceStatus: bus.maintenanceStatus || 'ACTIVE',
+      vehicleName: vehicle.vehicleName || '',
+      numberPlate: vehicle.numberPlate || '',
+      routeId: vehicle.routeId || '',
+      vehicleType: vehicle.vehicleType || 'AC',
+      serviceType: vehicle.serviceType || 'PUBLIC',
+      isActive: vehicle.isActive !== false,
+      maintenanceStatus: vehicle.maintenanceStatus || 'ACTIVE',
     });
     setEditError(null);
   };
 
   const handleSaveEdit = async () => {
-    if (!editBus) return;
+    if (!editVehicle) return;
     setEditError(null);
     try {
-      await updateBusM.mutateAsync({
-        busId: editBus.busId,
-        payload: { ...editForm, seatCapacity: Number(editForm.seatCapacity) },
+      await updateVehicleM.mutateAsync({
+        vehicleId: editVehicle.vehicleId,
+        payload: { ...editForm },
       });
-      toast('Bus updated');
-      setEditBus(null);
+      toast('Vehicle updated');
+      setEditVehicle(null);
     } catch (err) {
       setEditError(err);
     }
@@ -162,7 +189,7 @@ export function ManagerBusesPage() {
   const handleDeleteConfirm = async (reason) => {
     if (!deleteTarget) return;
     try {
-      await deleteReqM.mutateAsync({ busId: deleteTarget.busId, payload: { reason: reason || '' } });
+      await deleteReqM.mutateAsync({ vehicleId: deleteTarget.vehicleId, payload: { reason: reason || '' } });
       toast('Delete request submitted');
       setDeleteTarget(null);
     } catch (err) {
@@ -172,20 +199,43 @@ export function ManagerBusesPage() {
   };
 
   const columns = useMemo(() => [
-    { id: 'busId', header: 'Bus ID', accessorKey: 'busId' },
-    { id: 'busName', header: 'Bus Name', accessorKey: 'busName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
+    { id: 'vehicleId', header: 'Vehicle ID', accessorKey: 'vehicleId' },
+    { id: 'vehicleName', header: 'Vehicle Name', accessorKey: 'vehicleName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
     { id: 'plate', header: 'Plate', accessorKey: 'numberPlate' },
-    { id: 'route', header: 'Route', accessorKey: 'routeId' },
+    {
+      id: 'driver',
+      header: 'Driver',
+      accessorKey: 'driverId',
+      enableSorting: false,
+      cell: (i) => (i.getValue()?.name
+        ? i.getValue().name
+        : <span className="text-muted-foreground">Unassigned</span>),
+    },
+    {
+      id: 'organization',
+      header: 'Organization',
+      accessorKey: 'organization',
+      enableSorting: false,
+      cell: (i) => (i.getValue()?.name
+        ? i.getValue().name
+        : <span className="text-muted-foreground">None</span>),
+    },
+    {
+      id: 'route',
+      header: 'Route',
+      accessorKey: 'routeId',
+      cell: (i) => i.getValue() || <span className="text-muted-foreground">Not set</span>,
+    },
     { id: 'service', header: 'Service', accessorKey: 'serviceType' },
     { id: 'state', header: 'Status', accessorKey: 'isActive', enableSorting: false, cell: (i) => <StatusBadge status={i.getValue() !== false ? 'active' : 'inactive'} /> },
     {
       id: 'actions', header: '', accessorKey: '_id', enableSorting: false,
       cell: (i) => {
-        const bus = i.row.original;
+        const vehicle = i.row.original;
         return (
           <div className="flex gap-1.5">
-            <Button size="sm" variant="outline" onClick={() => openEdit(bus)}>Edit</Button>
-            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(bus)}>Delete Req</Button>
+            <Button size="sm" variant="outline" onClick={() => openEdit(vehicle)}>Edit</Button>
+            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(vehicle)}>Delete Req</Button>
           </div>
         );
       },
@@ -195,37 +245,37 @@ export function ManagerBusesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Bus Management"
-        description="Review managed buses, monitor availability, and submit new bus account requests."
+        title="Vehicle Management"
+        description="Review managed vehicles, monitor availability, and add new ones to your fleet."
         actions={
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4 mr-1.5" />
-            Add Bus Request
+            Add Vehicle
           </Button>
         }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Total Buses" value={summary.total} icon={Bus} isLoading={busesQ.isLoading} />
-        <StatCard label="Active Fleet" value={summary.active} icon={CheckCircle} isLoading={busesQ.isLoading} />
-        <StatCard label="Inactive Fleet" value={summary.inactive} icon={XCircle} isLoading={busesQ.isLoading} />
+        <StatCard label="Total Vehicles" value={summary.total} icon={VehicleIcon} isLoading={vehiclesQ.isLoading} />
+        <StatCard label="Active Fleet" value={summary.active} icon={CheckCircle} isLoading={vehiclesQ.isLoading} />
+        <StatCard label="Inactive Fleet" value={summary.inactive} icon={XCircle} isLoading={vehiclesQ.isLoading} />
       </div>
 
       <DataTable
         columns={columns}
-        data={buses}
-        isLoading={busesQ.isLoading}
-        error={busesQ.error}
-        onRetry={busesQ.refetch}
-        emptyTitle="No buses yet"
-        emptyDescription="Submit a bus account request to get started."
+        data={vehicles}
+        isLoading={vehiclesQ.isLoading}
+        error={vehiclesQ.error}
+        onRetry={vehiclesQ.refetch}
+        emptyTitle="No vehicles yet"
+        emptyDescription="Add your first vehicle to get started."
       />
 
       {/* Multi-step create dialog */}
       <Dialog open={createOpen} onOpenChange={(v) => { if (!v) closeCreate(); }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Add Bus Request</DialogTitle>
+            <DialogTitle>Add Vehicle</DialogTitle>
             <DialogDescription>
               Step {createStep + 1} of {CREATE_STEPS.length}: {CREATE_STEPS[createStep]}
             </DialogDescription>
@@ -237,26 +287,88 @@ export function ManagerBusesPage() {
             </Alert>
           )}
 
-          {/* Step 0: Bus Details */}
+          {/* Step 0: Vehicle Details */}
           {createStep === 0 && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="cb-busid">Bus ID</Label>
-                  <Input id="cb-busid" value={createForm.busId} onChange={setCreate('busId')} placeholder="BUS-001" />
+                  <Label htmlFor="cb-vehicleid">Vehicle ID</Label>
+                  <Input id="cb-vehicleid" value={createForm.vehicleId} onChange={setCreate('vehicleId')} placeholder="VEHICLE-001" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="cb-busname">Bus Name</Label>
-                  <Input id="cb-busname" value={createForm.busName} onChange={setCreate('busName')} placeholder="Express Kandy" />
+                  <Label htmlFor="cb-vehiclename">Vehicle Name (optional)</Label>
+                  <Input
+                    id="cb-vehiclename"
+                    value={createForm.vehicleName}
+                    onChange={setCreate('vehicleName')}
+                    placeholder="Named after its plate if left blank"
+                  />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="cb-plate">Number Plate</Label>
-                <Input id="cb-plate" value={createForm.numberPlate} onChange={(e) => setCreateForm((p) => ({ ...p, numberPlate: e.target.value.toUpperCase() }))} placeholder="ABC-1234" />
+                <Input
+                  id="cb-plate"
+                  value={createForm.numberPlate}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, numberPlate: cleanPlateInput(e.target.value) }))}
+                  onBlur={(e) => setCreateForm((p) => ({ ...p, numberPlate: tidyPlate(e.target.value) }))}
+                  placeholder={PLATE_PLACEHOLDER}
+                />
+              </div>
+
+              {/* The same organization the vehicle's drivers belong to. */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-org-category">Organization category (optional)</Label>
+                  <Select
+                    value={createForm.organizationCategory}
+                    onValueChange={(v) => setCreateForm((p) => ({
+                      ...p, organizationCategory: v, organizationId: '',
+                    }))}
+                  >
+                    <SelectTrigger id="cb-org-category">
+                      <SelectValue placeholder="None" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ORG_CATEGORIES.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cb-org">Organization</Label>
+                  <Select
+                    value={createForm.organizationId}
+                    onValueChange={(v) => setCreateForm((p) => ({ ...p, organizationId: v }))}
+                    disabled={!createForm.organizationCategory}
+                  >
+                    <SelectTrigger id="cb-org">
+                      <SelectValue
+                        placeholder={
+                          createForm.organizationCategory
+                            ? 'Select an organization…'
+                            : 'Choose a category first'
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {organizations.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          No organizations in this category
+                        </div>
+                      ) : (
+                        organizations.map((o) => (
+                          <SelectItem key={o._id} value={o._id}>{o.name}</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Route Assignment</Label>
+                <Label>Route Assignment (optional)</Label>
                 <RadioGroup
                   value={createForm.routeMode}
                   onValueChange={(v) => setCreateForm((p) => ({ ...p, routeMode: v, routeId: v === 'CUSTOM' ? '' : p.routeId }))}
@@ -275,7 +387,7 @@ export function ManagerBusesPage() {
 
               {createForm.routeMode === 'CUSTOM' ? (
                 <Alert>
-                  <AlertDescription>No route needed yet — the driver will record the route by driving it.</AlertDescription>
+                  <AlertDescription>No route needed yet. The driver will record the route by driving it.</AlertDescription>
                 </Alert>
               ) : (
                 <div className="space-y-1.5">
@@ -290,7 +402,7 @@ export function ManagerBusesPage() {
                       ) : (
                         routes.map((r) => (
                           <SelectItem key={r.routeId} value={r.routeId}>
-                            {r.routeName || r.routeId} ({r.routeId}){r.visibility === 'PRIVATE' ? ' — Custom' : ''}
+                            {r.routeName || r.routeId} ({r.routeId}){r.visibility === 'PRIVATE' ? ' · Custom' : ''}
                           </SelectItem>
                         ))
                       )}
@@ -299,16 +411,12 @@ export function ManagerBusesPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="cb-seats">Seat Capacity</Label>
-                  <Input id="cb-seats" type="number" min="1" value={createForm.seatCapacity} onChange={setCreate('seatCapacity')} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="cb-bustype">Bus Type</Label>
-                  <Select value={createForm.busType} onValueChange={(v) => setCreateForm((p) => ({ ...p, busType: v }))}>
-                    <SelectTrigger id="cb-bustype"><SelectValue /></SelectTrigger>
-                    <SelectContent>{BUS_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  <Label htmlFor="cb-vehicletype">Vehicle Type</Label>
+                  <Select value={createForm.vehicleType} onValueChange={(v) => setCreateForm((p) => ({ ...p, vehicleType: v }))}>
+                    <SelectTrigger id="cb-vehicletype"><SelectValue /></SelectTrigger>
+                    <SelectContent>{VEHICLE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
@@ -322,9 +430,15 @@ export function ManagerBusesPage() {
             </div>
           )}
 
-          {/* Step 1: Driver & Access */}
+          {/* Step 1: Driver, which the vehicle can go without */}
           {createStep === 1 && (
             <div className="space-y-3">
+              <Alert>
+                <AlertDescription>
+                  Leave this blank to add the vehicle unassigned. It gets its driver when you
+                  add one on the Drivers page with this vehicle number.
+                </AlertDescription>
+              </Alert>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-dname">Driver Name</Label>
@@ -336,7 +450,14 @@ export function ManagerBusesPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-dphone">Driver Phone</Label>
-                  <Input id="cb-dphone" value={createForm.driverPhoneNumber} onChange={setCreate('driverPhoneNumber')} />
+                  <Input
+                    id="cb-dphone"
+                    value={createForm.driverPhoneNumber}
+                    onChange={(e) => setCreateForm((p) => ({
+                      ...p, driverPhoneNumber: cleanPhoneInput(e.target.value),
+                    }))}
+                    placeholder={PHONE_PLACEHOLDER}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-dnic">Driver NIC</Label>
@@ -361,13 +482,31 @@ export function ManagerBusesPage() {
           {/* Step 2: Review */}
           {createStep === 2 && (
             <div className="rounded-lg border border-border bg-surface-muted p-4 space-y-1.5 text-sm">
-              <p><span className="font-semibold">Bus:</span> {createForm.busId} — {createForm.busName}</p>
+              <p>
+                <span className="font-semibold">Vehicle:</span>
+                {' '}
+                {createForm.vehicleId} · {createForm.vehicleName || createForm.numberPlate}
+              </p>
               <p><span className="font-semibold">Number Plate:</span> {createForm.numberPlate}</p>
-              <p><span className="font-semibold">Route:</span> {createForm.routeMode === 'CUSTOM' ? 'Driver will record a custom route' : createForm.routeId}</p>
-              <p><span className="font-semibold">Capacity:</span> {createForm.seatCapacity} seats</p>
-              <p><span className="font-semibold">Type:</span> {createForm.busType} / {createForm.serviceType}</p>
-              <p><span className="font-semibold">Driver:</span> {createForm.driverName || 'Not provided'}</p>
-              <p><span className="font-semibold">Driver Email:</span> {createForm.driverEmail || 'Not provided'}</p>
+              <p>
+                <span className="font-semibold">Organization:</span>
+                {' '}
+                {organizations.find((o) => o._id === createForm.organizationId)?.name || 'None'}
+              </p>
+              <p>
+                <span className="font-semibold">Route:</span>
+                {' '}
+                {createForm.routeMode === 'CUSTOM'
+                  ? 'Driver will record a custom route'
+                  : (createForm.routeId || 'Set later')}
+              </p>
+              <p><span className="font-semibold">Type:</span> {createForm.vehicleType} / {createForm.serviceType}</p>
+              <p>
+                <span className="font-semibold">Driver:</span>
+                {' '}
+                {createForm.driverName || 'Unassigned'}
+              </p>
+              <p><span className="font-semibold">Driver Email:</span> {createForm.driverEmail || 'None'}</p>
               <p><span className="font-semibold">Reason:</span> {createForm.reason || 'Not provided'}</p>
             </div>
           )}
@@ -381,7 +520,7 @@ export function ManagerBusesPage() {
               <Button onClick={handleNext}>Continue</Button>
             ) : (
               <Button onClick={handleSubmit} disabled={createM.isPending}>
-                {createM.isPending ? 'Submitting…' : 'Submit Request'}
+                {createM.isPending ? 'Creating…' : 'Create Vehicle'}
               </Button>
             )}
           </DialogFooter>
@@ -390,39 +529,41 @@ export function ManagerBusesPage() {
 
       {/* Edit dialog */}
       <FormDialog
-        open={Boolean(editBus)}
-        onOpenChange={(v) => { if (!v) setEditBus(null); }}
-        title="Edit Bus"
+        open={Boolean(editVehicle)}
+        onOpenChange={(v) => { if (!v) setEditVehicle(null); }}
+        title="Edit Vehicle"
         submitLabel="Save Changes"
         onSubmit={handleSaveEdit}
-        pending={updateBusM.isPending}
+        pending={updateVehicleM.isPending}
         error={editError}
       >
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="eb-name">Bus Name</Label>
-              <Input id="eb-name" value={editForm.busName || ''} onChange={(e) => setEditForm((p) => ({ ...p, busName: e.target.value }))} />
+              <Label htmlFor="eb-name">Vehicle Name</Label>
+              <Input id="eb-name" value={editForm.vehicleName || ''} onChange={(e) => setEditForm((p) => ({ ...p, vehicleName: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="eb-plate">Number Plate</Label>
-              <Input id="eb-plate" value={editForm.numberPlate || ''} onChange={(e) => setEditForm((p) => ({ ...p, numberPlate: e.target.value.toUpperCase() }))} />
+              <Input
+                id="eb-plate"
+                value={editForm.numberPlate || ''}
+                onChange={(e) => setEditForm((p) => ({ ...p, numberPlate: cleanPlateInput(e.target.value) }))}
+                onBlur={(e) => setEditForm((p) => ({ ...p, numberPlate: tidyPlate(e.target.value) }))}
+                placeholder={PLATE_PLACEHOLDER}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="eb-route">Route ID</Label>
               <Input id="eb-route" value={editForm.routeId || ''} onChange={(e) => setEditForm((p) => ({ ...p, routeId: e.target.value }))} />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="eb-seats">Seat Capacity</Label>
-              <Input id="eb-seats" type="number" value={editForm.seatCapacity || ''} onChange={(e) => setEditForm((p) => ({ ...p, seatCapacity: e.target.value }))} />
-            </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="eb-bustype">Bus Type</Label>
-              <Select value={editForm.busType || 'AC'} onValueChange={(v) => setEditForm((p) => ({ ...p, busType: v }))}>
-                <SelectTrigger id="eb-bustype"><SelectValue /></SelectTrigger>
-                <SelectContent>{BUS_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              <Label htmlFor="eb-vehicletype">Vehicle Type</Label>
+              <Select value={editForm.vehicleType || 'AC'} onValueChange={(v) => setEditForm((p) => ({ ...p, vehicleType: v }))}>
+                <SelectTrigger id="eb-vehicletype"><SelectValue /></SelectTrigger>
+                <SelectContent>{VEHICLE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
@@ -457,8 +598,8 @@ export function ManagerBusesPage() {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}
-        title="Request Bus Deletion"
-        description={`Submit a deletion request for ${deleteTarget?.busName || 'this bus'}. A reason is required.`}
+        title="Request Vehicle Deletion"
+        description={`Submit a deletion request for ${deleteTarget?.vehicleName || 'this vehicle'}. A reason is required.`}
         confirmLabel="Submit Request"
         requireReason
         pending={deleteReqM.isPending}

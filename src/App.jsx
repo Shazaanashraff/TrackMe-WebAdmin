@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage';
 import { ForgotPasswordRequestPage } from './pages/ForgotPasswordRequestPage';
 import { ForgotPasswordVerifyPage } from './pages/ForgotPasswordVerifyPage';
 import { ForgotPasswordResetPage } from './pages/ForgotPasswordResetPage';
+import { ActivateAccountPage } from './pages/ActivateAccountPage';
 import { AppShell } from './layout/AppShell';
 import { AppLoading } from './layout/AppLoading';
 import { ErrorBoundary } from './layout/ErrorBoundary';
@@ -17,15 +18,13 @@ import { OperationsPage } from './pages/OperationsPage';
 import { RoutesPage } from './pages/RoutesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ManagerDashboardPage } from './pages/ManagerDashboardPage';
-import { ManagerBusesPage } from './pages/ManagerBusesPage';
-import { ManagerTrackingPage } from './pages/ManagerTrackingPage';
+import { ManagerVehiclesPage } from './pages/ManagerVehiclesPage';
 import { ManagerAccountsPage } from './pages/ManagerAccountsPage';
 import { ManagerSettingsPage } from './pages/ManagerSettingsPage';
-import { ManagerRouteApprovalsPage } from './pages/ManagerRouteApprovalsPage';
-import { ManagerPrivateRoutesPage } from './pages/ManagerPrivateRoutesPage';
 import { adminApi } from './api';
 import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
 import { useRefreshData } from './hooks/use-refresh';
+import { useTypographyScope } from './hooks/use-typography-scope';
 import { StyleGuidePage } from './pages/StyleGuidePage';
 
 function ProtectedShell({ auth, onLogout, triggerRefresh }) {
@@ -33,6 +32,9 @@ function ProtectedShell({ auth, onLogout, triggerRefresh }) {
   const userRole = auth?.user?.role;
   const isSuperAdmin = userRole === 'super-admin';
   const isManager = userRole === 'admin';
+
+  // Above the early return below, because a hook may not be called conditionally.
+  useTypographyScope(isManager);
 
   if (!authToken || (!isSuperAdmin && !isManager)) {
     return <Navigate to="/login" replace />;
@@ -59,11 +61,8 @@ function ProtectedShell({ auth, onLogout, triggerRefresh }) {
     <Routes>
       <Route element={shell}>
         <Route path="/manager/dashboard" element={<ManagerDashboardPage />} />
-        <Route path="/manager/buses" element={<ManagerBusesPage />} />
-        <Route path="/manager/tracking" element={<ManagerTrackingPage />} />
+        <Route path="/manager/vehicles" element={<ManagerVehiclesPage />} />
         <Route path="/manager/accounts" element={<ManagerAccountsPage />} />
-        <Route path="/manager/route-approvals" element={<ManagerRouteApprovalsPage />} />
-        <Route path="/manager/private-routes" element={<ManagerPrivateRoutesPage />} />
         <Route path="/manager/settings" element={<ManagerSettingsPage />} />
         <Route path="*" element={<NotFoundPage role="admin" />} />
       </Route>
@@ -159,10 +158,18 @@ export default function App() {
           if (!cancelled) {
             setAuth(normalizedAuth);
           }
-        } catch {
-          clearStoredAuth();
-          if (!cancelled) {
-            setAuth(null);
+        } catch (err) {
+          // Only a genuine rejection means the session is dead. A network error,
+          // a timeout, or the backend restarting leaves `status` undefined — in
+          // that case keep the stored session (the access token is still valid)
+          // instead of logging the user out on every reload.
+          const rejectedByServer = err?.status === 401 || err?.status === 403;
+
+          if (rejectedByServer) {
+            clearStoredAuth();
+            if (!cancelled) {
+              setAuth(null);
+            }
           }
         }
       }
@@ -202,6 +209,7 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPasswordRequestPage />} />
           <Route path="/forgot-password/verify" element={<ForgotPasswordVerifyPage />} />
           <Route path="/forgot-password/reset" element={<ForgotPasswordResetPage />} />
+          <Route path="/activate" element={<ActivateAccountPage />} />
           <Route
             path="/*"
             element={

@@ -41,7 +41,7 @@ export function OfflineBanner() {
       className="fixed top-0 inset-x-0 z-[100] flex items-center justify-center gap-2 px-4 py-2 bg-status-warning text-white text-sm font-medium"
     >
       <WifiOff className="h-4 w-4" aria-hidden />
-      No internet connection — data shown may be outdated
+      No internet connection. Data shown may be outdated.
     </div>
   );
 }

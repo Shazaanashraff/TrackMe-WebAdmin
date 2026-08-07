@@ -49,11 +49,11 @@ describe('ui primitives — token-driven, MUI-free', () => {
         <CardHeader>
           <CardTitle>Fleet</CardTitle>
         </CardHeader>
-        <CardContent>22 buses</CardContent>
+        <CardContent>22 vehicles</CardContent>
       </Card>
     );
     expect(screen.getByText('Fleet')).toBeInTheDocument();
-    expect(screen.getByText('22 buses')).toBeInTheDocument();
+    expect(screen.getByText('22 vehicles')).toBeInTheDocument();
   });
 
   it('Skeleton renders the pulse affordance', () => {
