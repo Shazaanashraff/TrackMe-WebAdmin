@@ -326,5 +326,21 @@ export const adminApi = {
   revertDriverEnrollmentKey: (driverId) =>
     request(`/api/manager/drivers/${driverId}/enrollment-key/revert`, {
       method: 'POST'
+    }),
+
+  // Passengers who redeemed a private driver's key wait here for a decision.
+  getEnrollmentRequests: (status = 'PENDING') =>
+    request(`/api/manager/enrollment-requests?status=${encodeURIComponent(status)}`),
+
+  getEnrollmentRequestCount: () => request('/api/manager/enrollment-requests/count'),
+
+  approveEnrollmentRequest: (id) =>
+    request(`/api/manager/enrollment-requests/${id}/approve`, {
+      method: 'POST'
+    }),
+
+  rejectEnrollmentRequest: (id) =>
+    request(`/api/manager/enrollment-requests/${id}/reject`, {
+      method: 'POST'
     })
 };

@@ -40,4 +40,9 @@ export const qk = {
     list: () => ['drivers', 'list'],
     enrollmentKey: (driverId) => ['drivers', driverId, 'enrollment-key'],
   },
+  enrollmentRequests: {
+    all: () => ['enrollment-requests'],
+    list: (status = 'PENDING') => ['enrollment-requests', 'list', status],
+    count: () => ['enrollment-requests', 'count'],
+  },
 };

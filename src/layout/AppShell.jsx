@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Activity, Route as RouteIcon, Settings,
-  Bus as VehicleIcon, UserCog, LogOut,
+  Bus as VehicleIcon, UserCog, LogOut, Inbox,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
+import { useEnrollmentRequestCount } from '@/hooks/use-enrollment-requests';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,17 +28,22 @@ export const MANAGER_NAV = [
   { label: 'Overview', path: '/manager/dashboard', icon: LayoutDashboard },
   { label: 'Vehicles', path: '/manager/vehicles', icon: VehicleIcon },
   { label: 'Drivers', path: '/manager/accounts', icon: UserCog },
+  { label: 'Requests', path: '/manager/requests', icon: Inbox },
   { label: 'Settings', path: '/manager/settings', icon: Settings },
 ];
 
-function NavItem({ item, active, collapsed, onNavigate }) {
+function NavItem({ item, active, collapsed, onNavigate, badge = 0 }) {
   const Icon = item.icon;
+  const hasBadge = badge > 0;
+  // Collapsed leaves no room for a number, so the count becomes a dot on the
+  // icon and the tooltip carries the detail.
+  const label = hasBadge ? `${item.label} (${badge} pending)` : item.label;
 
   const link = (
     <Link
       to={item.path}
       onClick={onNavigate}
-      aria-label={collapsed ? item.label : undefined}
+      aria-label={collapsed || hasBadge ? label : undefined}
       aria-current={active ? 'page' : undefined}
       className={cn(
         'relative flex items-center gap-2.5 rounded-lg py-2 text-sm font-medium transition-colors',
@@ -48,8 +54,24 @@ function NavItem({ item, active, collapsed, onNavigate }) {
         active && collapsed && 'bg-primary/10 text-primary',
       )}
     >
-      <Icon className="h-5 w-5 shrink-0" />
+      <span className="relative shrink-0">
+        <Icon className="h-5 w-5" />
+        {hasBadge && collapsed && (
+          <span
+            aria-hidden="true"
+            className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary ring-2 ring-surface"
+          />
+        )}
+      </span>
       {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+      {!collapsed && hasBadge && (
+        <span
+          aria-hidden="true"
+          className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-xs font-semibold leading-none text-primary-foreground"
+        >
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </Link>
   );
 
@@ -57,7 +79,7 @@ function NavItem({ item, active, collapsed, onNavigate }) {
     return (
       <Tooltip>
         <TooltipTrigger asChild>{link}</TooltipTrigger>
-        <TooltipContent side="right">{item.label}</TooltipContent>
+        <TooltipContent side="right">{label}</TooltipContent>
       </Tooltip>
     );
   }
@@ -65,7 +87,7 @@ function NavItem({ item, active, collapsed, onNavigate }) {
   return link;
 }
 
-function SidebarNav({ navItems, location, collapsed, onLogout, onNavigate }) {
+function SidebarNav({ navItems, location, collapsed, onLogout, onNavigate, badges = {} }) {
   return (
     <>
       <nav aria-label="Main navigation" className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
@@ -76,6 +98,7 @@ function SidebarNav({ navItems, location, collapsed, onLogout, onNavigate }) {
             active={location.pathname.startsWith(item.path)}
             collapsed={collapsed}
             onNavigate={onNavigate}
+            badge={badges[item.path] || 0}
           />
         ))}
       </nav>
@@ -127,6 +150,11 @@ export function AppShell({ user, onLogout, onRefresh }) {
   const navItems = isSuperAdmin ? SUPER_ADMIN_NAV : MANAGER_NAV;
   const wordmark = isSuperAdmin ? 'TRACKME ADMIN' : 'TRACKME MGR';
 
+  // Pending enrolment requests waiting on this manager. Super-admins own no
+  // drivers, so the call is skipped for them entirely.
+  const { data: pendingEnrollments = 0 } = useEnrollmentRequestCount({ enabled: !isSuperAdmin });
+  const navBadges = { '/manager/requests': pendingEnrollments };
+
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
       const next = !prev;
@@ -174,6 +202,7 @@ export function AppShell({ user, onLogout, onRefresh }) {
             collapsed={collapsed}
             onLogout={onLogout}
             onNavigate={undefined}
+            badges={navBadges}
           />
         </aside>
 
@@ -195,6 +224,7 @@ export function AppShell({ user, onLogout, onRefresh }) {
                 collapsed={false}
                 onLogout={() => { setMobileOpen(false); onLogout(); }}
                 onNavigate={() => setMobileOpen(false)}
+                badges={navBadges}
               />
             </SheetContent>
           )}

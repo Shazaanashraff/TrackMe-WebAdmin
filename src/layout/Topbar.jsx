@@ -30,6 +30,7 @@ const ROUTE_LABELS = {
   '/manager/dashboard': 'Overview',
   '/manager/vehicles': 'Vehicles',
   '/manager/accounts': 'Drivers',
+  '/manager/requests': 'Enrollment requests',
   '/manager/settings': 'Settings',
 };
 

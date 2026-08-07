@@ -20,6 +20,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { ManagerDashboardPage } from './pages/ManagerDashboardPage';
 import { ManagerVehiclesPage } from './pages/ManagerVehiclesPage';
 import { ManagerAccountsPage } from './pages/ManagerAccountsPage';
+import { ManagerRequestsPage } from './pages/ManagerRequestsPage';
 import { ManagerSettingsPage } from './pages/ManagerSettingsPage';
 import { adminApi } from './api';
 import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
@@ -63,6 +64,7 @@ function ProtectedShell({ auth, onLogout, triggerRefresh }) {
         <Route path="/manager/dashboard" element={<ManagerDashboardPage />} />
         <Route path="/manager/vehicles" element={<ManagerVehiclesPage />} />
         <Route path="/manager/accounts" element={<ManagerAccountsPage />} />
+        <Route path="/manager/requests" element={<ManagerRequestsPage />} />
         <Route path="/manager/settings" element={<ManagerSettingsPage />} />
         <Route path="*" element={<NotFoundPage role="admin" />} />
       </Route>
