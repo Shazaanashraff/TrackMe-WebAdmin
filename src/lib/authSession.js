@@ -65,6 +65,8 @@ const decodeBase64Url = (input) => {
     return window.atob(padded);
   }
 
+  // Node/SSR fallback for when window.atob is unavailable (e.g. under Vitest).
+  // eslint-disable-next-line no-undef
   return Buffer.from(padded, 'base64').toString('utf8');
 };
 
