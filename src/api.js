@@ -1,6 +1,17 @@
-import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
+import { clearStoredAuth, readStoredAuth, writeStoredAuth, isJwtExpired } from './lib/authSession';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// Endpoints that either issue tokens themselves or are reachable without one —
+// a refresh attempt here would be pointless or recursive.
+const REFRESH_EXEMPT_PATHS = [
+  '/api/auth/login',
+  '/api/auth/refresh-token',
+  '/api/auth/logout',
+  '/api/auth/forgot-password/request-otp',
+  '/api/auth/forgot-password/verify-otp',
+  '/api/auth/forgot-password/reset'
+];
 
 const handleUnauthorized = (message) => {
   const normalized = String(message || '').toLowerCase();
@@ -67,8 +78,29 @@ const getSharedRefresh = () => {
 };
 
 const request = async (path, options = {}) => {
-  const cachedAuth = readStoredAuth();
-  const token = cachedAuth?.token || cachedAuth?.accessToken || null;
+  let cachedAuth = readStoredAuth();
+  let token = cachedAuth?.token || cachedAuth?.accessToken || null;
+
+  // Proactively refresh an already-expired token before firing the request,
+  // instead of only reacting to the 401 it would otherwise guarantee. Every
+  // session used to eat at least one failed request + silent retry right at
+  // the expiry boundary; for a non-idempotent request landing on that boundary,
+  // that was a real risk of a failed submission the user had to notice and retry.
+  if (
+    token &&
+    cachedAuth?.refreshToken &&
+    options.retryAfterRefresh !== false &&
+    !REFRESH_EXEMPT_PATHS.includes(path) &&
+    isJwtExpired(token)
+  ) {
+    try {
+      cachedAuth = await getSharedRefresh();
+      token = cachedAuth?.token || cachedAuth?.accessToken || token;
+    } catch {
+      // Fall through with the stale token — the request below will get a real
+      // 401 and go through the existing reactive refresh/handleUnauthorized path.
+    }
+  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
@@ -92,14 +124,7 @@ const request = async (path, options = {}) => {
       isRetryableAuthFailure &&
       options.retryAfterRefresh !== false &&
       cachedAuth?.refreshToken &&
-      ![
-        '/api/auth/login',
-        '/api/auth/refresh-token',
-        '/api/auth/logout',
-        '/api/auth/forgot-password/request-otp',
-        '/api/auth/forgot-password/verify-otp',
-        '/api/auth/forgot-password/reset'
-      ].includes(path);
+      !REFRESH_EXEMPT_PATHS.includes(path);
 
     if (shouldRetryAfterRefresh) {
       try {
