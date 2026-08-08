@@ -3,6 +3,7 @@ import { Alert, Box, Button, TextField } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../api';
 import { AuthCard, ACCENT, ACCENT_HOVER, authFieldSx, authErrorAlertSx } from '../components/auth/AuthCard';
+import { saveForgotPasswordState } from '../lib/forgotPasswordSession';
 
 export function ForgotPasswordRequestPage() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export function ForgotPasswordRequestPage() {
 
     try {
       await adminApi.requestPasswordResetOtp(email);
+      saveForgotPasswordState({ email });
       navigate('/forgot-password/verify', { state: { email } });
     } catch (requestError) {
       setError(requestError.message || 'Unable to request recovery code');

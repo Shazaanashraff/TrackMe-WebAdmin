@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -24,6 +24,8 @@ function renderPage(initialState = { email: 'manager@trackme.com' }) {
 }
 
 describe('ForgotPasswordVerifyPage', () => {
+  beforeEach(() => { sessionStorage.clear(); });
+
   it('renders the code field with a numeric input affordance (issue #20)', () => {
     renderPage();
     const codeField = screen.getByLabelText(/recovery code/i);
@@ -52,6 +54,28 @@ describe('ForgotPasswordVerifyPage', () => {
 
     expect(adminApi.verifyPasswordResetOtp).toHaveBeenCalledWith('manager@trackme.com', '123456');
     expect(await screen.findByText('Reset password page')).toBeInTheDocument();
+  });
+
+  it('recovers the email from sessionStorage after a refresh loses router state (issue #55)', () => {
+    sessionStorage.setItem('forgot-password-flow', JSON.stringify({ email: 'manager@trackme.com' }));
+    renderPage({});
+
+    expect(screen.getByLabelText(/email/i)).toHaveValue('manager@trackme.com');
+  });
+
+  it('persists the resetToken to sessionStorage on a successful verify, alongside the email', async () => {
+    adminApi.verifyPasswordResetOtp.mockResolvedValueOnce({ resetToken: 'reset-tok-1' });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText(/recovery code/i), '123456');
+    await user.click(screen.getByRole('button', { name: /verify code/i }));
+
+    await screen.findByText('Reset password page');
+    expect(JSON.parse(sessionStorage.getItem('forgot-password-flow'))).toEqual({
+      email: 'manager@trackme.com',
+      resetToken: 'reset-tok-1',
+    });
   });
 
   it('shows the server error message on failure', async () => {

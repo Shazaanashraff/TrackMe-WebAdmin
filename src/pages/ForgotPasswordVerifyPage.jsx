@@ -3,6 +3,7 @@ import { Alert, Box, Button, TextField, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { adminApi } from '../api';
 import { AuthCard, ACCENT, ACCENT_HOVER, authFieldSx, authErrorAlertSx } from '../components/auth/AuthCard';
+import { readForgotPasswordState, saveForgotPasswordState } from '../lib/forgotPasswordSession';
 
 // Client-side pacing only, well under the backend's 10-minute/3-attempt cap
 // (authRoutes.js) — this just stops an impatient double-click, not abuse.
@@ -11,7 +12,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
 export function ForgotPasswordVerifyPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const initialEmail = location.state?.email || '';
+  const initialEmail = location.state?.email || readForgotPasswordState()?.email || '';
   const [email, setEmail] = useState(initialEmail);
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,7 @@ export function ForgotPasswordVerifyPage() {
 
     try {
       const response = await adminApi.verifyPasswordResetOtp(email, otp);
+      saveForgotPasswordState({ email, resetToken: response.resetToken });
       navigate('/forgot-password/reset', {
         state: {
           email,
