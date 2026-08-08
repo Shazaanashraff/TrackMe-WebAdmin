@@ -40,13 +40,24 @@ describe('api.js request error handling', () => {
   });
 });
 
-function seedStoredAuth() {
+function seedStoredAuth(token = 'access-token-1') {
   localStorage.setItem('admin-auth', JSON.stringify({
-    token: 'access-token-1',
-    accessToken: 'access-token-1',
+    token,
+    accessToken: token,
     refreshToken: 'refresh-token-1',
     rememberMe: true,
   }));
+}
+
+function base64UrlEncode(obj) {
+  const base64 = btoa(JSON.stringify(obj));
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function makeJwt(expSecondsFromNow) {
+  const header = base64UrlEncode({ alg: 'none', typ: 'JWT' });
+  const payload = base64UrlEncode({ exp: Math.floor(Date.now() / 1000) + expSecondsFromNow });
+  return `${header}.${payload}.sig`;
 }
 
 describe('api.js token-refresh retry gating (issue #47)', () => {
@@ -131,5 +142,68 @@ describe('api.js single-flight token refresh (issue #53)', () => {
 
     const refreshCalls = fetchMock.mock.calls.filter(([url]) => url.includes('/api/auth/refresh-token'));
     expect(refreshCalls).toHaveLength(1);
+  });
+});
+
+describe('api.js proactive token refresh (issue #54)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('refreshes an already-expired token before firing the request, instead of only reacting to a 401', async () => {
+    const expiredToken = makeJwt(-60);
+    seedStoredAuth(expiredToken);
+
+    const fetchMock = vi.fn((url) => {
+      if (url.includes('/api/auth/refresh-token')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ token: 'fresh-access-token', accessToken: 'fresh-access-token', refreshToken: 'refresh-token-1' }),
+        });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ data: { totalManagers: 1 } }) });
+    });
+    globalThis.fetch = fetchMock;
+
+    await adminApi.getSuperAdminDashboard();
+
+    // Exactly a refresh call followed by the real request — no failed 401 attempt first.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [refreshCall, realCall] = fetchMock.mock.calls;
+    expect(refreshCall[0]).toContain('/api/auth/refresh-token');
+    expect(realCall[0]).toContain('/api/super-admin/dashboard');
+    expect(realCall[1].headers.Authorization).toBe('Bearer fresh-access-token');
+  });
+
+  it('does not refresh a token that is not yet expired', async () => {
+    seedStoredAuth(makeJwt(60 * 15));
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: { totalManagers: 1 } }),
+    });
+    globalThis.fetch = fetchMock;
+
+    await adminApi.getSuperAdminDashboard();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not attempt a proactive refresh on a refresh-exempt path (e.g. login)', async () => {
+    seedStoredAuth(makeJwt(-60));
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ token: 'ignored', user: { role: 'admin' } }),
+    });
+    globalThis.fetch = fetchMock;
+
+    await adminApi.login('manager@trackme.com', 'secret');
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
