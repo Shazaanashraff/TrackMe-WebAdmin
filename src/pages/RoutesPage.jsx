@@ -17,6 +17,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useSystemRoutes, useCreateSystemRoute } from '@/hooks/use-system-routes';
+import { useManagers } from '@/hooks/use-managers';
 import { SERVICE_TYPES } from '@/lib/serviceTypes';
 
 const UNASSIGNED = '__unassigned__';
@@ -32,8 +33,6 @@ const PROVINCES = [
   { name: 'Eastern', slug: 'eastern' },
   { name: 'Northern', slug: 'northern' },
 ];
-
-const managerEmail = (slug) => `${slug}.manager@trackme.com`;
 
 const EMPTY_FORM = {
   routeId: '',
@@ -103,6 +102,10 @@ const routeColumns = [
 export function RoutesPage() {
   const routesQ = useSystemRoutes();
   const createM = useCreateSystemRoute();
+  // getManagers doesn't support a serviceType filter server-side, so fetch the
+  // full page (well under the backend's 100 cap — one manager per province) and
+  // filter PUBLIC managers by province client-side.
+  const managersQ = useManagers({ limit: 100 });
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState(null);
@@ -110,6 +113,17 @@ export function RoutesPage() {
   const [selectedProvince, setSelectedProvince] = useState(null);
 
   const routes = routesQ.data?.data || [];
+  const managers = managersQ.data?.data || [];
+
+  const managerEmailByProvince = useMemo(() => {
+    const map = {};
+    for (const manager of managers) {
+      if (manager.serviceType === 'PUBLIC' && manager.province) {
+        map[manager.province] = manager.email;
+      }
+    }
+    return map;
+  }, [managers]);
 
   const { countsByProvince, unassignedCount } = useMemo(() => {
     const counts = {};
@@ -337,7 +351,7 @@ export function RoutesPage() {
                 {selectedProvince === UNASSIGNED ? 'Unassigned Routes' : `${selectedProvince} Province`}
               </CardTitle>
               {selectedProvince !== UNASSIGNED && (
-                <CardDescription>{managerEmail(PROVINCES.find((p) => p.name === selectedProvince)?.slug || '')}</CardDescription>
+                <CardDescription>{managerEmailByProvince[selectedProvince] || 'No manager assigned'}</CardDescription>
               )}
             </div>
             <div className="flex items-center gap-3">
@@ -378,7 +392,7 @@ export function RoutesPage() {
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-foreground text-sm">{province.name} Province</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{managerEmail(province.slug)}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{managerEmailByProvince[province.name] || 'No manager assigned'}</p>
                       </div>
                       <Badge variant={count > 0 ? 'default' : 'secondary'}>{count} routes</Badge>
                       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
