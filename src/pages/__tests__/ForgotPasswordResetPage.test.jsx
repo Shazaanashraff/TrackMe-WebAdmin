@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -23,6 +23,8 @@ function renderPage(initialState = { email: 'manager@trackme.com', resetToken: '
 }
 
 describe('ForgotPasswordResetPage', () => {
+  beforeEach(() => { sessionStorage.clear(); });
+
   it('renders both password fields masked by default with a reveal toggle (issue #7)', () => {
     renderPage();
 
@@ -116,5 +118,39 @@ describe('ForgotPasswordResetPage', () => {
     await user.click(screen.getByRole('button', { name: /reset password/i }));
 
     expect(await screen.findByText('Reset token expired')).toBeInTheDocument();
+  });
+
+  it('recovers email and resetToken from sessionStorage after a refresh loses router state (issue #55)', () => {
+    sessionStorage.setItem('forgot-password-flow', JSON.stringify({
+      email: 'manager@trackme.com',
+      resetToken: 'reset-tok-1',
+    }));
+    renderPage({});
+
+    expect(screen.queryByText(/start the recovery flow again/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toHaveValue('manager@trackme.com');
+  });
+
+  it('still shows the restart warning when neither router state nor sessionStorage has a resetToken', () => {
+    renderPage({});
+
+    expect(screen.getByText(/start the recovery flow again/i)).toBeInTheDocument();
+  });
+
+  it('clears the persisted flow state once the password is successfully reset', async () => {
+    sessionStorage.setItem('forgot-password-flow', JSON.stringify({
+      email: 'manager@trackme.com',
+      resetToken: 'reset-tok-1',
+    }));
+    adminApi.resetPasswordWithToken.mockResolvedValueOnce({});
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText(/^new password$/i), 'Password123!');
+    await user.type(screen.getByLabelText(/^confirm password$/i), 'Password123!');
+    await user.click(screen.getByRole('button', { name: /reset password/i }));
+
+    await screen.findByText('Login page');
+    expect(sessionStorage.getItem('forgot-password-flow')).toBeNull();
   });
 });

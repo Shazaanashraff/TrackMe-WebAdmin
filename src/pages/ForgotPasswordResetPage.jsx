@@ -5,12 +5,14 @@ import { adminApi } from '../api';
 import { AuthCard, ACCENT, ACCENT_HOVER, authFieldSx, authErrorAlertSx, authWarningAlertSx } from '../components/auth/AuthCard';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/shared/password-input';
+import { readForgotPasswordState, clearForgotPasswordState } from '../lib/forgotPasswordSession';
 
 export function ForgotPasswordResetPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const initialEmail = location.state?.email || '';
-  const initialResetToken = location.state?.resetToken || '';
+  const storedFlowState = readForgotPasswordState();
+  const initialEmail = location.state?.email || storedFlowState?.email || '';
+  const initialResetToken = location.state?.resetToken || storedFlowState?.resetToken || '';
   const [email, setEmail] = useState(initialEmail);
   const [resetToken] = useState(initialResetToken);
   const [password, setPassword] = useState('');
@@ -47,6 +49,7 @@ export function ForgotPasswordResetPage() {
 
     try {
       await adminApi.resetPasswordWithToken(email, resetToken, password);
+      clearForgotPasswordState();
       navigate('/login', {
         replace: true,
         state: { passwordResetSuccess: true }
