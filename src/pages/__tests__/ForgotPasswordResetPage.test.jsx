@@ -60,6 +60,35 @@ describe('ForgotPasswordResetPage', () => {
     expect(adminApi.resetPasswordWithToken).not.toHaveBeenCalled();
   });
 
+  it('shows a live mismatch message on blur, before ever submitting (issue #71)', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText(/^new password$/i), 'Password123!');
+    await user.type(screen.getByLabelText(/^confirm password$/i), 'Different123!');
+    expect(screen.queryByText('Passwords do not match')).not.toBeInTheDocument();
+
+    await user.tab();
+
+    expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
+    expect(adminApi.resetPasswordWithToken).not.toHaveBeenCalled();
+  });
+
+  it('clears the live mismatch message once the confirm field matches', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText(/^new password$/i), 'Password123!');
+    const confirmField = screen.getByLabelText(/^confirm password$/i);
+    await user.type(confirmField, 'Different123!');
+    await user.tab();
+    expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
+
+    await user.clear(confirmField);
+    await user.type(confirmField, 'Password123!');
+    expect(screen.queryByText('Passwords do not match')).not.toBeInTheDocument();
+  });
+
   it('submits the new password and navigates to login on success', async () => {
     adminApi.resetPasswordWithToken.mockResolvedValueOnce({});
     const user = userEvent.setup();

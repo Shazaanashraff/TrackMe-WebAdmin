@@ -15,8 +15,11 @@ export function ForgotPasswordResetPage() {
   const [resetToken] = useState(initialResetToken);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmTouched, setConfirmTouched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const mismatch = confirmTouched && confirmPassword.length > 0 && password !== confirmPassword;
 
   if (!email || !resetToken) {
     return (
@@ -35,7 +38,7 @@ export function ForgotPasswordResetPage() {
     event.preventDefault();
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setConfirmTouched(true);
       return;
     }
 
@@ -90,7 +93,12 @@ export function ForgotPasswordResetPage() {
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
+            onBlur={() => setConfirmTouched(true)}
+            aria-invalid={mismatch}
           />
+          {mismatch ? (
+            <p className="text-[#F7C1C1] text-sm">Passwords do not match</p>
+          ) : null}
         </Box>
 
         {error ? <Alert severity="error" sx={authErrorAlertSx}>{error}</Alert> : null}

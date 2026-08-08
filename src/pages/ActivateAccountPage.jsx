@@ -20,8 +20,11 @@ export function ActivateAccountPage() {
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmTouched, setConfirmTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const mismatch = confirmTouched && confirmPassword.length > 0 && password !== confirmPassword;
 
   useEffect(() => {
     let cancelled = false;
@@ -78,7 +81,7 @@ export function ActivateAccountPage() {
     event.preventDefault();
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setConfirmTouched(true);
       return;
     }
 
@@ -128,6 +131,9 @@ export function ActivateAccountPage() {
           fullWidth
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
+          onBlur={() => setConfirmTouched(true)}
+          error={mismatch}
+          helperText={mismatch ? 'Passwords do not match' : ' '}
           sx={authFieldSx}
         />
 
