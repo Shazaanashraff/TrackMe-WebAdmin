@@ -554,8 +554,26 @@ export function ManagerVehiclesPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="eb-route">Route ID</Label>
-              <Input id="eb-route" value={editForm.routeId || ''} onChange={(e) => setEditForm((p) => ({ ...p, routeId: e.target.value }))} />
+              <Label htmlFor="eb-route">Route</Label>
+              <Select value={editForm.routeId || ''} onValueChange={(v) => setEditForm((p) => ({ ...p, routeId: v }))}>
+                <SelectTrigger id="eb-route">
+                  <SelectValue placeholder="Select a route" />
+                </SelectTrigger>
+                <SelectContent>
+                  {editForm.routeId && !routes.some((r) => r.routeId === editForm.routeId) ? (
+                    <SelectItem value={editForm.routeId}>{editForm.routeId} (current)</SelectItem>
+                  ) : null}
+                  {routes.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">No routes found</div>
+                  ) : (
+                    routes.map((r) => (
+                      <SelectItem key={r.routeId} value={r.routeId}>
+                        {r.routeName || r.routeId} ({r.routeId}){r.visibility === 'PRIVATE' ? ' · Custom' : ''}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">

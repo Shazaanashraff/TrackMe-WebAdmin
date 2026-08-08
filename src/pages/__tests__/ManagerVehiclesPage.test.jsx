@@ -27,7 +27,17 @@ import {
   useRequestDeleteVehicle,
 } from '@/hooks/use-vehicles';
 
-const ROUTES = [{ routeId: 'PUB-1', routeName: 'Public Route', visibility: 'PUBLIC' }];
+const ROUTES = [
+  { routeId: 'PUB-1', routeName: 'Public Route', visibility: 'PUBLIC' },
+  { routeId: 'PUB-2', routeName: 'Second Route', visibility: 'PUBLIC' },
+];
+
+// The Radix select trigger is a button; picking an option is click-trigger,
+// click-option.
+async function chooseOption(user, triggerName, optionName) {
+  await user.click(screen.getByRole('combobox', { name: triggerName }));
+  await user.click(await screen.findByRole('option', { name: optionName }));
+}
 
 const VEHICLES = [
   {
@@ -294,6 +304,37 @@ describe('ManagerVehiclesPage edit and delete', () => {
     expect(dialog).toBeInTheDocument();
     expect(screen.getByLabelText(/vehicle name/i)).toHaveValue('Shuttle 1');
     expect(screen.getByLabelText(/number plate/i)).toHaveValue('AB-1234');
+  });
+
+  it('uses the same validated route dropdown as the create form, not free text (issue #13)', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+    await screen.findByRole('dialog');
+
+    expect(screen.queryByLabelText(/route id/i)).toBeNull();
+    expect(screen.getByRole('combobox', { name: /route/i })).toHaveTextContent('Public Route');
+  });
+
+  it('sends the newly-picked route when the edit dropdown selection changes', async () => {
+    const updateMut = makeMutation();
+    const { user } = setup({ updateMut });
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+    await screen.findByRole('dialog');
+
+    await chooseOption(user, /route/i, /second route/i);
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => expect(updateMut.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(updateMut.mutateAsync.mock.calls[0][0].payload.routeId).toBe('PUB-2');
+  });
+
+  it('keeps a route not in the assignable list visible as the current selection instead of blanking it', async () => {
+    const orphanVehicle = { ...VEHICLES[0], routeId: 'ORPHAN-ROUTE' };
+    const { user } = setup({ vehicles: [orphanVehicle] });
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+    await screen.findByRole('dialog');
+
+    expect(screen.getByRole('combobox', { name: /route/i })).toHaveTextContent('ORPHAN-ROUTE');
   });
 
   it('calls updateVehicle mutation on save', async () => {
