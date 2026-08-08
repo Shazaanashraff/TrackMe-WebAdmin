@@ -89,4 +89,10 @@ describe('ManagerDashboardPage', () => {
     setup();
     expect(screen.getAllByText('2').length).toBeGreaterThan(0);
   });
+
+  it('clamps utilization to 100% when active vehicles exceeds total (issue #59)', () => {
+    setup({ data: { ...DASHBOARD, fleet: { totalVehicles: 5, activeVehicles: 7 } } });
+    expect(screen.getByText(/100%/)).toBeInTheDocument();
+    expect(screen.queryByText(/140%/)).toBeNull();
+  });
 });
