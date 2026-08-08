@@ -11,7 +11,7 @@ const handleUnauthorized = (message) => {
   clearStoredAuth();
 
   if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-    window.location.assign('/login');
+    window.location.assign('/login?reason=session_expired');
   }
 };
 

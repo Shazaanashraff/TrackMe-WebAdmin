@@ -5,6 +5,7 @@
 |---|---|---|---|---|
 | adminApi.login() | unit (fetch) | src/__tests__/api.test.js | token normalization, error parse | auth response changes |
 | api.js request() error surfacing (issue #42) | unit (fetch) | src/__tests__/api.test.js | a multi-field backend validation failure joins every message (not just the first) into the thrown error; the full list is also exposed as `error.fieldErrors`; falls back to `data.message` when there are no field errors | the backend's error-response shape changes |
+| LoginShell session-expiry messaging (issue #46) | RTL (Vitest) | src/__tests__/App.test.jsx | `/login` shows no message by default; `/login?reason=session_expired` (set by `api.js`'s `handleUnauthorized` redirect) shows "Your session expired — please sign in again." | the redirect's query param or the message copy changes |
 | auth storage helpers | unit | src/helpers/auth/__tests__/authStorage.test.js | read/write/clear | storage keys change |
 | App role gating | RTL | src/__tests__/App.test.jsx | redirect rules | role logic changes |
 | ForgotPasswordVerifyPage (recovery code) | RTL (Vitest) | src/pages/__tests__/ForgotPasswordVerifyPage.test.jsx | numeric-keyboard affordance (`inputMode`/`pattern`) + "digits only" helper text (issue #20), non-digit stripping capped at 6, successful verify navigates to reset with `resetToken`, server error shown inline | recovery-code field or verify flow changes |
