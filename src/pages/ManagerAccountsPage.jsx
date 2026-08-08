@@ -445,13 +445,13 @@ export function ManagerAccountsPage() {
         // Privacy changes what the key does, so it is flagged on the key itself
         // rather than as a column of its own.
         const lock = driver.isPrivate ? (
-          <span
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+          <Badge
+            variant="warning"
             title="Private: redeeming this key needs your approval"
           >
             <Lock className="h-3 w-3" aria-hidden="true" />
             Approval
-          </span>
+          </Badge>
         ) : null;
 
         if (!key) {
