@@ -64,6 +64,27 @@ describe('ActivateAccountPage', () => {
     expect(screen.getByRole('button', { name: /^reset password$/i })).toBeInTheDocument();
   });
 
+  it('renders both password fields masked by default with an independent reveal toggle each (issue #72)', async () => {
+    adminApi.validateAccountSetup.mockResolvedValueOnce({
+      email: 'manager@trackme.com',
+      purpose: 'INVITE',
+    });
+    const user = userEvent.setup();
+    renderAt('/activate?token=good-token');
+
+    await screen.findByText('Activate your account');
+    const newPassword = screen.getByLabelText(/^new password$/i);
+    const confirmPassword = screen.getByLabelText(/^confirm password$/i);
+    expect(newPassword).toHaveAttribute('type', 'password');
+    expect(confirmPassword).toHaveAttribute('type', 'password');
+
+    const [showNew] = screen.getAllByRole('button', { name: /show password/i });
+    await user.click(showNew);
+
+    expect(newPassword).toHaveAttribute('type', 'text');
+    expect(confirmPassword).toHaveAttribute('type', 'password');
+  });
+
   it('submits the new password and redirects to /login on success', async () => {
     adminApi.validateAccountSetup.mockResolvedValueOnce({
       email: 'manager@trackme.com',
