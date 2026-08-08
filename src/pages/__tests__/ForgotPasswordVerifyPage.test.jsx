@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ForgotPasswordVerifyPage } from '../ForgotPasswordVerifyPage';
@@ -8,6 +8,7 @@ import { adminApi } from '../../api';
 vi.mock('../../api', () => ({
   adminApi: {
     verifyPasswordResetOtp: vi.fn(),
+    requestPasswordResetOtp: vi.fn(),
   },
 }));
 
@@ -62,5 +63,41 @@ describe('ForgotPasswordVerifyPage', () => {
     await user.click(screen.getByRole('button', { name: /verify code/i }));
 
     expect(await screen.findByText('Invalid or expired code')).toBeInTheDocument();
+  });
+
+  it('resends the code and starts a cooldown, disabling the resend button (issue #56)', async () => {
+    vi.useFakeTimers();
+    try {
+      adminApi.requestPasswordResetOtp.mockResolvedValueOnce({});
+      renderPage();
+
+      const resendButton = screen.getByRole('button', { name: /resend code/i });
+      expect(resendButton).not.toBeDisabled();
+
+      await act(async () => {
+        fireEvent.click(resendButton);
+      });
+
+      expect(adminApi.requestPasswordResetOtp).toHaveBeenCalledWith('manager@trackme.com');
+      expect(screen.getByText(/a new code has been sent/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /resend code \(30s\)/i })).toBeDisabled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      expect(screen.getByRole('button', { name: /resend code \(29s\)/i })).toBeDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows an error inline if resending the code fails', async () => {
+    adminApi.requestPasswordResetOtp.mockRejectedValueOnce(new Error('Too many requests'));
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /resend code/i }));
+
+    expect(await screen.findByText('Too many requests')).toBeInTheDocument();
   });
 });
