@@ -22,6 +22,7 @@
 | adminApi.createSystemRoute() | unit (fetch) | src/__tests__/api.test.js | POST payload | route fields change |
 | Routes page flow | RTL | src/__tests__/pages/RoutesPage.test.jsx | create + validation | stop validation changes |
 | SERVICE_TYPES shared constant (issue #19) | — (refactor, no behavior change) | covered by existing RoutesPage/ManagerVehiclesPage/OperationsPage suites | `src/lib/serviceTypes.js` is the single source imported by RoutesPage, ManagerVehiclesPage and OperationsPage instead of three hand-duplicated arrays | a new service type is added (add it once, in `src/lib/serviceTypes.js`) |
+| RoutesPage province manager email (issue #16) | RTL (Vitest) | src/pages/__tests__/RoutesPage.test.jsx | province list and drilled-in header show the PUBLIC manager's real `email` from `useManagers()` (matched by `province`), not a `slug.manager@trackme.com` guess; falls back to "No manager assigned" when no manager is provisioned for a province | manager-to-province matching or the `getManagers` response shape changes |
 | RoutesPage stop rows keyed by stable id (issue #17) | RTL (Vitest) | src/pages/__tests__/RoutesPage.test.jsx | a stop's typed values follow it (not its list position) after `moveStop()`; an invalid stop's `aria-invalid` highlight stays attached to that stop, not to whatever now occupies its old row | stop-list reordering or per-stop validation UI changes |
 
 ## Buses and Requests

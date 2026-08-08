@@ -8,13 +8,20 @@ vi.mock('@/hooks/use-system-routes', () => ({
   useSystemRoutes: vi.fn(),
   useCreateSystemRoute: vi.fn(),
 }));
+vi.mock('@/hooks/use-managers', () => ({
+  useManagers: vi.fn(),
+}));
 vi.mock('sonner', () => ({ toast: vi.fn() }));
 
 import { useSystemRoutes, useCreateSystemRoute } from '@/hooks/use-system-routes';
+import { useManagers } from '@/hooks/use-managers';
 
 const ROUTE_W = { _id: 'r1', routeId: 'RT-001', routeName: 'Colombo–Kandy', source: 'Colombo', destination: 'Kandy', serviceType: 'PUBLIC', stopsCount: 3, isActive: true, province: 'Western' };
 const ROUTE_C = { _id: 'r2', routeId: 'RT-002', routeName: 'Galle–Matara', source: 'Galle', destination: 'Matara', serviceType: 'PUBLIC', stopsCount: 0, isActive: true, province: 'Central' };
 const ROUTE_NONE = { _id: 'r3', routeId: 'RT-003', routeName: 'Orphan Route', source: 'A', destination: 'B', serviceType: 'PUBLIC', stopsCount: 0, isActive: false, province: '' };
+
+const MANAGER_W = { _id: 'm1', name: 'Western Province Manager', email: 'western.manager@trackme.com', serviceType: 'PUBLIC', province: 'Western' };
+const MANAGER_C = { _id: 'm2', name: 'Central Province Manager', email: 'central.manager@trackme.com', serviceType: 'PUBLIC', province: 'Central' };
 
 function makeMutation(overrides = {}) {
   return {
@@ -24,9 +31,10 @@ function makeMutation(overrides = {}) {
   };
 }
 
-function defaultHooks({ routes = [ROUTE_W, ROUTE_C], loading = false, error = null, createMut } = {}) {
+function defaultHooks({ routes = [ROUTE_W, ROUTE_C], loading = false, error = null, createMut, managers = [MANAGER_W, MANAGER_C] } = {}) {
   useSystemRoutes.mockReturnValue({ data: { data: routes }, isLoading: loading, error, refetch: vi.fn() });
   useCreateSystemRoute.mockReturnValue(createMut || makeMutation());
+  useManagers.mockReturnValue({ data: { data: managers }, isLoading: false, error: null });
 }
 
 function setup(opts = {}) {
@@ -78,6 +86,24 @@ describe('RoutesPage', () => {
   it('shows routes by province manager subtitle', () => {
     setup();
     expect(screen.getByText(/routes by province manager/i)).toBeInTheDocument();
+  });
+
+  it('shows each province manager\'s real registered email, not a guessed formula (issue #16)', () => {
+    setup();
+    expect(screen.getByText('western.manager@trackme.com')).toBeInTheDocument();
+    expect(screen.getByText('central.manager@trackme.com')).toBeInTheDocument();
+  });
+
+  it('falls back to a plain message when no manager is assigned to a province', () => {
+    setup({ managers: [MANAGER_W] });
+    expect(screen.getAllByText('No manager assigned').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/central\.manager@trackme\.com/i)).toBeNull();
+  });
+
+  it('shows the drilled-in province\'s real manager email in the header', async () => {
+    const { user } = setup();
+    await user.click(screen.getByText('Western Province').closest('button'));
+    expect(await screen.findByText('western.manager@trackme.com')).toBeInTheDocument();
   });
 
   it('shows unassigned section when routes have no province', () => {
