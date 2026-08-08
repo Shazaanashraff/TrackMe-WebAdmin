@@ -45,7 +45,7 @@ export function SettingsPage() {
       </Alert>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {PLANNED_SECTIONS.map((section, index) => (
+        {PLANNED_SECTIONS.map((section) => (
           <Card key={section.title}>
             <CardHeader>
               <CardTitle className="text-sm font-semibold">{section.title}</CardTitle>
