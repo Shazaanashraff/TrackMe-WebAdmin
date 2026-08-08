@@ -98,3 +98,38 @@ describe('api.js token-refresh retry gating (issue #47)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });
+
+describe('api.js single-flight token refresh (issue #53)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('shares one refresh call across concurrent 401s instead of each request refreshing independently', async () => {
+    seedStoredAuth();
+
+    const fetchMock = vi.fn((url, opts = {}) => {
+      if (url.includes('/api/auth/refresh-token')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({ token: 'access-token-2', accessToken: 'access-token-2', refreshToken: 'refresh-token-1' }),
+        });
+      }
+      if (opts.retryAfterRefresh === false) {
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({ data: 'ok' }) });
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 401,
+        json: async () => ({ message: 'Not authorized, token failed' }),
+      });
+    });
+    globalThis.fetch = fetchMock;
+
+    await Promise.all([adminApi.getSuperAdminDashboard(), adminApi.getManagers()]);
+
+    const refreshCalls = fetchMock.mock.calls.filter(([url]) => url.includes('/api/auth/refresh-token'));
+    expect(refreshCalls).toHaveLength(1);
+  });
+});
