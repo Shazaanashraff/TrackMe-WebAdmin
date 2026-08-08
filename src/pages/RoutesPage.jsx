@@ -360,7 +360,7 @@ export function RoutesPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <AsyncSection isLoading={routesQ.isLoading} error={routesQ.error} data={!routesQ.isLoading ? true : null} onRetry={routesQ.refetch} emptyTitle="No routes">
+            <AsyncSection isLoading={routesQ.isLoading} error={routesQ.error} data={visibleRoutes} isEmpty={false} onRetry={routesQ.refetch}>
               <DataTable
                 columns={routeColumns}
                 data={visibleRoutes}
@@ -379,7 +379,7 @@ export function RoutesPage() {
             <span className="text-sm text-muted-foreground tabular-nums">{routes.length} routes total</span>
           </CardHeader>
           <CardContent className="pt-0">
-            <AsyncSection isLoading={routesQ.isLoading} error={routesQ.error} data={!routesQ.isLoading ? true : null} onRetry={routesQ.refetch} emptyTitle="No routes">
+            <AsyncSection isLoading={routesQ.isLoading} error={routesQ.error} data={routes} isEmpty={false} onRetry={routesQ.refetch}>
               <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
                 {PROVINCES.map((province) => {
                   const count = countsByProvince[province.name] || 0;

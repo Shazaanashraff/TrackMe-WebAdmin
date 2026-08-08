@@ -118,6 +118,13 @@ describe('RoutesPage', () => {
     expect(screen.getByText('Western Province')).toBeInTheDocument();
   });
 
+  it('shows the DataTable\'s specific empty message for a province with zero routes, not a generic one (issue #73)', async () => {
+    const { user } = setup();
+    await user.click(screen.getByText('Southern Province').closest('button'));
+    expect(await screen.findByText('No routes for this province')).toBeInTheDocument();
+    expect(screen.queryByText('No routes')).not.toBeInTheDocument();
+  });
+
   it('returns to province list when "All provinces" is clicked', async () => {
     const { user } = setup();
     await user.click(screen.getByText('Western Province').closest('button'));
