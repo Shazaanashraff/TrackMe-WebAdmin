@@ -50,6 +50,22 @@ const refreshStoredAuth = async () => {
   }, storedAuth.rememberMe);
 };
 
+// Several queries can fire on mount and all hit a 401 around the same time on
+// token expiry. Without this, each would independently POST its own
+// refresh-token request — wasteful, and a real risk of a spurious logout if the
+// backend ever rotates refresh tokens (single-use), since only the first of the
+// concurrent calls would still hold a valid one.
+let refreshPromise = null;
+
+const getSharedRefresh = () => {
+  if (!refreshPromise) {
+    refreshPromise = refreshStoredAuth().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+};
+
 const request = async (path, options = {}) => {
   const cachedAuth = readStoredAuth();
   const token = cachedAuth?.token || cachedAuth?.accessToken || null;
@@ -87,7 +103,7 @@ const request = async (path, options = {}) => {
 
     if (shouldRetryAfterRefresh) {
       try {
-        await refreshStoredAuth();
+        await getSharedRefresh();
         return request(path, { ...options, retryAfterRefresh: false });
       } catch {
         handleUnauthorized(data.message);
