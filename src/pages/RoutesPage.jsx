@@ -47,6 +47,23 @@ const EMPTY_FORM = {
   stops: [],
 };
 
+// Stops keyed by their stable clientId (not array position), so a reorder never
+// misattaches an invalid-field highlight to the wrong row.
+function getInvalidStopIds(stops) {
+  const filledStops = stops.filter(
+    (s) => s.stopName.trim() || String(s.lat).trim() || String(s.lng).trim(),
+  );
+  return filledStops
+    .filter((s) => (
+      !s.stopName.trim()
+      || String(s.lat).trim() === ''
+      || String(s.lng).trim() === ''
+      || Number.isNaN(Number(s.lat))
+      || Number.isNaN(Number(s.lng))
+    ))
+    .map((s) => s.clientId);
+}
+
 function validateForm(form) {
   if (!form.routeId.trim()) return 'Route ID is required.';
   if (!form.routeName.trim()) return 'Route Name is required.';
@@ -69,6 +86,9 @@ function validateForm(form) {
   return null;
 }
 
+let nextStopClientId = 0;
+const makeEmptyStop = () => ({ clientId: `stop-${nextStopClientId++}`, stopName: '', lat: '', lng: '' });
+
 const routeColumns = [
   { id: 'routeId', header: 'Route ID', accessorKey: 'routeId' },
   { id: 'routeName', header: 'Route Name', accessorKey: 'routeName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
@@ -86,6 +106,7 @@ export function RoutesPage() {
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState(null);
+  const [invalidStopIds, setInvalidStopIds] = useState([]);
   const [selectedProvince, setSelectedProvince] = useState(null);
 
   const routes = routesQ.data?.data || [];
@@ -109,7 +130,7 @@ export function RoutesPage() {
 
   const setField = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
 
-  const addStop = () => setForm((p) => ({ ...p, stops: [...p.stops, { stopName: '', lat: '', lng: '' }] }));
+  const addStop = () => setForm((p) => ({ ...p, stops: [...p.stops, makeEmptyStop()] }));
   const removeStop = (i) => setForm((p) => ({ ...p, stops: p.stops.filter((_, idx) => idx !== i) }));
   const updateStop = (i, key, value) =>
     setForm((p) => ({ ...p, stops: p.stops.map((s, idx) => (idx === i ? { ...s, [key]: value } : s)) }));
@@ -125,8 +146,13 @@ export function RoutesPage() {
   const handleCreate = async (e) => {
     e.preventDefault();
     const err = validateForm(form);
-    if (err) { setFormError(err); return; }
+    if (err) {
+      setFormError(err);
+      setInvalidStopIds(getInvalidStopIds(form.stops));
+      return;
+    }
     setFormError(null);
+    setInvalidStopIds([]);
 
     const filledStops = form.stops
       .filter((s) => s.stopName.trim() || String(s.lat).trim() || String(s.lng).trim())
@@ -147,6 +173,7 @@ export function RoutesPage() {
       });
       toast('Route created successfully');
       setForm(EMPTY_FORM);
+      setInvalidStopIds([]);
     } catch (err) {
       setFormError(err?.message || 'Failed to create route');
     }
@@ -243,11 +270,14 @@ export function RoutesPage() {
                 <p className="text-sm text-muted-foreground">No stops added. Stops are optional.</p>
               ) : (
                 <div className="space-y-2">
-                  {form.stops.map((stop, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                  {form.stops.map((stop, i) => {
+                    const stopInvalid = invalidStopIds.includes(stop.clientId);
+                    return (
+                    <div key={stop.clientId} className="grid grid-cols-12 gap-2 items-center">
                       <div className="col-span-12 sm:col-span-5">
                         <Input
                           aria-label={`Stop ${i + 1} name`}
+                          aria-invalid={stopInvalid}
                           placeholder={`Stop ${i + 1} name`}
                           value={stop.stopName}
                           onChange={(e) => updateStop(i, 'stopName', e.target.value)}
@@ -256,6 +286,7 @@ export function RoutesPage() {
                       <div className="col-span-4 sm:col-span-2">
                         <Input
                           aria-label={`Stop ${i + 1} latitude`}
+                          aria-invalid={stopInvalid}
                           type="number"
                           placeholder="Lat"
                           value={stop.lat}
@@ -265,6 +296,7 @@ export function RoutesPage() {
                       <div className="col-span-4 sm:col-span-2">
                         <Input
                           aria-label={`Stop ${i + 1} longitude`}
+                          aria-invalid={stopInvalid}
                           type="number"
                           placeholder="Lng"
                           value={stop.lng}
@@ -283,7 +315,8 @@ export function RoutesPage() {
                         </Button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
