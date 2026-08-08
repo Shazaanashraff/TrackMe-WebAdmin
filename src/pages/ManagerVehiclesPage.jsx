@@ -18,6 +18,7 @@ import {
 import {
   cleanPhoneInput, isValidPhone, PHONE_FORMAT_MESSAGE, PHONE_PLACEHOLDER,
 } from '@/lib/phone-number';
+import { SERVICE_TYPES } from '@/lib/serviceTypes';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -33,7 +34,6 @@ import {
 } from '@/hooks/use-vehicles';
 import { useOrganizations } from '@/hooks/use-drivers';
 
-const SERVICE_TYPES = ['PUBLIC', 'SCHOOL', 'UNIVERSITY', 'OFFICE'];
 // Public service has no organization, so it is not offered here.
 const ORG_CATEGORIES = [
   { value: 'SCHOOL', label: 'School' },

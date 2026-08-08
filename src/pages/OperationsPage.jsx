@@ -26,8 +26,7 @@ import {
   useReviewVehicleRequest,
   useUpdateVehicle,
 } from '@/hooks/use-operations';
-
-const SERVICE_TYPES = ['PUBLIC', 'SCHOOL', 'UNIVERSITY', 'OFFICE'];
+import { SERVICE_TYPES } from '@/lib/serviceTypes';
 
 export function OperationsPage() {
   const [searchParams] = useSearchParams();
