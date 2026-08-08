@@ -99,6 +99,25 @@ describe('ActivateAccountPage', () => {
     expect(adminApi.completeAccountSetup).not.toHaveBeenCalled();
   });
 
+  it('shows a live mismatch message on blur, before ever submitting (issue #71)', async () => {
+    adminApi.validateAccountSetup.mockResolvedValueOnce({
+      email: 'manager@trackme.com',
+      purpose: 'INVITE',
+    });
+    const user = userEvent.setup();
+    renderAt('/activate?token=good-token');
+
+    await screen.findByText('Activate your account');
+    await user.type(screen.getByLabelText(/new password/i), 'passwordone');
+    await user.type(screen.getByLabelText(/confirm password/i), 'passwordtwo');
+    expect(screen.queryByText('Passwords do not match')).not.toBeInTheDocument();
+
+    await user.tab();
+
+    expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
+    expect(adminApi.completeAccountSetup).not.toHaveBeenCalled();
+  });
+
   it('shows the server error message when completeAccountSetup fails', async () => {
     adminApi.validateAccountSetup.mockResolvedValueOnce({
       email: 'manager@trackme.com',
