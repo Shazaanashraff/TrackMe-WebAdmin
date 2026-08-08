@@ -15,6 +15,7 @@
 | ForgotPasswordVerifyPage resend + cooldown (issue #56) | RTL (Vitest, fake timers) | src/pages/__tests__/ForgotPasswordVerifyPage.test.jsx | "Resend code" calls `requestPasswordResetOtp` and shows a confirmation; the button disables and shows a live countdown for 30s afterward; a failed resend shows the error inline | the cooldown length or resend contract changes |
 | ForgotPasswordResetPage password fields (issue #7) | RTL (Vitest) | src/pages/__tests__/ForgotPasswordResetPage.test.jsx | both password fields use the shared `password-input.jsx` reveal toggle, masked by default, each toggles independently; mismatch blocks submit; success navigates to `/login`; server error shown inline | the reset page's password UI changes |
 | ForgotPasswordResetPage / ActivateAccountPage live mismatch validation (issue #71) | RTL (Vitest) | src/pages/__tests__/ForgotPasswordResetPage.test.jsx, src/pages/__tests__/ActivateAccountPage.test.jsx | a password/confirm mismatch shows inline on blur, before any submit attempt; the message clears once the confirm field is edited to match | either page's mismatch-detection or the message copy changes |
+| ActivateAccountPage password fields (issue #72) | RTL (Vitest) | src/pages/__tests__/ActivateAccountPage.test.jsx | both password fields now use the shared `password-input.jsx` reveal toggle (matching Login/ForgotPasswordResetPage), masked by default, each toggles independently | the activate/reset page's password UI changes |
 
 ## Managers
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |

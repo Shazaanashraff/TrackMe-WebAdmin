@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Alert, Box, Button, TextField } from '@mui/material';
+import { Alert, Box, Button } from '@mui/material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { adminApi } from '../api';
-import { AuthCard, ACCENT, ACCENT_HOVER, authFieldSx, authErrorAlertSx, authWarningAlertSx } from '../components/auth/AuthCard';
+import { AuthCard, ACCENT, ACCENT_HOVER, authErrorAlertSx, authWarningAlertSx } from '../components/auth/AuthCard';
+import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/shared/password-input';
 
 // Consumes the invite/reset link a manager gets emailed (see backend
 // buildSetupLink: `${ADMIN_APP_URL}/activate?token=...`). Validates the token to
@@ -113,29 +115,31 @@ export function ActivateAccountPage() {
       }
     >
       <Box component="form" onSubmit={handleSubmit} sx={{ display: 'grid', gap: 1.75 }}>
-        <TextField
-          size="small"
-          label="New password"
-          type="password"
-          required
-          fullWidth
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          sx={authFieldSx}
-        />
-        <TextField
-          size="small"
-          label="Confirm password"
-          type="password"
-          required
-          fullWidth
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-          onBlur={() => setConfirmTouched(true)}
-          error={mismatch}
-          helperText={mismatch ? 'Passwords do not match' : ' '}
-          sx={authFieldSx}
-        />
+        <Box sx={{ display: 'grid', gap: 0.5 }}>
+          <Label htmlFor="activate-password" className="text-[#F7F5EF]">New password</Label>
+          <PasswordInput
+            id="activate-password"
+            required
+            autoComplete="new-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </Box>
+        <Box sx={{ display: 'grid', gap: 0.5 }}>
+          <Label htmlFor="activate-confirm-password" className="text-[#F7F5EF]">Confirm password</Label>
+          <PasswordInput
+            id="activate-confirm-password"
+            required
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            onBlur={() => setConfirmTouched(true)}
+            aria-invalid={mismatch}
+          />
+          {mismatch ? (
+            <p className="text-[#F7C1C1] text-sm">Passwords do not match</p>
+          ) : null}
+        </Box>
 
         {error ? <Alert severity="error" sx={authErrorAlertSx}>{error}</Alert> : null}
 
