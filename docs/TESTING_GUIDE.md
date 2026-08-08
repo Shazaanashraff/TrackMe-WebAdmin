@@ -7,6 +7,7 @@
 | auth storage helpers | unit | src/helpers/auth/__tests__/authStorage.test.js | read/write/clear | storage keys change |
 | App role gating | RTL | src/__tests__/App.test.jsx | redirect rules | role logic changes |
 | ForgotPasswordVerifyPage (recovery code) | RTL (Vitest) | src/pages/__tests__/ForgotPasswordVerifyPage.test.jsx | numeric-keyboard affordance (`inputMode`/`pattern`) + "digits only" helper text (issue #20), non-digit stripping capped at 6, successful verify navigates to reset with `resetToken`, server error shown inline | recovery-code field or verify flow changes |
+| ForgotPasswordResetPage password fields (issue #7) | RTL (Vitest) | src/pages/__tests__/ForgotPasswordResetPage.test.jsx | both password fields use the shared `password-input.jsx` reveal toggle, masked by default, each toggles independently; mismatch blocks submit; success navigates to `/login`; server error shown inline | the reset page's password UI changes |
 
 ## Managers
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
