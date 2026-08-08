@@ -4,6 +4,7 @@
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
 |---|---|---|---|---|
 | adminApi.login() | unit (fetch) | src/__tests__/api.test.js | token normalization, error parse | auth response changes |
+| api.js request() error surfacing (issue #42) | unit (fetch) | src/__tests__/api.test.js | a multi-field backend validation failure joins every message (not just the first) into the thrown error; the full list is also exposed as `error.fieldErrors`; falls back to `data.message` when there are no field errors | the backend's error-response shape changes |
 | auth storage helpers | unit | src/helpers/auth/__tests__/authStorage.test.js | read/write/clear | storage keys change |
 | App role gating | RTL | src/__tests__/App.test.jsx | redirect rules | role logic changes |
 | ForgotPasswordVerifyPage (recovery code) | RTL (Vitest) | src/pages/__tests__/ForgotPasswordVerifyPage.test.jsx | numeric-keyboard affordance (`inputMode`/`pattern`) + "digits only" helper text (issue #20), non-digit stripping capped at 6, successful verify navigates to reset with `resetToken`, server error shown inline | recovery-code field or verify flow changes |

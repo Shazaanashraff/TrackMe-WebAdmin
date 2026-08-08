@@ -96,7 +96,10 @@ const request = async (path, options = {}) => {
     const fieldErrors = Array.isArray(data.errors)
       ? data.errors.map((item) => item.message || item.msg).filter(Boolean)
       : [];
-    const error = new Error(fieldErrors[0] || data.message || 'Request failed');
+    const error = new Error(fieldErrors.length ? fieldErrors.join('; ') : (data.message || 'Request failed'));
+    // Every message the backend flagged, not just the first — callers that want
+    // to render a list (instead of the joined summary above) can use this.
+    error.fieldErrors = fieldErrors;
     // Callers need to tell "the server rejected this" apart from "the request
     // never got through" — a network failure must not be treated as a rejection.
     error.status = response.status;
