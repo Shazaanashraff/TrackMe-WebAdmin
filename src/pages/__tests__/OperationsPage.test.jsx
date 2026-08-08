@@ -158,14 +158,23 @@ describe('OperationsPage', () => {
     expect(screen.getByText('Offline')).toBeInTheDocument();
   });
 
-  it('auto-selects first manager and shows detail on load', async () => {
+  it('does not auto-select a manager on load — shows the prompt state until clicked (issue #9)', () => {
     setup({ detail: DETAIL_A });
+    expect(screen.getByText('No manager selected')).toBeInTheDocument();
+    expect(screen.queryByText('Vehicle Alpha')).not.toBeInTheDocument();
+    expect(useOperationManagerDetail).toHaveBeenCalledWith('');
+  });
+
+  it('fetches and shows detail once the viewer clicks a manager row', async () => {
+    const { user } = setup({ detail: DETAIL_A });
+    await user.click(screen.getByText('Alice Smith'));
+    expect(useOperationManagerDetail).toHaveBeenLastCalledWith('m1');
     await waitFor(() => {
       expect(screen.getByText('Vehicle Alpha')).toBeInTheDocument();
     });
   });
 
-  it('preselects the manager passed via ?managerId= instead of the first row', () => {
+  it('preselects the manager passed via ?managerId= instead of requiring a click', () => {
     setup({ detail: DETAIL_A }, { initialEntries: ['/operations?managerId=m2'] });
     expect(useOperationManagerDetail).toHaveBeenCalledWith('m2');
   });
@@ -241,6 +250,7 @@ describe('OperationsPage', () => {
 
   it('opens vehicle edit FormDialog when Edit is clicked', async () => {
     const { user } = setup({ detail: DETAIL_A });
+    await user.click(screen.getByText('Alice Smith'));
     await waitFor(() => { expect(screen.getByText('Vehicle Alpha')).toBeInTheDocument(); });
     await user.click(screen.getByRole('button', { name: /edit/i }));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
@@ -250,6 +260,7 @@ describe('OperationsPage', () => {
   it('calls updateVehicle mutation when vehicle edit dialog is saved', async () => {
     const updateVehicleMut = makeMutation();
     const { user } = setup({ detail: DETAIL_A, updateVehicleMut });
+    await user.click(screen.getByText('Alice Smith'));
     await waitFor(() => { expect(screen.getByText('Vehicle Alpha')).toBeInTheDocument(); });
     await user.click(screen.getByRole('button', { name: /edit/i }));
     await screen.findByRole('dialog');

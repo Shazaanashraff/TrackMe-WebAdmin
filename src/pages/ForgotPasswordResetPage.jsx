@@ -3,18 +3,25 @@ import { Alert, Box, Button, TextField } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { adminApi } from '../api';
 import { AuthCard, ACCENT, ACCENT_HOVER, authFieldSx, authErrorAlertSx, authWarningAlertSx } from '../components/auth/AuthCard';
+import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/shared/password-input';
+import { readForgotPasswordState, clearForgotPasswordState } from '../lib/forgotPasswordSession';
 
 export function ForgotPasswordResetPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const initialEmail = location.state?.email || '';
-  const initialResetToken = location.state?.resetToken || '';
+  const storedFlowState = readForgotPasswordState();
+  const initialEmail = location.state?.email || storedFlowState?.email || '';
+  const initialResetToken = location.state?.resetToken || storedFlowState?.resetToken || '';
   const [email, setEmail] = useState(initialEmail);
   const [resetToken] = useState(initialResetToken);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmTouched, setConfirmTouched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const mismatch = confirmTouched && confirmPassword.length > 0 && password !== confirmPassword;
 
   if (!email || !resetToken) {
     return (
@@ -33,7 +40,7 @@ export function ForgotPasswordResetPage() {
     event.preventDefault();
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setConfirmTouched(true);
       return;
     }
 
@@ -42,6 +49,7 @@ export function ForgotPasswordResetPage() {
 
     try {
       await adminApi.resetPasswordWithToken(email, resetToken, password);
+      clearForgotPasswordState();
       navigate('/login', {
         replace: true,
         state: { passwordResetSuccess: true }
@@ -70,26 +78,31 @@ export function ForgotPasswordResetPage() {
           onChange={(event) => setEmail(event.target.value)}
           sx={authFieldSx}
         />
-        <TextField
-          size="small"
-          label="New password"
-          type="password"
-          required
-          fullWidth
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          sx={authFieldSx}
-        />
-        <TextField
-          size="small"
-          label="Confirm password"
-          type="password"
-          required
-          fullWidth
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-          sx={authFieldSx}
-        />
+        <Box sx={{ display: 'grid', gap: 0.5 }}>
+          <Label htmlFor="reset-password" className="text-[#F7F5EF]">New password</Label>
+          <PasswordInput
+            id="reset-password"
+            required
+            autoComplete="new-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </Box>
+        <Box sx={{ display: 'grid', gap: 0.5 }}>
+          <Label htmlFor="reset-confirm-password" className="text-[#F7F5EF]">Confirm password</Label>
+          <PasswordInput
+            id="reset-confirm-password"
+            required
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            onBlur={() => setConfirmTouched(true)}
+            aria-invalid={mismatch}
+          />
+          {mismatch ? (
+            <p className="text-[#F7C1C1] text-sm">Passwords do not match</p>
+          ) : null}
+        </Box>
 
         {error ? <Alert severity="error" sx={authErrorAlertSx}>{error}</Alert> : null}
 

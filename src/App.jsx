@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LoginPage } from './pages/LoginPage';
 import { ForgotPasswordRequestPage } from './pages/ForgotPasswordRequestPage';
@@ -72,10 +72,15 @@ function ProtectedShell({ auth, onLogout, triggerRefresh }) {
   );
 }
 
-function LoginShell({ auth, setAuth }) {
+const SESSION_EXPIRED_MESSAGE = 'Your session expired — please sign in again.';
+
+export function LoginShell({ auth, setAuth }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() => (
+    searchParams.get('reason') === 'session_expired' ? SESSION_EXPIRED_MESSAGE : ''
+  ));
 
   const handleLogin = async ({ email, password, rememberMe }) => {
     setLoading(true);

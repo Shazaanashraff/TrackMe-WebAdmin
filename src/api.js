@@ -1,6 +1,17 @@
-import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
+import { clearStoredAuth, readStoredAuth, writeStoredAuth, isJwtExpired } from './lib/authSession';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// Endpoints that either issue tokens themselves or are reachable without one —
+// a refresh attempt here would be pointless or recursive.
+const REFRESH_EXEMPT_PATHS = [
+  '/api/auth/login',
+  '/api/auth/refresh-token',
+  '/api/auth/logout',
+  '/api/auth/forgot-password/request-otp',
+  '/api/auth/forgot-password/verify-otp',
+  '/api/auth/forgot-password/reset'
+];
 
 const handleUnauthorized = (message) => {
   const normalized = String(message || '').toLowerCase();
@@ -11,7 +22,7 @@ const handleUnauthorized = (message) => {
   clearStoredAuth();
 
   if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-    window.location.assign('/login');
+    window.location.assign('/login?reason=session_expired');
   }
 };
 
@@ -50,9 +61,46 @@ const refreshStoredAuth = async () => {
   }, storedAuth.rememberMe);
 };
 
+// Several queries can fire on mount and all hit a 401 around the same time on
+// token expiry. Without this, each would independently POST its own
+// refresh-token request — wasteful, and a real risk of a spurious logout if the
+// backend ever rotates refresh tokens (single-use), since only the first of the
+// concurrent calls would still hold a valid one.
+let refreshPromise = null;
+
+const getSharedRefresh = () => {
+  if (!refreshPromise) {
+    refreshPromise = refreshStoredAuth().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+};
+
 const request = async (path, options = {}) => {
-  const cachedAuth = readStoredAuth();
-  const token = cachedAuth?.token || cachedAuth?.accessToken || null;
+  let cachedAuth = readStoredAuth();
+  let token = cachedAuth?.token || cachedAuth?.accessToken || null;
+
+  // Proactively refresh an already-expired token before firing the request,
+  // instead of only reacting to the 401 it would otherwise guarantee. Every
+  // session used to eat at least one failed request + silent retry right at
+  // the expiry boundary; for a non-idempotent request landing on that boundary,
+  // that was a real risk of a failed submission the user had to notice and retry.
+  if (
+    token &&
+    cachedAuth?.refreshToken &&
+    options.retryAfterRefresh !== false &&
+    !REFRESH_EXEMPT_PATHS.includes(path) &&
+    isJwtExpired(token)
+  ) {
+    try {
+      cachedAuth = await getSharedRefresh();
+      token = cachedAuth?.token || cachedAuth?.accessToken || token;
+    } catch {
+      // Fall through with the stale token — the request below will get a real
+      // 401 and go through the existing reactive refresh/handleUnauthorized path.
+    }
+  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
@@ -67,22 +115,20 @@ const request = async (path, options = {}) => {
 
   if (!response.ok) {
     const isAuthFailure = response.status === 401 || response.status === 403;
+    // Only a 401 means the token itself is the problem — the backend uses 403 for
+    // role/deactivation checks (see middleware/auth.js) that a fresh token can
+    // never fix, so retrying those would just repeat the same rejection after a
+    // wasted round trip.
+    const isRetryableAuthFailure = response.status === 401;
     const shouldRetryAfterRefresh =
-      isAuthFailure &&
+      isRetryableAuthFailure &&
       options.retryAfterRefresh !== false &&
       cachedAuth?.refreshToken &&
-      ![
-        '/api/auth/login',
-        '/api/auth/refresh-token',
-        '/api/auth/logout',
-        '/api/auth/forgot-password/request-otp',
-        '/api/auth/forgot-password/verify-otp',
-        '/api/auth/forgot-password/reset'
-      ].includes(path);
+      !REFRESH_EXEMPT_PATHS.includes(path);
 
     if (shouldRetryAfterRefresh) {
       try {
-        await refreshStoredAuth();
+        await getSharedRefresh();
         return request(path, { ...options, retryAfterRefresh: false });
       } catch {
         handleUnauthorized(data.message);
@@ -96,7 +142,10 @@ const request = async (path, options = {}) => {
     const fieldErrors = Array.isArray(data.errors)
       ? data.errors.map((item) => item.message || item.msg).filter(Boolean)
       : [];
-    const error = new Error(fieldErrors[0] || data.message || 'Request failed');
+    const error = new Error(fieldErrors.length ? fieldErrors.join('; ') : (data.message || 'Request failed'));
+    // Every message the backend flagged, not just the first — callers that want
+    // to render a list (instead of the joined summary above) can use this.
+    error.fieldErrors = fieldErrors;
     // Callers need to tell "the server rejected this" apart from "the request
     // never got through" — a network failure must not be treated as a rejection.
     error.status = response.status;

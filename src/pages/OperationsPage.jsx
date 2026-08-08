@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Activity, Bus as VehicleIcon, CheckCircle, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
@@ -26,8 +26,7 @@ import {
   useReviewVehicleRequest,
   useUpdateVehicle,
 } from '@/hooks/use-operations';
-
-const SERVICE_TYPES = ['PUBLIC', 'SCHOOL', 'UNIVERSITY', 'OFFICE'];
+import { SERVICE_TYPES } from '@/lib/serviceTypes';
 
 export function OperationsPage() {
   const [searchParams] = useSearchParams();
@@ -45,14 +44,6 @@ export function OperationsPage() {
   const auditQ = useAuditLogs({ limit: 60, managerId: auditManagerId });
   const reviewM = useReviewVehicleRequest();
   const updateVehicleM = useUpdateVehicle();
-
-  // Auto-select first manager once overview loads
-  useEffect(() => {
-    const rows = overviewQ.data?.data || [];
-    if (rows.length > 0 && !selectedManagerId) {
-      setSelectedManagerId(rows[0].managerId);
-    }
-  }, [overviewQ.data, selectedManagerId]);
 
   const overview = overviewQ.data?.data || [];
   const requests = requestsQ.data?.data || [];
