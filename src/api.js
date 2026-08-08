@@ -67,8 +67,13 @@ const request = async (path, options = {}) => {
 
   if (!response.ok) {
     const isAuthFailure = response.status === 401 || response.status === 403;
+    // Only a 401 means the token itself is the problem — the backend uses 403 for
+    // role/deactivation checks (see middleware/auth.js) that a fresh token can
+    // never fix, so retrying those would just repeat the same rejection after a
+    // wasted round trip.
+    const isRetryableAuthFailure = response.status === 401;
     const shouldRetryAfterRefresh =
-      isAuthFailure &&
+      isRetryableAuthFailure &&
       options.retryAfterRefresh !== false &&
       cachedAuth?.refreshToken &&
       ![
