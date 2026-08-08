@@ -199,4 +199,49 @@ describe('RoutesPage', () => {
     await user.click(screen.getByRole('button', { name: /remove stop/i }));
     expect(screen.queryByLabelText(/stop 1 name/i)).toBeNull();
   });
+
+  it('keeps a stop\'s own values attached to it (not its position) after reordering (issue #17)', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: /add stop/i }));
+    await user.click(screen.getByRole('button', { name: /add stop/i }));
+    await user.type(screen.getByLabelText(/stop 1 name/i), 'First');
+    await user.type(screen.getByLabelText(/stop 2 name/i), 'Second');
+
+    // Move the second row up so "Second" is now row 1.
+    const moveUpButtons = screen.getAllByRole('button', { name: /move up/i });
+    await user.click(moveUpButtons[1]);
+
+    expect(screen.getByLabelText(/stop 1 name/i)).toHaveValue('Second');
+    expect(screen.getByLabelText(/stop 2 name/i)).toHaveValue('First');
+  });
+
+  it('keeps a validation error attached to the invalid stop after reordering, not to whatever is now in its old position (issue #17)', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: /add stop/i }));
+    await user.click(screen.getByRole('button', { name: /add stop/i }));
+    // Stop 1 ("Bad") is left partially filled (no lat/lng) — invalid.
+    // Stop 2 ("Good") is fully filled — valid.
+    await user.type(screen.getByLabelText(/stop 1 name/i), 'Bad');
+    await user.type(screen.getByLabelText(/stop 2 name/i), 'Good');
+    await user.type(screen.getByLabelText(/stop 2 latitude/i), '6.9');
+    await user.type(screen.getByLabelText(/stop 2 longitude/i), '79.8');
+
+    await user.type(screen.getByLabelText(/route id/i), 'RT-X');
+    await user.type(screen.getByLabelText(/route name/i), 'Test Route');
+    await user.type(screen.getByLabelText(/source/i), 'A');
+    await user.type(screen.getByLabelText(/destination/i), 'B');
+    await user.type(screen.getByLabelText(/distance/i), '10');
+    await user.type(screen.getByLabelText(/fare/i), '100');
+    await user.click(screen.getByRole('button', { name: /create route/i }));
+    await screen.findByText(/each stop must have/i);
+
+    // Reorder so "Bad" (still invalid) is now in row 2's position.
+    const moveDownButtons = screen.getAllByRole('button', { name: /move down/i });
+    await user.click(moveDownButtons[0]);
+
+    expect(screen.getByLabelText(/stop 1 name/i)).toHaveValue('Good');
+    expect(screen.getByLabelText(/stop 2 name/i)).toHaveValue('Bad');
+    expect(screen.getByLabelText(/stop 1 name/i)).toHaveAttribute('aria-invalid', 'false');
+    expect(screen.getByLabelText(/stop 2 name/i)).toHaveAttribute('aria-invalid', 'true');
+  });
 });
