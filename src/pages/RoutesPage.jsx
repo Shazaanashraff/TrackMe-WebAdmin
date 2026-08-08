@@ -17,8 +17,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useSystemRoutes, useCreateSystemRoute } from '@/hooks/use-system-routes';
+import { SERVICE_TYPES } from '@/lib/serviceTypes';
 
-const SERVICE_TYPES = ['PUBLIC', 'SCHOOL', 'UNIVERSITY', 'OFFICE'];
 const UNASSIGNED = '__unassigned__';
 
 const PROVINCES = [
