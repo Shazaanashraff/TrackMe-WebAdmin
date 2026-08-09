@@ -109,7 +109,7 @@ describe('api.js request layer', () => {
 
     // handleUnauthorized should have cleared the now-dead session.
     expect(readStoredAuth()).toBeNull();
-    expect(locationAssignSpy).toHaveBeenCalledWith('/login');
+    expect(locationAssignSpy).toHaveBeenCalledWith('/login?reason=session_expired');
   });
 
   it('a 403 that is not an auth-token message (permission-denied) does not clear the session', async () => {

@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 
 // cmdk v1 uses ResizeObserver and scrollIntoView — not in JSDOM
-global.ResizeObserver = class ResizeObserver {
+globalThis.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}

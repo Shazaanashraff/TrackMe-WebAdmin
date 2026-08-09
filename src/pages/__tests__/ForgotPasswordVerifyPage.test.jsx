@@ -45,6 +45,15 @@ describe('ForgotPasswordVerifyPage', () => {
     expect(adminApi.verifyPasswordResetOtp).toHaveBeenCalledWith('manager@trackme.com', '123456');
   });
 
+  it('renders the code field with a numeric input affordance (issue #20)', () => {
+    renderAt('/forgot-password/verify', { email: 'manager@trackme.com' });
+
+    const codeField = screen.getByLabelText(/recovery code/i);
+    expect(codeField).toHaveAttribute('inputmode', 'numeric');
+    expect(codeField).toHaveAttribute('pattern', '[0-9]*');
+    expect(screen.getByText('6 digits, numbers only')).toBeInTheDocument();
+  });
+
   it('strips non-digit characters and caps the code at 6 digits', async () => {
     const user = userEvent.setup();
     renderAt('/forgot-password/verify', { email: 'manager@trackme.com' });

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { ColorModeProvider } from '../theme/ColorMode';
-import App from '../App';
+import App, { LoginShell } from '../App';
 import { adminApi } from '../api';
 import { writeStoredAuth, readStoredAuth } from '../lib/authSession';
 
@@ -244,5 +244,25 @@ describe('App — logout', () => {
 
     expect(await screen.findByRole('button', { name: /sign in/i })).toBeInTheDocument();
     expect(readStoredAuth()).toBeNull();
+  });
+});
+
+describe('LoginShell — session-expired message via query param (issue #46)', () => {
+  function renderLoginShell(initialEntry = '/login') {
+    return render(
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <LoginShell auth={null} setAuth={vi.fn()} />
+      </MemoryRouter>
+    );
+  }
+
+  it('shows no message by default', () => {
+    renderLoginShell('/login');
+    expect(screen.queryByText(/session expired/i)).not.toBeInTheDocument();
+  });
+
+  it('shows a session-expired message when redirected here after a dead session', () => {
+    renderLoginShell('/login?reason=session_expired');
+    expect(screen.getByText(/your session expired.*please sign in again/i)).toBeInTheDocument();
   });
 });

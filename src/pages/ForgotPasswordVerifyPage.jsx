@@ -56,7 +56,8 @@ export function ForgotPasswordVerifyPage() {
           type="text"
           required
           fullWidth
-          inputProps={{ inputMode: 'numeric', maxLength: 6 }}
+          helperText="6 digits, numbers only"
+          inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', maxLength: 6 }}
           value={otp}
           onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
           sx={authFieldSx}

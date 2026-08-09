@@ -40,6 +40,31 @@ describe('ForgotPasswordResetPage', () => {
     expect(screen.getByLabelText(/^Confirm password/)).toBeInTheDocument();
   });
 
+  it('renders both password fields masked by default with a reveal toggle (issue #7)', () => {
+    renderAt('/forgot-password/reset', { email: 'manager@trackme.com', resetToken: 'reset-tok-1' });
+
+    const newPassword = screen.getByLabelText(/^new password$/i);
+    const confirmPassword = screen.getByLabelText(/^confirm password$/i);
+    expect(newPassword).toHaveAttribute('type', 'password');
+    expect(confirmPassword).toHaveAttribute('type', 'password');
+
+    expect(screen.getAllByRole('button', { name: /show password/i })).toHaveLength(2);
+  });
+
+  it('reveals a password field independently when its toggle is clicked', async () => {
+    const user = userEvent.setup();
+    renderAt('/forgot-password/reset', { email: 'manager@trackme.com', resetToken: 'reset-tok-1' });
+
+    const newPassword = screen.getByLabelText(/^new password$/i);
+    const confirmPassword = screen.getByLabelText(/^confirm password$/i);
+    const [showNew] = screen.getAllByRole('button', { name: /show password/i });
+
+    await user.click(showNew);
+
+    expect(newPassword).toHaveAttribute('type', 'text');
+    expect(confirmPassword).toHaveAttribute('type', 'password');
+  });
+
   it('rejects a mismatched confirm-password without calling the API', async () => {
     const user = userEvent.setup();
     renderAt('/forgot-password/reset', { email: 'manager@trackme.com', resetToken: 'reset-tok-1' });

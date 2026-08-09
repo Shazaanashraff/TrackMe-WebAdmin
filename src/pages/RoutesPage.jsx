@@ -17,8 +17,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useSystemRoutes, useCreateSystemRoute } from '@/hooks/use-system-routes';
+import { useManagers } from '@/hooks/use-managers';
+import { SERVICE_TYPES } from '@/lib/serviceTypes';
 
-const SERVICE_TYPES = ['PUBLIC', 'SCHOOL', 'UNIVERSITY', 'OFFICE'];
 const UNASSIGNED = '__unassigned__';
 
 const PROVINCES = [
@@ -33,8 +34,6 @@ const PROVINCES = [
   { name: 'Northern', slug: 'northern' },
 ];
 
-const managerEmail = (slug) => `${slug}.manager@trackme.com`;
-
 const EMPTY_FORM = {
   routeId: '',
   routeName: '',
@@ -46,6 +45,23 @@ const EMPTY_FORM = {
   qrEnabled: false,
   stops: [],
 };
+
+// Stops keyed by their stable clientId (not array position), so a reorder never
+// misattaches an invalid-field highlight to the wrong row.
+function getInvalidStopIds(stops) {
+  const filledStops = stops.filter(
+    (s) => s.stopName.trim() || String(s.lat).trim() || String(s.lng).trim(),
+  );
+  return filledStops
+    .filter((s) => (
+      !s.stopName.trim()
+      || String(s.lat).trim() === ''
+      || String(s.lng).trim() === ''
+      || Number.isNaN(Number(s.lat))
+      || Number.isNaN(Number(s.lng))
+    ))
+    .map((s) => s.clientId);
+}
 
 function validateForm(form) {
   if (!form.routeId.trim()) return 'Route ID is required.';
@@ -69,6 +85,9 @@ function validateForm(form) {
   return null;
 }
 
+let nextStopClientId = 0;
+const makeEmptyStop = () => ({ clientId: `stop-${nextStopClientId++}`, stopName: '', lat: '', lng: '' });
+
 const routeColumns = [
   { id: 'routeId', header: 'Route ID', accessorKey: 'routeId' },
   { id: 'routeName', header: 'Route Name', accessorKey: 'routeName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
@@ -83,12 +102,28 @@ const routeColumns = [
 export function RoutesPage() {
   const routesQ = useSystemRoutes();
   const createM = useCreateSystemRoute();
+  // getManagers doesn't support a serviceType filter server-side, so fetch the
+  // full page (well under the backend's 100 cap — one manager per province) and
+  // filter PUBLIC managers by province client-side.
+  const managersQ = useManagers({ limit: 100 });
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState(null);
+  const [invalidStopIds, setInvalidStopIds] = useState([]);
   const [selectedProvince, setSelectedProvince] = useState(null);
 
   const routes = routesQ.data?.data || [];
+  const managers = managersQ.data?.data || [];
+
+  const managerEmailByProvince = useMemo(() => {
+    const map = {};
+    for (const manager of managers) {
+      if (manager.serviceType === 'PUBLIC' && manager.province) {
+        map[manager.province] = manager.email;
+      }
+    }
+    return map;
+  }, [managers]);
 
   const { countsByProvince, unassignedCount } = useMemo(() => {
     const counts = {};
@@ -109,7 +144,7 @@ export function RoutesPage() {
 
   const setField = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
 
-  const addStop = () => setForm((p) => ({ ...p, stops: [...p.stops, { stopName: '', lat: '', lng: '' }] }));
+  const addStop = () => setForm((p) => ({ ...p, stops: [...p.stops, makeEmptyStop()] }));
   const removeStop = (i) => setForm((p) => ({ ...p, stops: p.stops.filter((_, idx) => idx !== i) }));
   const updateStop = (i, key, value) =>
     setForm((p) => ({ ...p, stops: p.stops.map((s, idx) => (idx === i ? { ...s, [key]: value } : s)) }));
@@ -125,8 +160,13 @@ export function RoutesPage() {
   const handleCreate = async (e) => {
     e.preventDefault();
     const err = validateForm(form);
-    if (err) { setFormError(err); return; }
+    if (err) {
+      setFormError(err);
+      setInvalidStopIds(getInvalidStopIds(form.stops));
+      return;
+    }
     setFormError(null);
+    setInvalidStopIds([]);
 
     const filledStops = form.stops
       .filter((s) => s.stopName.trim() || String(s.lat).trim() || String(s.lng).trim())
@@ -147,6 +187,7 @@ export function RoutesPage() {
       });
       toast('Route created successfully');
       setForm(EMPTY_FORM);
+      setInvalidStopIds([]);
     } catch (err) {
       setFormError(err?.message || 'Failed to create route');
     }
@@ -243,11 +284,14 @@ export function RoutesPage() {
                 <p className="text-sm text-muted-foreground">No stops added. Stops are optional.</p>
               ) : (
                 <div className="space-y-2">
-                  {form.stops.map((stop, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                  {form.stops.map((stop, i) => {
+                    const stopInvalid = invalidStopIds.includes(stop.clientId);
+                    return (
+                    <div key={stop.clientId} className="grid grid-cols-12 gap-2 items-center">
                       <div className="col-span-12 sm:col-span-5">
                         <Input
                           aria-label={`Stop ${i + 1} name`}
+                          aria-invalid={stopInvalid}
                           placeholder={`Stop ${i + 1} name`}
                           value={stop.stopName}
                           onChange={(e) => updateStop(i, 'stopName', e.target.value)}
@@ -256,6 +300,7 @@ export function RoutesPage() {
                       <div className="col-span-4 sm:col-span-2">
                         <Input
                           aria-label={`Stop ${i + 1} latitude`}
+                          aria-invalid={stopInvalid}
                           type="number"
                           placeholder="Lat"
                           value={stop.lat}
@@ -265,6 +310,7 @@ export function RoutesPage() {
                       <div className="col-span-4 sm:col-span-2">
                         <Input
                           aria-label={`Stop ${i + 1} longitude`}
+                          aria-invalid={stopInvalid}
                           type="number"
                           placeholder="Lng"
                           value={stop.lng}
@@ -283,7 +329,8 @@ export function RoutesPage() {
                         </Button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -304,7 +351,7 @@ export function RoutesPage() {
                 {selectedProvince === UNASSIGNED ? 'Unassigned Routes' : `${selectedProvince} Province`}
               </CardTitle>
               {selectedProvince !== UNASSIGNED && (
-                <CardDescription>{managerEmail(PROVINCES.find((p) => p.name === selectedProvince)?.slug || '')}</CardDescription>
+                <CardDescription>{managerEmailByProvince[selectedProvince] || 'No manager assigned'}</CardDescription>
               )}
             </div>
             <div className="flex items-center gap-3">
@@ -345,7 +392,7 @@ export function RoutesPage() {
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-foreground text-sm">{province.name} Province</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{managerEmail(province.slug)}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{managerEmailByProvince[province.name] || 'No manager assigned'}</p>
                       </div>
                       <Badge variant={count > 0 ? 'default' : 'secondary'}>{count} routes</Badge>
                       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
