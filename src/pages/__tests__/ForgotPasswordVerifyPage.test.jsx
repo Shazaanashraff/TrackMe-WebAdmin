@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { ForgotPasswordVerifyPage } from '../ForgotPasswordVerifyPage';
@@ -7,46 +7,38 @@ import { adminApi } from '../../api';
 
 vi.mock('../../api', () => ({
   adminApi: {
-    verifyPasswordResetOtp: vi.fn()
-  }
+    verifyPasswordResetOtp: vi.fn(),
+    requestPasswordResetOtp: vi.fn(),
+  },
 }));
 
-function LocationProbe() {
+function ResetPageProbe() {
   const location = useLocation();
   return (
-    <pre data-testid="location-state">{JSON.stringify(location.state)}</pre>
+    <div>
+      Reset password page
+      <pre data-testid="location-state">{JSON.stringify(location.state)}</pre>
+    </div>
   );
 }
 
-function renderAt(path, state) {
+function renderPage(initialState = { email: 'manager@trackme.com' }) {
   return render(
-    <MemoryRouter initialEntries={[{ pathname: path, state }]}>
+    <MemoryRouter initialEntries={[{ pathname: '/forgot-password/verify', state: initialState }]}>
       <Routes>
         <Route path="/forgot-password/verify" element={<ForgotPasswordVerifyPage />} />
         <Route path="/forgot-password" element={<div>Request page</div>} />
-        <Route path="/forgot-password/reset" element={<LocationProbe />} />
+        <Route path="/forgot-password/reset" element={<ResetPageProbe />} />
       </Routes>
     </MemoryRouter>
   );
 }
 
 describe('ForgotPasswordVerifyPage', () => {
-  it('pre-fills the email from router state and submits email + otp', async () => {
-    adminApi.verifyPasswordResetOtp.mockResolvedValueOnce({ resetToken: 'reset-tok-1' });
-    const user = userEvent.setup();
-
-    renderAt('/forgot-password/verify', { email: 'manager@trackme.com' });
-
-    expect(screen.getByLabelText(/email/i)).toHaveValue('manager@trackme.com');
-
-    await user.type(screen.getByLabelText(/recovery code/i), '123456');
-    await user.click(screen.getByRole('button', { name: /verify code/i }));
-
-    expect(adminApi.verifyPasswordResetOtp).toHaveBeenCalledWith('manager@trackme.com', '123456');
-  });
+  beforeEach(() => { sessionStorage.clear(); });
 
   it('renders the code field with a numeric input affordance (issue #20)', () => {
-    renderAt('/forgot-password/verify', { email: 'manager@trackme.com' });
+    renderPage();
 
     const codeField = screen.getByLabelText(/recovery code/i);
     expect(codeField).toHaveAttribute('inputmode', 'numeric');
@@ -54,42 +46,68 @@ describe('ForgotPasswordVerifyPage', () => {
     expect(screen.getByText('6 digits, numbers only')).toBeInTheDocument();
   });
 
-  it('strips non-digit characters and caps the code at 6 digits', async () => {
+  it('strips non-digit characters and caps entry at 6 digits', async () => {
     const user = userEvent.setup();
-    renderAt('/forgot-password/verify', { email: 'manager@trackme.com' });
+    renderPage();
 
-    const otpField = screen.getByLabelText(/recovery code/i);
-    await user.type(otpField, '12a34b56789');
+    const codeField = screen.getByLabelText(/recovery code/i);
+    await user.type(codeField, 'a1b2c3d4e5f6g7');
 
-    expect(otpField).toHaveValue('123456');
+    expect(codeField).toHaveValue('123456');
   });
 
-  it('navigates to the reset step carrying email and resetToken on success', async () => {
+  it('submits the email and code, then navigates to the reset page with the resetToken', async () => {
     adminApi.verifyPasswordResetOtp.mockResolvedValueOnce({ resetToken: 'reset-tok-1' });
     const user = userEvent.setup();
+    renderPage();
 
-    renderAt('/forgot-password/verify', { email: 'manager@trackme.com' });
+    expect(screen.getByLabelText(/email/i)).toHaveValue('manager@trackme.com');
+
     await user.type(screen.getByLabelText(/recovery code/i), '123456');
     await user.click(screen.getByRole('button', { name: /verify code/i }));
 
+    expect(adminApi.verifyPasswordResetOtp).toHaveBeenCalledWith('manager@trackme.com', '123456');
+    expect(await screen.findByText('Reset password page')).toBeInTheDocument();
     const state = JSON.parse(await screen.findByTestId('location-state').then((el) => el.textContent));
     expect(state).toEqual({ email: 'manager@trackme.com', resetToken: 'reset-tok-1' });
   });
 
-  it('shows the server error message on an invalid or expired code', async () => {
-    adminApi.verifyPasswordResetOtp.mockRejectedValueOnce(new Error('Code expired'));
-    const user = userEvent.setup();
+  it('recovers the email from sessionStorage after a refresh loses router state (issue #55)', () => {
+    sessionStorage.setItem('forgot-password-flow', JSON.stringify({ email: 'manager@trackme.com' }));
+    renderPage({});
 
-    renderAt('/forgot-password/verify', { email: 'manager@trackme.com' });
+    expect(screen.getByLabelText(/email/i)).toHaveValue('manager@trackme.com');
+  });
+
+  it('persists the resetToken to sessionStorage on a successful verify, alongside the email', async () => {
+    adminApi.verifyPasswordResetOtp.mockResolvedValueOnce({ resetToken: 'reset-tok-1' });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText(/recovery code/i), '123456');
+    await user.click(screen.getByRole('button', { name: /verify code/i }));
+
+    await screen.findByText('Reset password page');
+    expect(JSON.parse(sessionStorage.getItem('forgot-password-flow'))).toEqual({
+      email: 'manager@trackme.com',
+      resetToken: 'reset-tok-1',
+    });
+  });
+
+  it('shows the server error message on failure', async () => {
+    adminApi.verifyPasswordResetOtp.mockRejectedValueOnce(new Error('Invalid or expired code'));
+    const user = userEvent.setup();
+    renderPage();
+
     await user.type(screen.getByLabelText(/recovery code/i), '999999');
     await user.click(screen.getByRole('button', { name: /verify code/i }));
 
-    expect(await screen.findByText('Code expired')).toBeInTheDocument();
+    expect(await screen.findByText('Invalid or expired code')).toBeInTheDocument();
   });
 
   it('navigates back to the request-email step, carrying the current email, when Back is clicked', async () => {
     const user = userEvent.setup();
-    renderAt('/forgot-password/verify', { email: 'manager@trackme.com' });
+    renderPage();
 
     await user.click(screen.getByRole('button', { name: /back/i }));
 
@@ -98,12 +116,48 @@ describe('ForgotPasswordVerifyPage', () => {
 
   it('allows editing the email field even if it was pre-filled from router state', async () => {
     const user = userEvent.setup();
-    renderAt('/forgot-password/verify', { email: 'manager@trackme.com' });
+    renderPage();
 
     const emailField = screen.getByLabelText(/email/i);
     await user.clear(emailField);
     await user.type(emailField, 'someone-else@trackme.com');
 
     expect(emailField).toHaveValue('someone-else@trackme.com');
+  });
+
+  it('resends the code and starts a cooldown, disabling the resend button (issue #56)', async () => {
+    vi.useFakeTimers();
+    try {
+      adminApi.requestPasswordResetOtp.mockResolvedValueOnce({});
+      renderPage();
+
+      const resendButton = screen.getByRole('button', { name: /resend code/i });
+      expect(resendButton).not.toBeDisabled();
+
+      await act(async () => {
+        fireEvent.click(resendButton);
+      });
+
+      expect(adminApi.requestPasswordResetOtp).toHaveBeenCalledWith('manager@trackme.com');
+      expect(screen.getByText(/a new code has been sent/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /resend code \(30s\)/i })).toBeDisabled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      expect(screen.getByRole('button', { name: /resend code \(29s\)/i })).toBeDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows an error inline if resending the code fails', async () => {
+    adminApi.requestPasswordResetOtp.mockRejectedValueOnce(new Error('Too many requests'));
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /resend code/i }));
+
+    expect(await screen.findByText('Too many requests')).toBeInTheDocument();
   });
 });

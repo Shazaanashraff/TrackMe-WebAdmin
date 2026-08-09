@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, MoreHorizontal, Users, UserCheck, UserX } from 'lucide-react';
+import { Plus, MoreHorizontal, Users, UserCheck, UserX, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -64,6 +65,9 @@ const EMPTY_FORM = {
   organizationId: '',
   organizationName: '',
   vehicleNumber: '',
+  // Off by default: a driver is enrollable by anyone holding their key unless
+  // the manager deliberately puts them behind approval.
+  isPrivate: false,
 };
 
 // A new driver needs a name, a password and the vehicle they will drive. An
@@ -118,6 +122,7 @@ function createPayload(form) {
     // Canonicalised here as well as on blur, since the form can be submitted
     // with Enter while the field still has focus.
     ...(form.vehicleNumber.trim() ? { vehicleNumber: tidyPlate(form.vehicleNumber) } : {}),
+    isPrivate: Boolean(form.isPrivate),
     ...organization,
   };
 }
@@ -213,6 +218,7 @@ export function ManagerAccountsPage() {
       licenseCardNumber: driver.licenseCardNumber || '',
       organizationCategory: driver.organization?.serviceType || '',
       organizationId: driver.organization?._id || '',
+      isPrivate: Boolean(driver.isPrivate),
     });
     setServerError(null);
     setDialogOpen(true);
@@ -238,6 +244,7 @@ export function ManagerAccountsPage() {
             nicNumber: form.nicNumber,
             licenseCardNumber: form.licenseCardNumber,
             organizationId: form.organizationId || null,
+            isPrivate: Boolean(form.isPrivate),
           },
         });
         toast('Driver updated successfully');
@@ -435,17 +442,32 @@ export function ManagerAccountsPage() {
         const driver = info.row.original;
         const key = revealedKeys[driver._id];
         const pending = revealKeyM.isPending && revealKeyM.variables?.driverId === driver._id;
+        // Privacy changes what the key does, so it is flagged on the key itself
+        // rather than as a column of its own.
+        const lock = driver.isPrivate ? (
+          <Badge
+            variant="warning"
+            title="Private: redeeming this key needs your approval"
+          >
+            <Lock className="h-3 w-3" aria-hidden="true" />
+            Approval
+          </Badge>
+        ) : null;
 
         if (!key) {
           return (
-            <Button size="sm" variant="ghost" disabled={pending} onClick={() => handleRevealKey(driver)}>
-              {pending ? 'Loading…' : 'Show key'}
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Button size="sm" variant="ghost" disabled={pending} onClick={() => handleRevealKey(driver)}>
+                {pending ? 'Loading…' : 'Show key'}
+              </Button>
+              {lock}
+            </div>
           );
         }
 
         return (
           <div className="flex items-center gap-1.5">
+            {lock}
             {/* The key is one token, and wrapping it mid-code makes it
                 unreadable and hard to transcribe over the phone. */}
             <code className="whitespace-nowrap rounded bg-surface-muted px-1.5 py-0.5 text-xs">
@@ -765,6 +787,21 @@ export function ManagerAccountsPage() {
                     />
                   </div>
                 </div>
+                <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-3">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="ob-private">Private driver</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {form.isPrivate
+                        ? 'Passengers who redeem this key wait for your approval before they are enrolled.'
+                        : 'Anyone with this driver’s enrollment key is enrolled straight away.'}
+                    </p>
+                  </div>
+                  <Switch
+                    id="ob-private"
+                    checked={form.isPrivate}
+                    onCheckedChange={(checked) => setForm((p) => ({ ...p, isPrivate: checked }))}
+                  />
+                </div>
                 {serverError && (
                   <Alert variant="destructive">
                     <AlertDescription>
@@ -983,6 +1020,21 @@ export function ManagerAccountsPage() {
               onChange={(e) => setForm((p) => ({ ...p, licenseCardNumber: e.target.value }))}
               placeholder="BXXXXXXX"
               autoComplete="off"
+            />
+          </div>
+          <div className="flex items-start justify-between gap-4 rounded-lg border border-border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="drv-private">Private driver</Label>
+              <p className="text-sm text-muted-foreground">
+                {form.isPrivate
+                  ? 'Passengers who redeem this key wait for your approval before they are enrolled.'
+                  : 'Anyone with this driver’s enrollment key is enrolled straight away.'}
+              </p>
+            </div>
+            <Switch
+              id="drv-private"
+              checked={form.isPrivate}
+              onCheckedChange={(checked) => setForm((p) => ({ ...p, isPrivate: checked }))}
             />
           </div>
         </div>

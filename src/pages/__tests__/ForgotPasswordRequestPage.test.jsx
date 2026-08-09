@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -12,6 +12,8 @@ vi.mock('../../api', () => ({
 }));
 
 describe('ForgotPasswordRequestPage', () => {
+  beforeEach(() => { sessionStorage.clear(); });
+
   it('matches the sign-in page design (dark background, blue accent) and submits the email', async () => {
     const user = userEvent.setup();
     render(
@@ -26,6 +28,22 @@ describe('ForgotPasswordRequestPage', () => {
     await user.click(screen.getByRole('button', { name: /send recovery code/i }));
 
     expect(adminApi.requestPasswordResetOtp).toHaveBeenCalledWith('manager@trackme.com');
+  });
+
+  it('persists the email to sessionStorage so a later refresh can recover it (issue #55)', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ForgotPasswordRequestPage />
+      </MemoryRouter>
+    );
+
+    await user.type(screen.getByLabelText(/email/i), 'manager@trackme.com');
+    await user.click(screen.getByRole('button', { name: /send recovery code/i }));
+
+    expect(JSON.parse(sessionStorage.getItem('forgot-password-flow'))).toMatchObject({
+      email: 'manager@trackme.com',
+    });
   });
 
   it('shows the server error message on failure', async () => {

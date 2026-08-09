@@ -6,6 +6,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ColorModeProvider } from '@/theme/ColorMode';
 import { AppShell } from '../AppShell';
 
+vi.mock('@/hooks/use-enrollment-requests', () => ({
+  useEnrollmentRequestCount: vi.fn(() => ({ data: 0 })),
+}));
+
+import { useEnrollmentRequestCount } from '@/hooks/use-enrollment-requests';
+
 function makeClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
@@ -40,7 +46,12 @@ function renderShell({ role = 'super-admin', path = '/dashboard', onLogout, onRe
 }
 
 describe('AppShell', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    // Reset per test: mockReturnValue otherwise leaks a count into later cases.
+    useEnrollmentRequestCount.mockReset();
+    useEnrollmentRequestCount.mockReturnValue({ data: 0 });
+  });
 
   it('renders super-admin nav links', () => {
     renderShell({ role: 'super-admin', path: '/dashboard' });
@@ -56,6 +67,30 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Vehicles' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Drivers' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Requests' })).toBeInTheDocument();
+  });
+
+  it('counts pending enrollment requests on the Requests link', () => {
+    useEnrollmentRequestCount.mockReturnValue({ data: 3 });
+    renderShell({ role: 'admin', path: '/manager/dashboard' });
+
+    // The count is folded into the accessible name so it is not colour-only.
+    const link = screen.getByRole('link', { name: 'Requests (3 pending)' });
+    expect(link).toHaveTextContent('3');
+  });
+
+  it('leaves the Requests link unadorned when nothing is pending', () => {
+    useEnrollmentRequestCount.mockReturnValue({ data: 0 });
+    renderShell({ role: 'admin', path: '/manager/dashboard' });
+
+    expect(screen.getByRole('link', { name: 'Requests' })).toBeInTheDocument();
+  });
+
+  it('does not ask for a manager count when a super-admin is signed in', () => {
+    useEnrollmentRequestCount.mockReturnValue({ data: 0 });
+    renderShell({ role: 'super-admin', path: '/dashboard' });
+
+    expect(useEnrollmentRequestCount).toHaveBeenCalledWith({ enabled: false });
   });
 
   it('marks the active route with aria-current="page"', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { RoutesPage } from '../RoutesPage';
@@ -118,6 +118,13 @@ describe('RoutesPage', () => {
     expect(screen.getByText('Western Province')).toBeInTheDocument();
   });
 
+  it('shows the DataTable\'s specific empty message for a province with zero routes, not a generic one (issue #73)', async () => {
+    const { user } = setup();
+    await user.click(screen.getByText('Southern Province').closest('button'));
+    expect(await screen.findByText('No routes for this province')).toBeInTheDocument();
+    expect(screen.queryByText('No routes')).not.toBeInTheDocument();
+  });
+
   it('returns to province list when "All provinces" is clicked', async () => {
     const { user } = setup();
     await user.click(screen.getByText('Western Province').closest('button'));
@@ -130,6 +137,35 @@ describe('RoutesPage', () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: /create route/i }));
     expect(await screen.findByText(/route id is required/i)).toBeInTheDocument();
+  });
+
+  it('rejects a non-numeric distance value instead of silently submitting NaN (issue #74)', async () => {
+    const { user } = setup();
+    await user.type(screen.getByLabelText(/route id/i), 'RT-X');
+    await user.type(screen.getByLabelText(/route name/i), 'Test Route');
+    await user.type(screen.getByLabelText(/source/i), 'A');
+    await user.type(screen.getByLabelText(/destination/i), 'B');
+    // type="number" doesn't always block every non-numeric value a browser can
+    // set (e.g. via paste) — fireEvent.change bypasses userEvent's normal typing
+    // simulation to exercise that path directly.
+    fireEvent.change(screen.getByLabelText(/distance/i), { target: { value: 'abc' } });
+    await user.type(screen.getByLabelText(/fare/i), '100');
+    await user.click(screen.getByRole('button', { name: /create route/i }));
+
+    expect(await screen.findByText(/distance must be a positive number/i)).toBeInTheDocument();
+  });
+
+  it('rejects a non-numeric fare value instead of silently submitting NaN', async () => {
+    const { user } = setup();
+    await user.type(screen.getByLabelText(/route id/i), 'RT-X');
+    await user.type(screen.getByLabelText(/route name/i), 'Test Route');
+    await user.type(screen.getByLabelText(/source/i), 'A');
+    await user.type(screen.getByLabelText(/destination/i), 'B');
+    await user.type(screen.getByLabelText(/distance/i), '10');
+    fireEvent.change(screen.getByLabelText(/fare/i), { target: { value: 'xyz' } });
+    await user.click(screen.getByRole('button', { name: /create route/i }));
+
+    expect(await screen.findByText(/fare must be a positive number/i)).toBeInTheDocument();
   });
 
   it('validates stop fields when a partial stop is entered', async () => {

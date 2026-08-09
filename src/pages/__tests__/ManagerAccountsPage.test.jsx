@@ -244,6 +244,43 @@ describe('ManagerAccountsPage: enrollment key rotation', () => {
   });
 });
 
+describe('ManagerAccountsPage: driver privacy', () => {
+  it('creates a public driver unless the manager turns privacy on', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({ data: { _id: 'new-1', name: 'Nimal' } }),
+    });
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'CAB-1234');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    await user.click(screen.getByLabelText(/Private driver/i));
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
+
+    expect(createMut.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ isPrivate: true })
+    );
+  });
+
+  it('explains what the toggle changes about the key', async () => {
+    const { user } = setup();
+    await openForm(user);
+
+    expect(screen.getByText(/enrolled straight away/i)).toBeInTheDocument();
+    await user.click(screen.getByLabelText(/Private driver/i));
+    expect(screen.getByText(/wait for your approval/i)).toBeInTheDocument();
+  });
+
+  it('flags a private driver in the directory', () => {
+    setup({
+      drivers: [{ ...DRIVERS[0], isPrivate: true }, { ...DRIVERS[1], isPrivate: false }],
+    });
+    // One badge for the one private driver, not one per row.
+    expect(screen.getAllByText('Approval')).toHaveLength(1);
+  });
+});
+
 describe('ManagerAccountsPage: add driver form', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
@@ -286,6 +323,8 @@ describe('ManagerAccountsPage: add driver form', () => {
       name: 'Nimal',
       password: 'DriverPass1!',
       vehicleNumber: 'CAB-1234',
+      // Always sent, so a driver is only private when deliberately made so.
+      isPrivate: false,
     });
   });
 

@@ -68,8 +68,8 @@ function validateForm(form) {
   if (!form.routeName.trim()) return 'Route Name is required.';
   if (!form.source.trim()) return 'Source is required.';
   if (!form.destination.trim()) return 'Destination is required.';
-  if (!form.distance || Number(form.distance) <= 0) return 'Distance must be a positive number.';
-  if (!form.fare || Number(form.fare) <= 0) return 'Fare must be a positive number.';
+  if (!form.distance || Number.isNaN(Number(form.distance)) || Number(form.distance) <= 0) return 'Distance must be a positive number.';
+  if (!form.fare || Number.isNaN(Number(form.fare)) || Number(form.fare) <= 0) return 'Fare must be a positive number.';
 
   const filledStops = form.stops.filter(
     (s) => s.stopName.trim() || String(s.lat).trim() || String(s.lng).trim(),
@@ -360,7 +360,7 @@ export function RoutesPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <AsyncSection isLoading={routesQ.isLoading} error={routesQ.error} data={!routesQ.isLoading ? true : null} onRetry={routesQ.refetch} emptyTitle="No routes">
+            <AsyncSection isLoading={routesQ.isLoading} error={routesQ.error} data={visibleRoutes} isEmpty={false} onRetry={routesQ.refetch}>
               <DataTable
                 columns={routeColumns}
                 data={visibleRoutes}
@@ -379,7 +379,7 @@ export function RoutesPage() {
             <span className="text-sm text-muted-foreground tabular-nums">{routes.length} routes total</span>
           </CardHeader>
           <CardContent className="pt-0">
-            <AsyncSection isLoading={routesQ.isLoading} error={routesQ.error} data={!routesQ.isLoading ? true : null} onRetry={routesQ.refetch} emptyTitle="No routes">
+            <AsyncSection isLoading={routesQ.isLoading} error={routesQ.error} data={routes} isEmpty={false} onRetry={routesQ.refetch}>
               <div className="rounded-xl border border-border overflow-hidden divide-y divide-border">
                 {PROVINCES.map((province) => {
                   const count = countsByProvince[province.name] || 0;
