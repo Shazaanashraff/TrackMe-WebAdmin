@@ -19,7 +19,9 @@ export function ManagerDashboardPage() {
 
   const utilizationPct = useMemo(() => {
     if (!fleet.totalVehicles) return null;
-    return Math.round((fleet.activeVehicles / fleet.totalVehicles) * 100);
+    // A stale/inconsistent backend aggregate (activeVehicles > totalVehicles)
+    // shouldn't render as a percentage over 100.
+    return Math.min(100, Math.round((fleet.activeVehicles / fleet.totalVehicles) * 100));
   }, [fleet.activeVehicles, fleet.totalVehicles]);
 
   return (
