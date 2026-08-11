@@ -63,6 +63,7 @@
 | adminApi.getSuperAdminDashboard() | unit (fetch) | src/__tests__/api.test.js | GET + auth | dashboard payload changes |
 | Dashboard page flow | RTL | src/__tests__/pages/DashboardPage.test.jsx | cards + error state | metrics layout changes |
 | ManagerDashboardPage utilizationPct clamp (issue #59) | RTL (Vitest) | src/pages/__tests__/ManagerDashboardPage.test.jsx | `activeVehicles` exceeding `totalVehicles` (a stale/inconsistent backend aggregate) renders 100%, never a value over it | the utilization calculation changes |
+| components/shared/money.jsx formatLKR zero fallback (issue #58) | unit (Vitest) | src/components/shared/__tests__/money.test.jsx | null/undefined/NaN amounts render a real `"LKR 0.00"`-style figure instead of the literal word "None" | the zero-amount fallback format changes |
 
 ## Custom Routes (school/work shuttles)
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
