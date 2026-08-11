@@ -96,8 +96,8 @@ export function OperationsPage() {
 
   const overviewColumns = useMemo(() => [
     { id: 'manager', header: 'Manager', accessorKey: 'managerName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
-    { id: 'vehicles', header: 'Vehicles', accessorKey: 'fleet', cell: (i) => i.getValue()?.totalVehicles ?? 0 },
-    { id: 'bookings', header: 'Bookings', accessorKey: 'bookings', cell: (i) => i.getValue()?.totalBookings ?? 0 },
+    { id: 'vehicles', header: 'Vehicles', accessorFn: (row) => row.fleet?.totalVehicles ?? 0, cell: (i) => i.getValue() },
+    { id: 'bookings', header: 'Bookings', accessorFn: (row) => row.bookings?.totalBookings ?? 0, cell: (i) => i.getValue() },
     { id: 'status', header: 'Status', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'online' : 'offline'} /> },
   ], []);
 

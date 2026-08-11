@@ -158,6 +158,47 @@ describe('OperationsPage', () => {
     expect(screen.getByText('Offline')).toBeInTheDocument();
   });
 
+  // The Vehicles/Bookings columns used to sort on the raw fleet/bookings object
+  // reference instead of the numeric field the cell renders, so clicking the
+  // sort toggle was a silent no-op (issue #62).
+  it('sorts by Vehicles using the numeric fleet count, not the object reference', async () => {
+    const { user } = setup();
+    const managerCellOrder = () => screen.getAllByRole('row')
+      .slice(1)
+      .map((row) => (row.textContent.includes('Alice Smith') ? 'Alice' : 'Bob'));
+
+    // Alice Smith has 3 vehicles, Bob Jones has 1. Toggling sort must actually
+    // reorder rows between the two clicks — with the old object-reference
+    // accessor this was a no-op and the order never changed at all.
+    await user.click(screen.getByRole('button', { name: /vehicles/i }));
+    const afterFirstClick = managerCellOrder();
+
+    await user.click(screen.getByRole('button', { name: /vehicles/i }));
+    const afterSecondClick = managerCellOrder();
+
+    expect(afterFirstClick).not.toEqual(afterSecondClick);
+    expect([afterFirstClick, afterSecondClick]).toContainEqual(['Bob', 'Alice']);
+    expect([afterFirstClick, afterSecondClick]).toContainEqual(['Alice', 'Bob']);
+  });
+
+  it('sorts by Bookings using the numeric booking count, not the object reference', async () => {
+    const { user } = setup();
+    const managerCellOrder = () => screen.getAllByRole('row')
+      .slice(1)
+      .map((row) => (row.textContent.includes('Alice Smith') ? 'Alice' : 'Bob'));
+
+    // Alice Smith has 20 bookings, Bob Jones has 5.
+    await user.click(screen.getByRole('button', { name: /bookings/i }));
+    const afterFirstClick = managerCellOrder();
+
+    await user.click(screen.getByRole('button', { name: /bookings/i }));
+    const afterSecondClick = managerCellOrder();
+
+    expect(afterFirstClick).not.toEqual(afterSecondClick);
+    expect([afterFirstClick, afterSecondClick]).toContainEqual(['Bob', 'Alice']);
+    expect([afterFirstClick, afterSecondClick]).toContainEqual(['Alice', 'Bob']);
+  });
+
   it('does not auto-select a manager on load — shows the prompt state until clicked (issue #9)', () => {
     setup({ detail: DETAIL_A });
     expect(screen.getByText('No manager selected')).toBeInTheDocument();
