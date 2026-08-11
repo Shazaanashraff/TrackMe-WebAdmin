@@ -16,6 +16,8 @@ one doc you need. Deep detail lives in [`docs/`](docs/README.md) — do not dupl
    - **Adding a feature** → [`docs/guides/ADDING_A_FEATURE.md`](docs/guides/ADDING_A_FEATURE.md)
    - **Adding a test** → [`docs/guides/ADDING_A_TEST.md`](docs/guides/ADDING_A_TEST.md)
    - **Cutting a release** → [`docs/guides/RELEASING.md`](docs/guides/RELEASING.md)
+   - **Working a GitHub issue** (agent routine/schedule or manual "finish up #N") →
+     [`docs/guides/WORKING_AN_ISSUE.md`](docs/guides/WORKING_AN_ISSUE.md)
 4. Before you push, append an entry to [`docs/CHANGES.md`](docs/CHANGES.md).
 
 **One-time setup per clone:**
@@ -77,7 +79,10 @@ Tests: **Vitest** (unit) + **Playwright** (E2E).
 ## The non-negotiables
 
 - **All HTTP goes through `src/api.js`.** Never call `fetch`/`axios` from a page or hook directly —
-  it bypasses auth refresh and redirect handling.
+  it bypasses auth refresh and redirect handling. The one deliberate exception is
+  `src/lib/devkit.js` (Developer page only), which talks to the local, unauthenticated devkit
+  runner, not the TrackMe API — see
+  [`docs/modules/DEVELOPER_MODE.md`](docs/modules/DEVELOPER_MODE.md).
 - **Keep auth refresh + redirect behaviour consistent** (`lib/authSession.js`).
 - **Manager scoping is not cosmetic.** Never render another manager's resources, and never rely on
   hiding a control as the access rule — the backend is the gate.
@@ -85,6 +90,9 @@ Tests: **Vitest** (unit) + **Playwright** (E2E).
   [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md) row.
 - **No undocumented module.** Update the [`docs/modules/`](docs/modules/) doc, from
   [`docs/guides/_MODULE_TEMPLATE.md`](docs/guides/_MODULE_TEMPLATE.md).
+- **Schema and CRUD changes must work in sandbox.** If a change here depends on a new
+  backend model/field/endpoint, `backend/scripts/seed-sandbox.js` needs the matching fixture in
+  the same change — see [`backend/docs/modules/SANDBOX.md`](../backend/docs/modules/SANDBOX.md).
 - **Log the session.** Append to [`docs/CHANGES.md`](docs/CHANGES.md) before every push.
 
 ---
@@ -98,3 +106,8 @@ npm test           # vitest run
 npm run test:e2e   # playwright
 npm run lint
 ```
+
+Developer Mode (dev-only `/developer` page, super-admin): from the repo root,
+`npm run devkit:catalog` regenerates the test catalog and `npm run devkit` starts the local
+runner on 127.0.0.1:5099. The sandbox toggle also needs `backend`'s `npm run dev:sandbox`
+running. See [`docs/modules/DEVELOPER_MODE.md`](docs/modules/DEVELOPER_MODE.md).

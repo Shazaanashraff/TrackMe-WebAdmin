@@ -7,8 +7,11 @@ The documentation map for web-admin. [`../CLAUDE.md`](../CLAUDE.md) routes you h
 > Every module doc must state **which role** (manager / super-admin) the feature serves.
 
 ## Modules (per page/feature)
-All currently **stubs** — each names its source files and must be filled in by the next change
-touching it:
+- **[modules/DEVELOPER_MODE.md](modules/DEVELOPER_MODE.md)** — sandbox toggle, test catalog, local
+  runner. Super-admin only, dev-only build.
+
+The rest are all currently **stubs** — each names its source files and must be filled in by the
+next change touching it:
 [AUTH](modules/AUTH.md) · [DASHBOARD](modules/DASHBOARD.md) · [ACCOUNTS](modules/ACCOUNTS.md) ·
 [BUSES](modules/BUSES.md) · [ROUTES](modules/ROUTES.md) ·
 [PRIVATE_ROUTES](modules/PRIVATE_ROUTES.md) · [ROUTE_APPROVALS](modules/ROUTE_APPROVALS.md) ·
@@ -18,6 +21,8 @@ touching it:
 - **[guides/ADDING_A_FEATURE.md](guides/ADDING_A_FEATURE.md)** — page → hook → `api.js`, plus role scoping.
 - **[guides/ADDING_A_TEST.md](guides/ADDING_A_TEST.md)** — Vitest + Playwright recipes.
 - **[guides/RELEASING.md](guides/RELEASING.md)** — ⚠️ deploy target is **undocumented**; read before assuming.
+- **[guides/WORKING_AN_ISSUE.md](guides/WORKING_AN_ISSUE.md)** — issue → regression tests → PR →
+  merge, for agents and manual sessions alike.
 - **[guides/_MODULE_TEMPLATE.md](guides/_MODULE_TEMPLATE.md)** — copy to start a module doc.
 
 ## Design

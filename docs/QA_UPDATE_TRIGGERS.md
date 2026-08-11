@@ -13,3 +13,5 @@ Use this checklist to keep docs/TESTING_GUIDE.md in sync with web-admin changes.
 ## Required actions
 - Update docs/TESTING_GUIDE.md rows.
 - Update unit and E2E tests covering the changed behavior.
+- Regenerate the test catalog (`npm run devkit:catalog` from the repo root) so the new/changed
+  test appears and the gap report in `tools/devkit/docs/TEST_CATALOG.md` stays honest.
