@@ -65,4 +65,17 @@ describe('StatCard', () => {
     wrap(<StatCard label="L" value="5" />);
     expect(screen.queryByRole('link')).toBeNull();
   });
+
+  it('shows a placeholder and "Failed to load" instead of the value when isError (issue #51)', () => {
+    wrap(<StatCard label="Total Managers" value={0} isError />);
+    expect(screen.getByText('Failed to load')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('0')).toBeNull();
+  });
+
+  it('renders the real value normally when isError is false', () => {
+    wrap(<StatCard label="Total Managers" value={7} isError={false} />);
+    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(screen.queryByText('Failed to load')).toBeNull();
+  });
 });

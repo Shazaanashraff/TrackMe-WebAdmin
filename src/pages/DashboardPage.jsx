@@ -30,7 +30,11 @@ export function DashboardPage() {
   const totalManagers = m?.managers?.totalManagers ?? 0;
   const activeVehicles = m?.vehicles?.activeVehicles ?? 0;
   const confirmedBookings = m?.bookings?.confirmedBookings ?? 0;
-  const avgRating = m?.reviews?.averageRating;
+  const rawAvgRating = m?.reviews?.averageRating;
+  const avgRatingNum = Number(rawAvgRating);
+  // Some Mongo aggregation pipelines serialize Decimal128 as a string, so a plain
+  // null-check isn't enough to guarantee toFixed is safe to call.
+  const hasAvgRating = rawAvgRating != null && Number.isFinite(avgRatingNum);
   const inactiveVehicles = m?.vehicles?.inactiveVehicles ?? 0;
   const pendingCount = (pendingQ.data?.data || []).length;
   const operations = (opsQ.data?.data || []).slice(0, 6);
@@ -49,24 +53,28 @@ export function DashboardPage() {
           value={totalManagers}
           icon={Users}
           isLoading={dashQ.isLoading}
+          isError={dashQ.isError}
         />
         <StatCard
           label="Active Vehicles"
           value={activeVehicles}
           icon={VehicleIcon}
           isLoading={dashQ.isLoading}
+          isError={dashQ.isError}
         />
         <StatCard
           label="Confirmed Bookings"
           value={confirmedBookings}
           icon={BookMarked}
           isLoading={dashQ.isLoading}
+          isError={dashQ.isError}
         />
         <StatCard
           label="Avg Rating"
-          value={avgRating != null ? avgRating.toFixed(1) : 'None'}
+          value={hasAvgRating ? avgRatingNum.toFixed(1) : 'None'}
           icon={Star}
           isLoading={dashQ.isLoading}
+          isError={dashQ.isError}
         />
       </div>
 
@@ -168,7 +176,7 @@ export function DashboardPage() {
                 />
                 <SnapshotRow
                   label="Average fleet rating"
-                  value={avgRating != null ? `${avgRating.toFixed(1)} / 5` : 'No ratings yet'}
+                  value={hasAvgRating ? `${avgRatingNum.toFixed(1)} / 5` : 'No ratings yet'}
                 />
               </div>
             </AsyncSection>
