@@ -102,6 +102,7 @@ export function ManagerVehiclesPage() {
   const [editError, setEditError] = useState(null);
 
   const [deleteTarget, setDeleteTarget] = useState(null); // vehicle object
+  const [deleteError, setDeleteError] = useState(null);
 
   const vehicles = vehiclesQ.data?.data || [];
   const routes = routesQ.data?.data || [];
@@ -188,13 +189,15 @@ export function ManagerVehiclesPage() {
 
   const handleDeleteConfirm = async (reason) => {
     if (!deleteTarget) return;
+    setDeleteError(null);
     try {
       await deleteReqM.mutateAsync({ vehicleId: deleteTarget.vehicleId, payload: { reason: reason || '' } });
       toast('Delete request submitted');
       setDeleteTarget(null);
     } catch (err) {
-      toast(`Failed: ${err?.message || 'Unknown error'}`);
-      setDeleteTarget(null);
+      // Keep the dialog open on failure so the error is visible inline
+      // (not just a transient toast) and the manager can retry in place.
+      setDeleteError(err);
     }
   };
 
@@ -235,7 +238,7 @@ export function ManagerVehiclesPage() {
         return (
           <div className="flex gap-1.5">
             <Button size="sm" variant="outline" onClick={() => openEdit(vehicle)}>Edit</Button>
-            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(vehicle)}>Delete Req</Button>
+            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { setDeleteError(null); setDeleteTarget(vehicle); }}>Delete Req</Button>
           </div>
         );
       },
@@ -615,13 +618,14 @@ export function ManagerVehiclesPage() {
       {/* Delete request confirmation */}
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}
+        onOpenChange={(v) => { if (!v) { setDeleteTarget(null); setDeleteError(null); } }}
         title="Request Vehicle Deletion"
         description={`Submit a deletion request for ${deleteTarget?.vehicleName || 'this vehicle'}. A reason is required.`}
         confirmLabel="Submit Request"
         requireReason
         pending={deleteReqM.isPending}
         onConfirm={handleDeleteConfirm}
+        error={deleteError}
       />
     </div>
   );

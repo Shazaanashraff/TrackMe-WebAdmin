@@ -88,6 +88,20 @@ function validateForm(form) {
 let nextStopClientId = 0;
 const makeEmptyStop = () => ({ clientId: `stop-${nextStopClientId++}`, stopName: '', lat: '', lng: '' });
 
+// Case-insensitive lookup keyed by the trimmed, lowercased, "Province"-suffix-stripped
+// form of each known province name — so 'western', 'WESTERN PROVINCE', or 'Western Province'
+// all resolve to the canonical 'Western' rather than silently falling into Unassigned.
+const PROVINCE_LOOKUP = new Map(
+  PROVINCES.map(({ name }) => [name.toLowerCase(), name]),
+);
+
+function normalizeProvince(rawValue) {
+  const trimmed = (rawValue || '').trim();
+  if (!trimmed) return null;
+  const key = trimmed.toLowerCase().replace(/\s+province$/, '');
+  return PROVINCE_LOOKUP.get(key) || null;
+}
+
 const routeColumns = [
   { id: 'routeId', header: 'Route ID', accessorKey: 'routeId' },
   { id: 'routeName', header: 'Route Name', accessorKey: 'routeName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
@@ -129,7 +143,7 @@ export function RoutesPage() {
     const counts = {};
     let unassigned = 0;
     for (const route of routes) {
-      const province = (route.province || '').trim();
+      const province = normalizeProvince(route.province);
       if (!province) { unassigned += 1; continue; }
       counts[province] = (counts[province] || 0) + 1;
     }
@@ -138,8 +152,8 @@ export function RoutesPage() {
 
   const visibleRoutes = useMemo(() => {
     if (!selectedProvince) return [];
-    if (selectedProvince === UNASSIGNED) return routes.filter((r) => !(r.province || '').trim());
-    return routes.filter((r) => (r.province || '').trim() === selectedProvince);
+    if (selectedProvince === UNASSIGNED) return routes.filter((r) => !normalizeProvince(r.province));
+    return routes.filter((r) => normalizeProvince(r.province) === selectedProvince);
   }, [routes, selectedProvince]);
 
   const setField = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));

@@ -25,6 +25,11 @@ export function ConfirmDialog({
   // inside it: AlertDialogDescription is a <p>, so lists and callouts cannot
   // legally nest there.
   children,
+  // Failure from the last onConfirm attempt. Passing this (instead of closing
+  // the dialog on failure) lets the caller keep the dialog open so the typed
+  // reason survives for a retry, with the failure surfaced inline rather than
+  // only in a transient toast.
+  error,
 }) {
   const [reason, setReason] = useState('');
   const canConfirm = !requireReason || reason.trim().length > 0;
@@ -48,6 +53,11 @@ export function ConfirmDialog({
           )}
         </AlertDialogHeader>
         {children}
+        {error && (
+          <p className="text-sm text-status-danger">
+            {typeof error === 'string' ? error : error.message}
+          </p>
+        )}
         {requireReason && (
           <Textarea
             placeholder="Reason (required)"
