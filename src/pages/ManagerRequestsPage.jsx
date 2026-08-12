@@ -17,6 +17,17 @@ const formatWhen = (value) => {
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
 };
 
+// A managed profile shares a name with nobody in particular — the decision
+// moment (approve/decline, and the toast confirming it) is exactly where the
+// manager needs the owning account surfaced, not just the profile's own name.
+const passengerLabel = (passenger) => {
+  const name = passenger?.name || 'this passenger';
+  if (passenger?.isManagedProfile && passenger?.account?.email) {
+    return `${name} (account: ${passenger.account.email})`;
+  }
+  return name;
+};
+
 export function ManagerRequestsPage() {
   const requestsQ = useEnrollmentRequests('PENDING');
   const approve = useApproveEnrollmentRequest();
@@ -55,16 +66,39 @@ export function ManagerRequestsPage() {
       header: 'Passenger',
       accessorKey: 'passenger',
       enableSorting: false,
-      cell: (i) => <span className="font-medium">{i.getValue()?.name || 'Unknown'}</span>,
+      cell: (i) => {
+        const passenger = i.getValue();
+        return (
+          <div>
+            <span className="font-medium">{passenger?.name || 'Unknown'}</span>
+            {passenger?.isManagedProfile && (
+              <div className="text-xs text-muted-foreground">
+                Managed profile{passenger.relation ? ` · ${passenger.relation}` : ''}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
-      id: 'email',
-      header: 'Email',
+      id: 'account',
+      header: 'Account',
       accessorKey: 'passenger',
       enableSorting: false,
-      cell: (i) => (i.getValue()?.email
-        ? i.getValue().email
-        : <span className="text-muted-foreground">None</span>),
+      cell: (i) => {
+        const passenger = i.getValue();
+        // A managed profile has no email/phone of its own — the account that
+        // owns it is what the manager actually needs to identify them by.
+        const email = passenger?.email || passenger?.account?.email;
+        const phone = passenger?.account?.phoneNumber;
+        if (!email && !phone) return <span className="text-muted-foreground">None</span>;
+        return (
+          <div>
+            {email && <div>{email}</div>}
+            {phone && <div className="text-xs text-muted-foreground">{phone}</div>}
+          </div>
+        );
+      },
     },
     {
       id: 'driver',
@@ -140,8 +174,8 @@ export function ManagerRequestsPage() {
         open={Boolean(pendingDecision)}
         onOpenChange={(open) => { if (!open) setPendingDecision(null); }}
         title={approving
-          ? `Approve ${target?.passenger?.name || 'this passenger'}?`
-          : `Decline ${target?.passenger?.name || 'this passenger'}?`}
+          ? `Approve ${passengerLabel(target?.passenger)}?`
+          : `Decline ${passengerLabel(target?.passenger)}?`}
         description={approving
           ? `They will be enrolled with ${target?.driver?.name || 'this driver'} and can see their shuttle.`
           : `They will not be enrolled with ${target?.driver?.name || 'this driver'}, but can ask again later.`}
