@@ -378,4 +378,21 @@ describe('ManagerVehiclesPage edit and delete', () => {
     expect(call.vehicleId).toBe('VEHICLE-1');
     expect(call.payload.reason).toBe('Vehicle retired');
   });
+
+  it('keeps the confirm dialog open and shows the error inline when the delete request fails (issue #48)', async () => {
+    const deleteMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(new Error('Server unavailable')) });
+    const { user } = setup({ deleteMut });
+
+    await user.click(screen.getByRole('button', { name: /delete req/i }));
+    await screen.findByRole('alertdialog');
+
+    const reasonInput = screen.getByPlaceholderText(/reason \(required\)/i);
+    await user.type(reasonInput, 'Vehicle retired');
+    await user.click(screen.getByRole('button', { name: /submit request/i }));
+
+    await waitFor(() => expect(deleteMut.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(screen.getByText(/server unavailable/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/reason \(required\)/i)).toHaveValue('Vehicle retired');
+  });
 });

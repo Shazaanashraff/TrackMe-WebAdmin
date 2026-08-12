@@ -77,8 +77,10 @@ export function OperationsPage() {
       toast(`Request ${reviewTarget.decision === 'APPROVE' ? 'approved' : 'rejected'}`);
       setReviewTarget(null);
     } catch (err) {
+      // Leave reviewTarget set so the dialog stays open and ConfirmDialog's
+      // internal `reason` state (which it clears on close) survives — the
+      // admin can retry without retyping a rejection reason.
       toast(`Failed: ${err?.message || 'Unknown error'}`);
-      setReviewTarget(null);
     }
   };
 

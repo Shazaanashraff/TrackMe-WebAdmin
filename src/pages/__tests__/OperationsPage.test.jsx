@@ -277,6 +277,19 @@ describe('OperationsPage', () => {
     });
   });
 
+  it('keeps the dialog open with the typed reason preserved when a rejection submission fails (issue #45)', async () => {
+    const reviewMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(new Error('Network error')) });
+    const { user } = setup({ requests: [REQ_A], reviewMut });
+    await user.click(screen.getByRole('button', { name: /reject/i }));
+    await screen.findByRole('heading', { name: /reject request/i });
+    await user.type(screen.getByLabelText(/reason/i), 'Not compliant');
+    await user.click(screen.getByRole('button', { name: /^reject$/i }));
+
+    await waitFor(() => expect(reviewMut.mutateAsync).toHaveBeenCalled());
+    expect(screen.getByRole('heading', { name: /reject request/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/reason/i)).toHaveValue('Not compliant');
+  });
+
   it('shows empty state when no requests exist', () => {
     setup({ requests: [] });
     expect(screen.getByText('No requests')).toBeInTheDocument();

@@ -83,4 +83,19 @@ describe('ConfirmDialog', () => {
     setup({ open: false });
     expect(screen.queryByText('Delete manager?')).toBeNull();
   });
+
+  it('renders a string error message inline', () => {
+    setup({ error: 'Something went wrong' });
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+  });
+
+  it('renders an Error object\'s message inline', () => {
+    setup({ error: new Error('Server unavailable') });
+    expect(screen.getByText('Server unavailable')).toBeInTheDocument();
+  });
+
+  it('renders no error text when error is not provided', () => {
+    setup();
+    expect(screen.queryByText(/server unavailable|something went wrong/i)).toBeNull();
+  });
 });
