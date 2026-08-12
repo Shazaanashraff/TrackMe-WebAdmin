@@ -9,6 +9,8 @@ The documentation map for web-admin. [`../CLAUDE.md`](../CLAUDE.md) routes you h
 ## Modules (per page/feature)
 - **[modules/DEVELOPER_MODE.md](modules/DEVELOPER_MODE.md)** — sandbox toggle, test catalog, local
   runner. Super-admin only, dev-only build.
+- **[modules/ENROLLMENT_REQUESTS.md](modules/ENROLLMENT_REQUESTS.md)** — manager's approval queue
+  for private-driver enrollment requests, incl. managed-rider-profile account surfacing.
 
 The rest are all currently **stubs** — each names its source files and must be filled in by the
 next change touching it:

@@ -39,6 +39,7 @@ git config core.hooksPath .githooks
 | Login / forgot-password / session + role gate | [`docs/modules/AUTH.md`](docs/modules/AUTH.md) |
 | Dashboards (super-admin + manager) | [`docs/modules/DASHBOARD.md`](docs/modules/DASHBOARD.md) |
 | Manage manager accounts / super-admin ops | [`docs/modules/ACCOUNTS.md`](docs/modules/ACCOUNTS.md) |
+| Passenger enrollment approval queue (private drivers) | [`docs/modules/ENROLLMENT_REQUESTS.md`](docs/modules/ENROLLMENT_REQUESTS.md) |
 | Buses & drivers | [`docs/modules/BUSES.md`](docs/modules/BUSES.md) |
 | Routes catalogue | [`docs/modules/ROUTES.md`](docs/modules/ROUTES.md) |
 | **Private routes**: room keys, hide, join approvals | [`docs/modules/PRIVATE_ROUTES.md`](docs/modules/PRIVATE_ROUTES.md) |

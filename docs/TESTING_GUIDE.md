@@ -51,6 +51,12 @@
 | Vehicles page without seat capacity | RTL (Vitest) | src/pages/__tests__/ManagerVehiclesPage.test.jsx | neither the create wizard (step 0 fields, Review summary) nor the edit dialog collects or shows a seat count, and no seatCapacity is sent on create or update | seat capacity returns to the manager UI (it is the last place a real capacity could be entered — see TrackMe-backend bookingController.getAvailableSeats) |
 | Driver directory vehicle column | RTL (Vitest) | src/pages/__tests__/ManagerAccountsPage.test.jsx | the vehicle is shown by number plate alone, never the internal vehicleId; falls back to the vehicleId when a record has no plate; "Unassigned" when there is no vehicle | the vehicle column stops being plate-first |
 
+## Enrollment Requests
+| Item (fn / flow) | Test type | Test file | Cases covered | Update when |
+|---|---|---|---|---|
+| ManagerRequestsPage (list + decide) | RTL (Vitest) | src/pages/__tests__/ManagerRequestsPage.test.jsx | pending list renders; Approve/Decline open the shared ConfirmDialog; managed-profile passenger shows a "Managed profile · relation" tag; Account column falls back to `passenger.account.email`/`phoneNumber` when the profile has none of its own; confirm-dialog title includes the account email for a managed profile via `passengerLabel()`; empty/loading/error states | request table layout, decision flow, or the managed-profile account surfacing changes |
+| AppShell Requests nav badge | RTL (Vitest) | src/layout/__tests__/AppShell.test.jsx | badge shows the pending count from `useEnrollmentRequestCount` | nav badge wiring changes |
+
 ## Tracking
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
 |---|---|---|---|---|
