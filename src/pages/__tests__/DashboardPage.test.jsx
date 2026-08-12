@@ -95,7 +95,15 @@ describe('DashboardPage', () => {
 
   it('shows error banner when dashboard query fails', () => {
     setup({ error: new Error('Server error'), metrics: null });
-    expect(screen.getByText(/failed to load/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/failed to load/i).length).toBeGreaterThan(0);
+  });
+
+  // The KPI cards used to keep rendering computed '0's during a fetch error,
+  // which reads as real data at a glance (issue #51).
+  it('shows an error placeholder on every KPI card during a fetch error, not "0"', () => {
+    setup({ error: new Error('Server error'), metrics: null });
+    expect(screen.getAllByText('—').length).toBe(4);
+    expect(screen.queryByText('0')).toBeNull();
   });
 
   it('renders operations table rows', () => {

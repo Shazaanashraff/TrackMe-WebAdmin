@@ -53,24 +53,28 @@ export function DashboardPage() {
           value={totalManagers}
           icon={Users}
           isLoading={dashQ.isLoading}
+          isError={dashQ.isError}
         />
         <StatCard
           label="Active Vehicles"
           value={activeVehicles}
           icon={VehicleIcon}
           isLoading={dashQ.isLoading}
+          isError={dashQ.isError}
         />
         <StatCard
           label="Confirmed Bookings"
           value={confirmedBookings}
           icon={BookMarked}
           isLoading={dashQ.isLoading}
+          isError={dashQ.isError}
         />
         <StatCard
           label="Avg Rating"
           value={hasAvgRating ? avgRatingNum.toFixed(1) : 'None'}
           icon={Star}
           isLoading={dashQ.isLoading}
+          isError={dashQ.isError}
         />
       </div>
 
