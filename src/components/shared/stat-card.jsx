@@ -3,7 +3,7 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
-export function StatCard({ label, value, icon: Icon, hint, trend, isLoading, href }) {
+export function StatCard({ label, value, icon: Icon, hint, trend, isLoading, isError, href }) {
   if (isLoading) {
     return (
       <div className="rounded-xl border border-border bg-surface p-5 space-y-3">
@@ -30,9 +30,15 @@ export function StatCard({ label, value, icon: Icon, hint, trend, isLoading, hre
         )}
       </div>
       <div className="space-y-1">
-        <span className="block text-3xl font-bold font-mono tabular-nums text-foreground leading-none">
-          {value}
+        <span
+          className={cn(
+            'block text-3xl font-bold font-mono tabular-nums leading-none',
+            isError ? 'text-status-danger' : 'text-foreground',
+          )}
+        >
+          {isError ? '—' : value}
         </span>
+        {isError && <p className="text-xs text-status-danger">Failed to load</p>}
         {trend && (
           <div
             className={cn(
