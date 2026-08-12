@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { adminApi } from '../api';
 import { writeStoredAuth, readStoredAuth } from '../lib/authSession';
+import { API_MODES, setApiMode } from '../lib/apiMode';
 
 // Exercises api.js's internal request()/refresh-retry/handleUnauthorized logic
 // directly, through the public adminApi methods, with a mocked global fetch.
@@ -33,6 +34,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   Object.defineProperty(window, 'location', {
     configurable: true,
     value: originalLocation
@@ -168,5 +170,26 @@ describe('api.js request layer', () => {
     });
 
     await expect(adminApi.getManagers()).resolves.toEqual({});
+  });
+
+  it('requests go to the sandbox backend once Developer Mode\'s toggle is flipped on', async () => {
+    setApiMode(API_MODES.SANDBOX);
+    global.fetch.mockResolvedValueOnce(jsonResponse({ success: true, data: { managers: [] } }));
+
+    await adminApi.getManagers();
+
+    const [url] = global.fetch.mock.calls[0];
+    expect(url).toMatch(/^http:\/\/localhost:5001\//);
+  });
+
+  it('always targets the primary backend outside a DEV build, even if sandbox was toggled on', async () => {
+    setApiMode(API_MODES.SANDBOX);
+    vi.stubEnv('DEV', false);
+    global.fetch.mockResolvedValueOnce(jsonResponse({ success: true, data: { managers: [] } }));
+
+    await adminApi.getManagers();
+
+    const [url] = global.fetch.mock.calls[0];
+    expect(url).toMatch(/^http:\/\/localhost:5000\//);
   });
 });

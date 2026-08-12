@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Activity, Route as RouteIcon, Settings,
-  Bus as VehicleIcon, UserCog, LogOut, Inbox,
+  Bus as VehicleIcon, UserCog, LogOut, Inbox, Code,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useEnrollmentRequestCount } from '@/hooks/use-enrollment-requests';
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Topbar } from './Topbar';
+import { SandboxBanner } from './SandboxBanner';
 
 const SIDEBAR_KEY = 'webadmin-sidebar-collapsed';
 
@@ -22,6 +23,8 @@ export const SUPER_ADMIN_NAV = [
   { label: 'Operations', path: '/operations', icon: Activity },
   { label: 'Routes', path: '/routes', icon: RouteIcon },
   { label: 'Settings', path: '/settings', icon: Settings },
+  // Compiled out of production builds — Developer Mode is dev-only by construction.
+  ...(import.meta.env.DEV ? [{ label: 'Developer', path: '/developer', icon: Code }] : []),
 ];
 
 export const MANAGER_NAV = [
@@ -232,6 +235,7 @@ export function AppShell({ user, onLogout, onRefresh }) {
 
         {/* Content card */}
         <div className="flex-1 flex flex-col bg-surface border border-border rounded-2xl shadow-float overflow-hidden min-w-0">
+          <SandboxBanner />
           <Topbar
             user={user}
             navItems={navItems}

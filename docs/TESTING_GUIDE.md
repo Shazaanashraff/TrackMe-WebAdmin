@@ -55,6 +55,12 @@
 | Vehicles page without seat capacity | RTL (Vitest) | src/pages/__tests__/ManagerVehiclesPage.test.jsx | neither the create wizard (step 0 fields, Review summary) nor the edit dialog collects or shows a seat count, and no seatCapacity is sent on create or update | seat capacity returns to the manager UI (it is the last place a real capacity could be entered — see TrackMe-backend bookingController.getAvailableSeats) |
 | Driver directory vehicle column | RTL (Vitest) | src/pages/__tests__/ManagerAccountsPage.test.jsx | the vehicle is shown by number plate alone, never the internal vehicleId; falls back to the vehicleId when a record has no plate; "Unassigned" when there is no vehicle | the vehicle column stops being plate-first |
 
+## Enrollment Requests
+| Item (fn / flow) | Test type | Test file | Cases covered | Update when |
+|---|---|---|---|---|
+| ManagerRequestsPage (list + decide) | RTL (Vitest) | src/pages/__tests__/ManagerRequestsPage.test.jsx | pending list renders; Approve/Decline open the shared ConfirmDialog; managed-profile passenger shows a "Managed profile · relation" tag; Account column falls back to `passenger.account.email`/`phoneNumber` when the profile has none of its own; confirm-dialog title includes the account email for a managed profile via `passengerLabel()`; empty/loading/error states | request table layout, decision flow, or the managed-profile account surfacing changes |
+| AppShell Requests nav badge | RTL (Vitest) | src/layout/__tests__/AppShell.test.jsx | badge shows the pending count from `useEnrollmentRequestCount` | nav badge wiring changes |
+
 ## Tracking
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
 |---|---|---|---|---|
@@ -81,4 +87,14 @@
 | ManagerRouteApprovalsPage — route change requests + RouteComparisonPanel (Phase 2) | RTL (Vitest) | src/pages/__tests__/ManagerRouteApprovalsPage.test.jsx | pending list renders with deviation stats, comparison panel shows both route maps, resolveRouteChangeRequest called with KEEP_OLD/ADOPT_NEW | diff resolver UI or resolve contract changes |
 | Full custom-route flow (mocked backend) | e2e (Playwright) | e2e/custom-routes.spec.ts | create CUSTOM driver request, review→name a recorded route→becomes ACTIVE→selectable in another bus's route dropdown, **Phase 2**: seeded route-change request→review diff→Adopt New→route geometry updates | end-to-end custom-route UX changes |
 
+## Developer Mode
+| Item (fn / flow) | Test type | Test file | Cases covered | Update when |
+|---|---|---|---|---|
+| lib/apiMode.js | unit (Vitest) | src/lib/__tests__/apiMode.test.js | defaults to primary; toggling switches the base URL and persists to localStorage; clears queryClient on every mode change; notifies subscribers; forces primary and ignores writes outside a DEV build, even if sandbox was already stored | the toggle's storage key, base URLs, or DEV-gating changes |
+| api.js base URL follows the sandbox toggle | unit (fetch) | src/__tests__/api.auth.test.js | a request goes to :5001 once sandbox is toggled on; stays on :5000 outside a DEV build even with sandbox toggled on | `getApiBaseUrl()`'s call sites in `request()`/`refreshStoredAuth()` change |
+| DeveloperPage | RTL (Vitest) | src/pages/__tests__/DeveloperPage.test.jsx | toggle flips mode + shows a mismatch warning when the server's own `/health` disagrees; health badge reflects the server's report; catalog renders grouped by module with case counts; running a file streams SSE output and reports the exit code; reset-sandbox streams output; a runner-unreachable state shows an error, not a crash; gap report shows missing categories without treating them as failures | the page's toggle, catalog rendering, run flow, or gap report changes |
+
 Setup: `npm run test` (Vitest, jsdom) and `npm run test:e2e` (Playwright, mocks all `/api/manager/*` calls — no live backend/DB needed). Run `npx playwright install chromium` once before the first `test:e2e` run.
+
+Regenerate the auto-generated catalog (`npm run devkit:catalog` from the repo root) whenever a
+test is added or renamed, so `tools/devkit/docs/TEST_CATALOG.md`'s gap report stays honest.

@@ -35,6 +35,23 @@ const REQUESTS = [
   },
 ];
 
+// A managed profile (a child, an employee the account holder added) has no
+// email of its own — the manager still needs to know whose account it is.
+const MANAGED_REQUEST = {
+  _id: 'req-3',
+  status: 'PENDING',
+  requestedAt: '2026-08-07T11:00:00.000Z',
+  passenger: {
+    _id: 'u3',
+    name: 'Amaya Perera',
+    email: '',
+    relation: 'Daughter',
+    isManagedProfile: true,
+    account: { name: 'Shazaan Ashraff', email: 'shazaan@t.com', phoneNumber: '0771234567' },
+  },
+  driver: { _id: 'd1', name: 'Kamal Perera', driverCode: 'DRV-4K7P-9XQ2' },
+};
+
 function makeMutation(overrides = {}) {
   return { mutate: vi.fn(), isPending: false, ...overrides };
 }
@@ -106,6 +123,28 @@ describe('ManagerRequestsPage', () => {
     setup({ approveMut: makeMutation({ isPending: true }) });
     screen.getAllByRole('button', { name: /approve/i }).forEach((button) => {
       expect(button).toBeDisabled();
+    });
+  });
+
+  describe('a managed profile passenger', () => {
+    it('shows the "Managed profile" tag and relation under the name', () => {
+      setup({ requests: [MANAGED_REQUEST] });
+      expect(screen.getByText('Amaya Perera')).toBeInTheDocument();
+      expect(screen.getByText('Managed profile · Daughter')).toBeInTheDocument();
+    });
+
+    it('falls back to the owning account\'s email and phone in the Account column', () => {
+      setup({ requests: [MANAGED_REQUEST] });
+      expect(screen.getByText('shazaan@t.com')).toBeInTheDocument();
+      expect(screen.getByText('0771234567')).toBeInTheDocument();
+    });
+
+    it('names the account holder in the confirm dialog, not just the profile', async () => {
+      const user = userEvent.setup();
+      setup({ requests: [MANAGED_REQUEST] });
+
+      await user.click(screen.getByRole('button', { name: /approve/i }));
+      expect(screen.getByText(/Approve Amaya Perera \(account: shazaan@t\.com\)\?/)).toBeInTheDocument();
     });
   });
 });
