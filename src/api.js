@@ -301,8 +301,9 @@ export const adminApi = {
       body: JSON.stringify(payload)
     }),
 
-  // Creates the vehicle and its first driver outright; a manager owns their own
-  // fleet, so there is no approval step.
+  // A manager's first vehicle is created outright. Every vehicle after that is
+  // submitted as a request a super admin must approve — same endpoint, the
+  // response shape tells you which happened (data.vehicle vs a pending request).
   createManagerVehicle: (payload) =>
     request('/api/manager/vehicle-accounts', {
       method: 'POST',

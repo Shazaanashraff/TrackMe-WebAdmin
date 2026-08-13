@@ -146,12 +146,18 @@ export function ManagerVehiclesPage() {
   const handleSubmit = async () => {
     try {
       const result = await createM.mutateAsync({ ...createForm });
-      // The driver ID is the only copy the manager gets in passing, so it goes
-      // in the toast rather than making them open the drivers page for it.
-      const driverCode = result?.data?.driver?.driverCode;
-      toast(driverCode
-        ? `Vehicle created. Driver ID ${driverCode}`
-        : 'Vehicle created, unassigned');
+      if (result?.data?.vehicle) {
+        // The driver ID is the only copy the manager gets in passing, so it goes
+        // in the toast rather than making them open the drivers page for it.
+        const driverCode = result?.data?.driver?.driverCode;
+        toast(driverCode
+          ? `Vehicle created. Driver ID ${driverCode}`
+          : 'Vehicle created, unassigned');
+      } else {
+        // No vehicle in the response means this fleet already has one, so the
+        // request went to a super admin for approval instead of being created.
+        toast('Vehicle creation request submitted for super admin approval');
+      }
       closeCreate();
     } catch (err) {
       setCreateError(err);
@@ -511,6 +517,11 @@ export function ManagerVehiclesPage() {
               </p>
               <p><span className="font-semibold">Driver Email:</span> {createForm.driverEmail || 'None'}</p>
               <p><span className="font-semibold">Reason:</span> {createForm.reason || 'Not provided'}</p>
+              <p className="text-muted-foreground pt-1">
+                {vehicles.length > 0
+                  ? 'This is not your first vehicle, so it will be submitted for super admin approval rather than created right away.'
+                  : 'This is your first vehicle, so it will be created right away.'}
+              </p>
             </div>
           )}
 
@@ -523,7 +534,9 @@ export function ManagerVehiclesPage() {
               <Button onClick={handleNext}>Continue</Button>
             ) : (
               <Button onClick={handleSubmit} disabled={createM.isPending}>
-                {createM.isPending ? 'Creating…' : 'Create Vehicle'}
+                {createM.isPending
+                  ? (vehicles.length > 0 ? 'Submitting…' : 'Creating…')
+                  : (vehicles.length > 0 ? 'Submit Request' : 'Create Vehicle')}
               </Button>
             )}
           </DialogFooter>
