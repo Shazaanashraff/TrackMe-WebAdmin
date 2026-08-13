@@ -28,6 +28,7 @@ import { useRefreshData } from './hooks/use-refresh';
 import { useTypographyScope } from './hooks/use-typography-scope';
 import { StyleGuidePage } from './pages/StyleGuidePage';
 import { DeveloperPage } from './pages/DeveloperPage';
+import { EnrollmentFormPage } from './pages/EnrollmentFormPage';
 
 function ProtectedShell({ auth, onLogout, triggerRefresh }) {
   const authToken = auth?.token || auth?.accessToken;
@@ -53,6 +54,7 @@ function ProtectedShell({ auth, onLogout, triggerRefresh }) {
           <Route path="/operations" element={<OperationsPage />} />
           <Route path="/routes" element={<RoutesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/enrollment-form" element={<EnrollmentFormPage />} />
           {import.meta.env.DEV && <Route path="/developer" element={<DeveloperPage />} />}
           <Route path="*" element={<NotFoundPage role="super-admin" />} />
         </Route>
@@ -67,6 +69,7 @@ function ProtectedShell({ auth, onLogout, triggerRefresh }) {
         <Route path="/manager/vehicles" element={<ManagerVehiclesPage />} />
         <Route path="/manager/accounts" element={<ManagerAccountsPage />} />
         <Route path="/manager/requests" element={<ManagerRequestsPage />} />
+        <Route path="/manager/enrollment-form" element={<EnrollmentFormPage />} />
         <Route path="/manager/settings" element={<ManagerSettingsPage />} />
         <Route path="*" element={<NotFoundPage role="admin" />} />
       </Route>

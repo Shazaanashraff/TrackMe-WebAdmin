@@ -390,5 +390,17 @@ export const adminApi = {
   rejectEnrollmentRequest: (id) =>
     request(`/api/manager/enrollment-requests/${id}/reject`, {
       method: 'POST'
+    }),
+
+  getManagerEnrollmentSchema: () => request('/api/manager/organization/enrollment-schema'),
+  updateManagerEnrollmentSchema: (fields) =>
+    request('/api/manager/organization/enrollment-schema', { method: 'PUT', body: JSON.stringify({ fields }) }),
+  getOrganizations: () => request('/api/super-admin/organizations'),
+  getOrganizationEnrollmentSchema: (organizationId) =>
+    request(`/api/super-admin/organizations/${organizationId}/enrollment-schema`),
+  updateOrganizationEnrollmentSchema: (organizationId, fields) =>
+    request(`/api/super-admin/organizations/${organizationId}/enrollment-schema`, {
+      method: 'PUT',
+      body: JSON.stringify({ fields })
     })
 };

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Activity, Route as RouteIcon, Settings,
-  Bus as VehicleIcon, UserCog, LogOut, Inbox, Code,
+  Bus as VehicleIcon, UserCog, LogOut, Inbox, Code, ClipboardList,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useEnrollmentRequestCount } from '@/hooks/use-enrollment-requests';
@@ -22,6 +22,7 @@ export const SUPER_ADMIN_NAV = [
   { label: 'Managers', path: '/managers', icon: Users },
   { label: 'Operations', path: '/operations', icon: Activity },
   { label: 'Routes', path: '/routes', icon: RouteIcon },
+  { label: 'Enrollment form', path: '/enrollment-form', icon: ClipboardList },
   { label: 'Settings', path: '/settings', icon: Settings },
   // Compiled out of production builds — Developer Mode is dev-only by construction.
   ...(import.meta.env.DEV ? [{ label: 'Developer', path: '/developer', icon: Code }] : []),
@@ -32,6 +33,7 @@ export const MANAGER_NAV = [
   { label: 'Vehicles', path: '/manager/vehicles', icon: VehicleIcon },
   { label: 'Drivers', path: '/manager/accounts', icon: UserCog },
   { label: 'Requests', path: '/manager/requests', icon: Inbox },
+  { label: 'Enrollment form', path: '/manager/enrollment-form', icon: ClipboardList },
   { label: 'Settings', path: '/manager/settings', icon: Settings },
 ];
 

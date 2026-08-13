@@ -45,4 +45,8 @@ export const qk = {
     list: (status = 'PENDING') => ['enrollment-requests', 'list', status],
     count: () => ['enrollment-requests', 'count'],
   },
+  enrollmentSchema: {
+    manager: () => ['enrollment-schema', 'manager'],
+    organization: (organizationId) => ['enrollment-schema', 'organization', organizationId],
+  },
 };
