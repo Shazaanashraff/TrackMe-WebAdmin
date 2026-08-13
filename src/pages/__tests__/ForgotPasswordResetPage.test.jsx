@@ -16,6 +16,8 @@ function renderPage(initialState = { email: 'manager@trackme.com', resetToken: '
     <MemoryRouter initialEntries={[{ pathname: '/forgot-password/reset', state: initialState }]}>
       <Routes>
         <Route path="/forgot-password/reset" element={<ForgotPasswordResetPage />} />
+        <Route path="/forgot-password/verify" element={<div>Verify page</div>} />
+        <Route path="/forgot-password" element={<div>Request page</div>} />
         <Route path="/login" element={<div>Login page</div>} />
       </Routes>
     </MemoryRouter>
@@ -24,6 +26,32 @@ function renderPage(initialState = { email: 'manager@trackme.com', resetToken: '
 
 describe('ForgotPasswordResetPage', () => {
   beforeEach(() => { sessionStorage.clear(); });
+
+  it('still shows the restart warning when neither router state nor sessionStorage has a resetToken', () => {
+    renderPage({});
+
+    expect(screen.getByText(/start the recovery flow again/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/new password/i)).not.toBeInTheDocument();
+  });
+
+  it('recovers email and resetToken from sessionStorage after a refresh loses router state (issue #55)', () => {
+    sessionStorage.setItem('forgot-password-flow', JSON.stringify({
+      email: 'manager@trackme.com',
+      resetToken: 'reset-tok-1',
+    }));
+    renderPage({});
+
+    expect(screen.queryByText(/start the recovery flow again/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toHaveValue('manager@trackme.com');
+  });
+
+  it('renders the reset form when email and resetToken are present', () => {
+    renderPage();
+
+    expect(screen.getByLabelText(/^Email/)).toHaveValue('manager@trackme.com');
+    expect(screen.getByLabelText(/^New password/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Confirm password/)).toBeInTheDocument();
+  });
 
   it('renders both password fields masked by default with a reveal toggle (issue #7)', () => {
     renderPage();
@@ -108,6 +136,26 @@ describe('ForgotPasswordResetPage', () => {
     expect(await screen.findByText('Login page')).toBeInTheDocument();
   });
 
+  it('disables the submit button and shows an updating state while the request is in flight', async () => {
+    let resolveRequest;
+    adminApi.resetPasswordWithToken.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRequest = resolve;
+      })
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText(/^new password$/i), 'Password123!');
+    await user.type(screen.getByLabelText(/^confirm password$/i), 'Password123!');
+    await user.click(screen.getByRole('button', { name: /reset password/i }));
+
+    expect(screen.getByRole('button', { name: /updating/i })).toBeDisabled();
+
+    resolveRequest({});
+    expect(await screen.findByText('Login page')).toBeInTheDocument();
+  });
+
   it('shows the server error message on failure', async () => {
     adminApi.resetPasswordWithToken.mockRejectedValueOnce(new Error('Reset token expired'));
     const user = userEvent.setup();
@@ -118,23 +166,6 @@ describe('ForgotPasswordResetPage', () => {
     await user.click(screen.getByRole('button', { name: /reset password/i }));
 
     expect(await screen.findByText('Reset token expired')).toBeInTheDocument();
-  });
-
-  it('recovers email and resetToken from sessionStorage after a refresh loses router state (issue #55)', () => {
-    sessionStorage.setItem('forgot-password-flow', JSON.stringify({
-      email: 'manager@trackme.com',
-      resetToken: 'reset-tok-1',
-    }));
-    renderPage({});
-
-    expect(screen.queryByText(/start the recovery flow again/i)).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toHaveValue('manager@trackme.com');
-  });
-
-  it('still shows the restart warning when neither router state nor sessionStorage has a resetToken', () => {
-    renderPage({});
-
-    expect(screen.getByText(/start the recovery flow again/i)).toBeInTheDocument();
   });
 
   it('clears the persisted flow state once the password is successfully reset', async () => {

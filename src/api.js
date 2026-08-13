@@ -1,6 +1,5 @@
 import { clearStoredAuth, readStoredAuth, writeStoredAuth, isJwtExpired } from './lib/authSession';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { getApiBaseUrl } from './lib/apiMode';
 
 // Endpoints that either issue tokens themselves or are reachable without one —
 // a refresh attempt here would be pointless or recursive.
@@ -38,7 +37,7 @@ const refreshStoredAuth = async () => {
   const storedAuth = readStoredAuth();
   if (!storedAuth?.refreshToken) return null;
 
-  const response = await fetch(`${API_BASE_URL}/api/auth/refresh-token`, {
+  const response = await fetch(`${getApiBaseUrl()}/api/auth/refresh-token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -102,7 +101,7 @@ const request = async (path, options = {}) => {
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',

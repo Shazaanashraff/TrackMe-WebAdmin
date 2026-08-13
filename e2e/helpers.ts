@@ -25,6 +25,69 @@ const json = (data: unknown, status = 200) => ({
   body: JSON.stringify(data),
 });
 
+/**
+ * Mocks the auth endpoints (/api/auth/*) so login, session refresh, and the
+ * forgot-password journey can be driven through the REAL UI end to end
+ * without a live backend. Pass overrides to script a specific outcome (e.g. a
+ * failed login, an expired OTP) for a given test.
+ */
+export async function mockAuthBackend(
+  page: Page,
+  opts: {
+    loginResponse?: { status?: number; body: unknown };
+    refreshResponse?: { status?: number; body: unknown };
+    requestOtpResponse?: { status?: number; body: unknown };
+    verifyOtpResponse?: { status?: number; body: unknown };
+    resetPasswordResponse?: { status?: number; body: unknown };
+  } = {}
+) {
+  await page.route('**/api/auth/login', (route) => {
+    const { status = 200, body = { success: true } } = opts.loginResponse ?? {};
+    route.fulfill(json(body, status));
+  });
+
+  await page.route('**/api/auth/refresh-token', (route) => {
+    const { status = 200, body = { success: true } } = opts.refreshResponse ?? {};
+    route.fulfill(json(body, status));
+  });
+
+  await page.route('**/api/auth/forgot-password/request-otp', (route) => {
+    const { status = 200, body = { success: true } } = opts.requestOtpResponse ?? {};
+    route.fulfill(json(body, status));
+  });
+
+  await page.route('**/api/auth/forgot-password/verify-otp', (route) => {
+    const { status = 200, body = { success: true, resetToken: 'e2e-reset-token' } } = opts.verifyOtpResponse ?? {};
+    route.fulfill(json(body, status));
+  });
+
+  await page.route('**/api/auth/forgot-password/reset', (route) => {
+    const { status = 200, body = { success: true } } = opts.resetPasswordResponse ?? {};
+    route.fulfill(json(body, status));
+  });
+}
+
+/** Mocks the handful of endpoints the super-admin Dashboard page fetches on load. */
+export async function mockSuperAdminDashboardBackend(page: Page) {
+  await page.route('**/api/super-admin/dashboard', (route) =>
+    route.fulfill(
+      json({
+        success: true,
+        data: {
+          managers: { totalManagers: 1 },
+          vehicles: { activeVehicles: 0, inactiveVehicles: 0 },
+          bookings: { confirmedBookings: 0 },
+          reviews: { averageRating: 0 },
+        },
+      })
+    )
+  );
+  await page.route('**/api/super-admin/operations', (route) => route.fulfill(json({ success: true, data: [] })));
+  await page.route('**/api/super-admin/vehicle-requests*', (route) =>
+    route.fulfill(json({ success: true, data: [] }))
+  );
+}
+
 export interface MockRoute {
   routeId: string;
   routeName?: string;

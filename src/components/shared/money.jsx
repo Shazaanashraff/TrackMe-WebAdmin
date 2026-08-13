@@ -1,13 +1,13 @@
 import { cn } from '@/lib/utils';
 
 export function formatLKR(amount) {
-  if (amount == null || isNaN(Number(amount))) return 'None';
+  const value = amount == null || isNaN(Number(amount)) ? 0 : Number(amount);
   return new Intl.NumberFormat('en-LK', {
     style: 'currency',
     currency: 'LKR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(Number(amount));
+  }).format(value);
 }
 
 export function Money({ amount, className }) {

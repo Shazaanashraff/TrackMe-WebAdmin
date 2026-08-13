@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { ForgotPasswordVerifyPage } from '../ForgotPasswordVerifyPage';
 import { adminApi } from '../../api';
 
@@ -12,12 +12,23 @@ vi.mock('../../api', () => ({
   },
 }));
 
+function ResetPageProbe() {
+  const location = useLocation();
+  return (
+    <div>
+      Reset password page
+      <pre data-testid="location-state">{JSON.stringify(location.state)}</pre>
+    </div>
+  );
+}
+
 function renderPage(initialState = { email: 'manager@trackme.com' }) {
   return render(
     <MemoryRouter initialEntries={[{ pathname: '/forgot-password/verify', state: initialState }]}>
       <Routes>
         <Route path="/forgot-password/verify" element={<ForgotPasswordVerifyPage />} />
-        <Route path="/forgot-password/reset" element={<div>Reset password page</div>} />
+        <Route path="/forgot-password" element={<div>Request page</div>} />
+        <Route path="/forgot-password/reset" element={<ResetPageProbe />} />
       </Routes>
     </MemoryRouter>
   );
@@ -28,6 +39,7 @@ describe('ForgotPasswordVerifyPage', () => {
 
   it('renders the code field with a numeric input affordance (issue #20)', () => {
     renderPage();
+
     const codeField = screen.getByLabelText(/recovery code/i);
     expect(codeField).toHaveAttribute('inputmode', 'numeric');
     expect(codeField).toHaveAttribute('pattern', '[0-9]*');
@@ -37,8 +49,8 @@ describe('ForgotPasswordVerifyPage', () => {
   it('strips non-digit characters and caps entry at 6 digits', async () => {
     const user = userEvent.setup();
     renderPage();
-    const codeField = screen.getByLabelText(/recovery code/i);
 
+    const codeField = screen.getByLabelText(/recovery code/i);
     await user.type(codeField, 'a1b2c3d4e5f6g7');
 
     expect(codeField).toHaveValue('123456');
@@ -49,11 +61,15 @@ describe('ForgotPasswordVerifyPage', () => {
     const user = userEvent.setup();
     renderPage();
 
+    expect(screen.getByLabelText(/email/i)).toHaveValue('manager@trackme.com');
+
     await user.type(screen.getByLabelText(/recovery code/i), '123456');
     await user.click(screen.getByRole('button', { name: /verify code/i }));
 
     expect(adminApi.verifyPasswordResetOtp).toHaveBeenCalledWith('manager@trackme.com', '123456');
     expect(await screen.findByText('Reset password page')).toBeInTheDocument();
+    const state = JSON.parse(await screen.findByTestId('location-state').then((el) => el.textContent));
+    expect(state).toEqual({ email: 'manager@trackme.com', resetToken: 'reset-tok-1' });
   });
 
   it('recovers the email from sessionStorage after a refresh loses router state (issue #55)', () => {
@@ -87,6 +103,26 @@ describe('ForgotPasswordVerifyPage', () => {
     await user.click(screen.getByRole('button', { name: /verify code/i }));
 
     expect(await screen.findByText('Invalid or expired code')).toBeInTheDocument();
+  });
+
+  it('navigates back to the request-email step, carrying the current email, when Back is clicked', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /back/i }));
+
+    expect(await screen.findByText('Request page')).toBeInTheDocument();
+  });
+
+  it('allows editing the email field even if it was pre-filled from router state', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const emailField = screen.getByLabelText(/email/i);
+    await user.clear(emailField);
+    await user.type(emailField, 'someone-else@trackme.com');
+
+    expect(emailField).toHaveValue('someone-else@trackme.com');
   });
 
   it('resends the code and starts a cooldown, disabling the resend button (issue #56)', async () => {

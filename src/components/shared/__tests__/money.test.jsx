@@ -2,18 +2,25 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Money, formatLKR } from '../money';
 
-// A missing amount is written out as a word; the UI carries no em dashes.
+// A missing amount renders as a real zero-currency figure, not the word "None" —
+// it reads as "zero so far", not as a broken value (issue #58).
 describe('formatLKR', () => {
-  it('returns None for null', () => {
-    expect(formatLKR(null)).toBe('None');
+  it('formats null as zero, not None', () => {
+    const result = formatLKR(null);
+    expect(result).not.toBe('None');
+    expect(result).toMatch(/0\.00/);
   });
 
-  it('returns None for undefined', () => {
-    expect(formatLKR(undefined)).toBe('None');
+  it('formats undefined as zero, not None', () => {
+    const result = formatLKR(undefined);
+    expect(result).not.toBe('None');
+    expect(result).toMatch(/0\.00/);
   });
 
-  it('returns None for NaN', () => {
-    expect(formatLKR(NaN)).toBe('None');
+  it('formats NaN as zero, not None', () => {
+    const result = formatLKR(NaN);
+    expect(result).not.toBe('None');
+    expect(result).toMatch(/0\.00/);
   });
 
   it('formats a number amount (contains the digits)', () => {
@@ -33,9 +40,10 @@ describe('Money', () => {
     expect(screen.getByText(/2[,.]?500/)).toBeInTheDocument();
   });
 
-  it('renders None for a null amount', () => {
+  it('renders a zero amount, not None, for a null amount', () => {
     render(<Money amount={null} />);
-    expect(screen.getByText('None')).toBeInTheDocument();
+    expect(screen.queryByText('None')).toBeNull();
+    expect(screen.getByText(/0\.00/)).toBeInTheDocument();
   });
 
   it('applies tabular-nums class', () => {

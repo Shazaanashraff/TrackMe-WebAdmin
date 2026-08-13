@@ -111,6 +111,35 @@ describe('RoutesPage', () => {
     expect(screen.getByText('Unassigned')).toBeInTheDocument();
   });
 
+  it('matches a lowercase province value to its correct province card instead of Unassigned (issue #60)', () => {
+    const routeLowercase = { ...ROUTE_C, _id: 'r-lower', province: 'central' };
+    setup({ routes: [ROUTE_W, routeLowercase] });
+    const centralRow = screen.getByText('Central Province').closest('button');
+    expect(within(centralRow).getByText('1 routes')).toBeInTheDocument();
+    expect(screen.queryByText('Unassigned')).not.toBeInTheDocument();
+  });
+
+  it('matches a "<Name> Province"-suffixed value to its correct province card (issue #60)', () => {
+    const routeSuffixed = { ...ROUTE_C, _id: 'r-suffixed', province: 'Western Province' };
+    setup({ routes: [routeSuffixed] });
+    const westernRow = screen.getByText('Western Province').closest('button');
+    expect(within(westernRow).getByText('1 routes')).toBeInTheDocument();
+    expect(screen.queryByText('Unassigned')).not.toBeInTheDocument();
+  });
+
+  it('still falls into Unassigned for a province value that matches no known province', () => {
+    const routeBogus = { ...ROUTE_C, _id: 'r-bogus', province: 'Atlantis' };
+    setup({ routes: [routeBogus] });
+    expect(screen.getByText('Unassigned')).toBeInTheDocument();
+  });
+
+  it('drills into a differently-cased province and shows its routes (issue #60)', async () => {
+    const routeLowercase = { ...ROUTE_C, _id: 'r-lower', province: 'CENTRAL' };
+    const { user } = setup({ routes: [routeLowercase] });
+    await user.click(screen.getByText('Central Province').closest('button'));
+    expect(await screen.findByText('Galle–Matara')).toBeInTheDocument();
+  });
+
   it('drills into province on click and shows route rows', async () => {
     const { user } = setup();
     await user.click(screen.getByText('Western Province').closest('button'));

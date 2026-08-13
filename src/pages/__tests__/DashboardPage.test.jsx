@@ -85,9 +85,25 @@ describe('DashboardPage', () => {
     expect(screen.getByText('None')).toBeInTheDocument();
   });
 
+  // Some Mongo aggregation pipelines serialize Decimal128 as a string — a plain
+  // null-check let that reach .toFixed() directly and throw (issue #64).
+  it('does not crash when averageRating is a stringified number', () => {
+    setup({ metrics: { ...METRICS, reviews: { averageRating: '4.2' } } });
+    expect(screen.getByText('Avg Rating')).toBeInTheDocument();
+    expect(screen.getAllByText('4.2').length).toBeGreaterThan(0);
+  });
+
   it('shows error banner when dashboard query fails', () => {
     setup({ error: new Error('Server error'), metrics: null });
-    expect(screen.getByText(/failed to load/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/failed to load/i).length).toBeGreaterThan(0);
+  });
+
+  // The KPI cards used to keep rendering computed '0's during a fetch error,
+  // which reads as real data at a glance (issue #51).
+  it('shows an error placeholder on every KPI card during a fetch error, not "0"', () => {
+    setup({ error: new Error('Server error'), metrics: null });
+    expect(screen.getAllByText('—').length).toBe(4);
+    expect(screen.queryByText('0')).toBeNull();
   });
 
   it('renders operations table rows', () => {

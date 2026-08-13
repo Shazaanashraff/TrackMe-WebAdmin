@@ -77,8 +77,10 @@ export function OperationsPage() {
       toast(`Request ${reviewTarget.decision === 'APPROVE' ? 'approved' : 'rejected'}`);
       setReviewTarget(null);
     } catch (err) {
+      // Leave reviewTarget set so the dialog stays open and ConfirmDialog's
+      // internal `reason` state (which it clears on close) survives — the
+      // admin can retry without retyping a rejection reason.
       toast(`Failed: ${err?.message || 'Unknown error'}`);
-      setReviewTarget(null);
     }
   };
 
@@ -96,8 +98,8 @@ export function OperationsPage() {
 
   const overviewColumns = useMemo(() => [
     { id: 'manager', header: 'Manager', accessorKey: 'managerName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
-    { id: 'vehicles', header: 'Vehicles', accessorKey: 'fleet', cell: (i) => i.getValue()?.totalVehicles ?? 0 },
-    { id: 'bookings', header: 'Bookings', accessorKey: 'bookings', cell: (i) => i.getValue()?.totalBookings ?? 0 },
+    { id: 'vehicles', header: 'Vehicles', accessorFn: (row) => row.fleet?.totalVehicles ?? 0, cell: (i) => i.getValue() },
+    { id: 'bookings', header: 'Bookings', accessorFn: (row) => row.bookings?.totalBookings ?? 0, cell: (i) => i.getValue() },
     { id: 'status', header: 'Status', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'online' : 'offline'} /> },
   ], []);
 

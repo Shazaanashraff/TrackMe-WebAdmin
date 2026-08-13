@@ -27,6 +27,7 @@ import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSess
 import { useRefreshData } from './hooks/use-refresh';
 import { useTypographyScope } from './hooks/use-typography-scope';
 import { StyleGuidePage } from './pages/StyleGuidePage';
+import { DeveloperPage } from './pages/DeveloperPage';
 
 function ProtectedShell({ auth, onLogout, triggerRefresh }) {
   const authToken = auth?.token || auth?.accessToken;
@@ -52,6 +53,7 @@ function ProtectedShell({ auth, onLogout, triggerRefresh }) {
           <Route path="/operations" element={<OperationsPage />} />
           <Route path="/routes" element={<RoutesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          {import.meta.env.DEV && <Route path="/developer" element={<DeveloperPage />} />}
           <Route path="*" element={<NotFoundPage role="super-admin" />} />
         </Route>
       </Routes>
