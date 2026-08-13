@@ -22,6 +22,33 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-13 — Create-vehicle flow reflects the new bootstrap-then-approval rule
+- **Branch:** main
+- **Modules touched:** vehicles/fleet (`ManagerVehiclesPage.jsx`) — no dedicated module doc yet
+- **What changed:**
+  - `handleSubmit` in `ManagerVehiclesPage.jsx` now branches on the create-vehicle
+    response: `data.vehicle` present → today's "Vehicle created" toast; otherwise
+    (a pending request came back) → "Vehicle creation request submitted for
+    super admin approval".
+  - The create wizard's review step and final submit button now read the
+    manager's current vehicle count (`useManagerVehicles`, already loaded on
+    this page) to say which will happen — "Create Vehicle" / "This is your
+    first vehicle, so it will be created right away" for an empty fleet, or
+    "Submit Request" / "…submitted for super admin approval" once they have one.
+- **Why:** the backend (`POST /api/manager/vehicle-accounts`) now creates a
+  manager's first vehicle outright but queues every one after that for
+  super-admin approval, mirroring how vehicle deletion already works. The UI
+  previously assumed every submission created a vehicle immediately.
+- **Contract impact:** backend contract change — see backend `docs/CHANGES.md`,
+  2026-08-13 entry. No new backend doc yet (`ADMIN.md` is still a stub).
+- **Tests:** extended `src/pages/__tests__/ManagerVehiclesPage.test.jsx` — two
+  new cases (immediate creation with an empty fleet vs. a submitted request
+  once the manager already has a vehicle) plus three existing wizard-submit
+  assertions loosened to accept either button label, since the shared test
+  fixture manager already has one vehicle.
+- **Docs updated:** n/a (no dedicated module doc for this page yet).
+- **Follow-ups / known issues:** none.
+
 ## 2026-08-12 — Show the owning account for a managed-profile passenger; document the requests page
 - **Branch:** feat/multi-rider-profiles
 - **Modules touched:** [docs/modules/ENROLLMENT_REQUESTS.md](modules/ENROLLMENT_REQUESTS.md) (new)

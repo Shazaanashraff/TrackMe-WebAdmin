@@ -26,6 +26,7 @@ import {
   useUpdateManagerVehicle,
   useRequestDeleteVehicle,
 } from '@/hooks/use-vehicles';
+import { toast } from 'sonner';
 
 const ROUTES = [
   { routeId: 'PUB-1', routeName: 'Public Route', visibility: 'PUBLIC' },
@@ -37,6 +38,27 @@ const ROUTES = [
 async function chooseOption(user, triggerName, optionName) {
   await user.click(screen.getByRole('combobox', { name: triggerName }));
   await user.click(await screen.findByRole('option', { name: optionName }));
+}
+
+async function fillStep0(user, { routeMode = 'EXISTING' } = {}) {
+  await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+  await screen.findByRole('dialog');
+
+  await user.type(screen.getByLabelText(/vehicle id/i), 'VEHICLE-99');
+  await user.type(screen.getByLabelText(/vehicle name/i), 'Shuttle 99');
+  // A real Sri Lankan plate: two or three letters, then four digits.
+  await user.type(screen.getByLabelText(/number plate/i), 'ABC-1234');
+
+  if (routeMode === 'CUSTOM') {
+    await user.click(screen.getByLabelText(/custom route/i));
+  } else {
+    // Select a route from the dropdown
+    await user.click(screen.getByLabelText(/^route$/i));
+    const option = await screen.findByRole('option', { name: /Public Route/i });
+    await user.click(option);
+  }
+
+  await user.click(screen.getByRole('button', { name: /continue/i }));
 }
 
 const VEHICLES = [
@@ -130,27 +152,6 @@ describe('ManagerVehiclesPage', () => {
 describe('ManagerVehiclesPage route assignment toggle', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  async function fillStep0(user, { routeMode = 'EXISTING' } = {}) {
-    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
-    await screen.findByRole('dialog');
-
-    await user.type(screen.getByLabelText(/vehicle id/i), 'VEHICLE-99');
-    await user.type(screen.getByLabelText(/vehicle name/i), 'Shuttle 99');
-    // A real Sri Lankan plate: two or three letters, then four digits.
-    await user.type(screen.getByLabelText(/number plate/i), 'ABC-1234');
-
-    if (routeMode === 'CUSTOM') {
-      await user.click(screen.getByLabelText(/custom route/i));
-    } else {
-      // Select a route from the dropdown
-      await user.click(screen.getByLabelText(/^route$/i));
-      const option = await screen.findByRole('option', { name: /Public Route/i });
-      await user.click(option);
-    }
-
-    await user.click(screen.getByRole('button', { name: /continue/i }));
-  }
-
   it('submits routeMode CUSTOM and no routeId when the Custom Route option is chosen', async () => {
     const createMut = makeMutation();
     const { user } = setup({ createMut });
@@ -161,7 +162,9 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
     // Step 2: submit
-    await user.click(screen.getByRole('button', { name: /create vehicle/i }));
+    // The default fixture manager already has a vehicle, so this submits as a
+    // request rather than an immediate creation — see the label toggle test.
+    await user.click(screen.getByRole('button', { name: /create vehicle|submit request/i }));
 
     await waitFor(() => expect(createMut.mutateAsync).toHaveBeenCalledTimes(1), { timeout: 15000 });
     const payload = createMut.mutateAsync.mock.calls[0][0];
@@ -215,7 +218,9 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     await user.click(screen.getByRole('button', { name: /continue/i }));
 
     // Step 2
-    await user.click(screen.getByRole('button', { name: /create vehicle/i }));
+    // The default fixture manager already has a vehicle, so this submits as a
+    // request rather than an immediate creation — see the label toggle test.
+    await user.click(screen.getByRole('button', { name: /create vehicle|submit request/i }));
 
     await waitFor(() => expect(createMut.mutateAsync).toHaveBeenCalledTimes(1), { timeout: 15000 });
     const payload = createMut.mutateAsync.mock.calls[0][0];
@@ -244,7 +249,7 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
 
     // Reached the review step rather than being held back, and it says the
     // vehicle is going in without a driver.
-    expect(screen.getByRole('button', { name: /create vehicle/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create vehicle|submit request/i })).toBeInTheDocument();
     expect(screen.getAllByText(/unassigned/i).length).toBeGreaterThan(0);
   }, 20000);
 
@@ -395,4 +400,58 @@ describe('ManagerVehiclesPage edit and delete', () => {
     expect(screen.getByText(/server unavailable/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/reason \(required\)/i)).toHaveValue('Vehicle retired');
   });
+});
+
+// ----------------------------------------------------------------
+// Create: a manager's first vehicle is immediate, later ones are a request
+// (backend/src/controllers/managerController.js — bootstrap rule)
+// ----------------------------------------------------------------
+describe('ManagerVehiclesPage create — bootstrap vs request', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('creates the vehicle immediately when the manager has no vehicles yet', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({
+        data: { vehicle: { vehicleId: 'VEHICLE-99' }, driver: { driverCode: 'DRV-1234-5678' } },
+      }),
+    });
+    const { user } = setup({ vehicles: [], createMut });
+
+    await fillStep0(user, { routeMode: 'CUSTOM' });
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+
+    // With no vehicles yet, the review step offers immediate creation, not a request.
+    expect(screen.getByText(/this is your first vehicle, so it will be created right away/i))
+      .toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^create vehicle$/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^create vehicle$/i }));
+
+    await waitFor(() => expect(createMut.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(toast).toHaveBeenCalledWith(expect.stringMatching(/vehicle created.*driver id/i));
+  }, 20000);
+
+  it('submits a request instead of creating when the manager already has a vehicle', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({
+        data: { _id: 'req-1', type: 'CREATE_VEHICLE_ACCOUNT', status: 'PENDING' },
+      }),
+    });
+    const { user } = setup({ vehicles: VEHICLES, createMut });
+
+    await fillStep0(user, { routeMode: 'CUSTOM' });
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+
+    // Already has a vehicle, so the review step says this one is a request.
+    expect(screen.getByText(/not your first vehicle.*submitted for super admin approval/i))
+      .toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^submit request$/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^submit request$/i }));
+
+    await waitFor(() => expect(createMut.mutateAsync).toHaveBeenCalledTimes(1));
+    // Not the immediate-creation toast — the request went to a super admin instead.
+    expect(toast).toHaveBeenCalledWith(expect.stringMatching(/submitted for super admin approval/i));
+    expect(toast).not.toHaveBeenCalledWith(expect.stringMatching(/driver id/i));
+  }, 20000);
 });
