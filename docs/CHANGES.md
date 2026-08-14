@@ -22,6 +22,24 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-14 — Vehicle edit enforces the same plate format as create
+- **Branch:** issue/41-plate-validation-on-edit
+- **Modules touched:** vehicles/fleet (`ManagerVehiclesPage.jsx`) — no dedicated module doc yet
+  (see `docs/modules/BUSES.md` stub)
+- **What changed:**
+  - `handleSaveEdit` now calls `isValidPlate` before submitting and shows the same
+    `PLATE_FORMAT_MESSAGE` inline error used on the create wizard, instead of
+    sending an invalid plate straight to the server.
+- **Why:** issue #41 — plate-format validation ran on create but not on edit.
+- **Contract impact:** none — client-side only, the backend already rejects
+  invalid plates.
+- **Tests:** `src/pages/__tests__/ManagerVehiclesPage.test.jsx` — added a case
+  asserting an invalid edit plate shows the inline error and does not call the
+  update mutation.
+- **Docs updated:** n/a (BUSES.md remains the pre-existing stub; unrelated to
+  this fix)
+- **Follow-ups / known issues:** none
+
 ## 2026-08-13 — Create-vehicle flow reflects the new bootstrap-then-approval rule
 - **Branch:** main
 - **Modules touched:** vehicles/fleet (`ManagerVehiclesPage.jsx`) — no dedicated module doc yet
