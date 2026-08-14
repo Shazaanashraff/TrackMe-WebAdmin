@@ -22,6 +22,31 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-14 — Show location state in the drivers directory, and link it to the map
+- **Branch:** main
+- **Modules touched:** tracking — [`docs/modules/TRACKING.md`](modules/TRACKING.md) (new §5a, key
+  files and tests rows)
+- **What changed:**
+  - New **Location** column on `/manager/accounts`: live / stale / offline per driver, from the
+    fleet snapshot keyed back to the driver each record names. Live and stale rows are a button
+    into `/manager/tracking?vehicle=<vehicleId>`; offline rows and drivers with no vehicle state
+    that and link nowhere.
+  - Added `useManagerFleetLive()` — the fleet query with no socket, sharing
+    `qk.vehicles.managerLive()` with the tracking page so either page warms the other.
+  - `ManagerTrackingPage` now reads `?vehicle=`, keeps a deep-linked vehicle through the first
+    render (where the fleet snapshot has not arrived), and keeps the URL in step with the vehicle
+    actually being followed.
+- **Why:** a manager reading the drivers directory could see that an account was Active but not
+  whether that driver was broadcasting, and had to go to the tracking page and re-find the vehicle
+  by hand.
+- **Contract impact:** none — consumes the existing `GET /api/manager/vehicles/live`.
+- **Tests:** updated `src/pages/__tests__/ManagerAccountsPage.test.jsx` (five location-column
+  cases) and `src/pages/__tests__/ManagerTrackingPage.test.jsx` (router wrapper + deep link).
+- **Docs updated:** `docs/modules/TRACKING.md`, two `docs/TESTING_GUIDE.md` rows.
+- **Follow-ups / known issues:** the column ages on the 30-second poll, so a driver going offline
+  can read live for up to that long. `ManagerRequestsPage.test.jsx` has one failure predating this
+  session ("Managed profile · Daughter").
+
 ## 2026-08-14 — Rebuild manager live tracking on the vehicle-scoped contract
 - **Branch:** main
 - **Modules touched:** tracking — [`docs/modules/TRACKING.md`](modules/TRACKING.md) (rewritten)

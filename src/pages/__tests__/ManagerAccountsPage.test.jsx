@@ -17,9 +17,23 @@ vi.mock('@/hooks/use-drivers', () => ({
   useRevertDriverEnrollmentKey: vi.fn(),
 }));
 
+// The directory reads the fleet snapshot for its Location column, but never
+// opens a socket: only the tracking page follows a vehicle.
+vi.mock('@/hooks/use-tracking', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useManagerFleetLive: vi.fn(),
+}));
+
+const navigate = vi.hoisted(() => vi.fn());
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useNavigate: () => navigate,
+}));
+
 vi.mock('sonner', () => ({ toast: vi.fn() }));
 
 import { toast } from 'sonner';
+import { useManagerFleetLive } from '@/hooks/use-tracking';
 
 import {
   useOrganizations,
@@ -69,9 +83,22 @@ function makeMutation(overrides = {}) {
   return { mutateAsync: vi.fn().mockResolvedValue({}), isPending: false, ...overrides };
 }
 
+// One record per fleet vehicle, exactly as GET /api/manager/vehicles/live
+// returns it: the driver is named on the record, which is how a row finds its
+// own position.
+const liveRecord = (overrides = {}) => ({
+  vehicleId: 'BUS-1',
+  live: true,
+  location: { lat: 6.9271, lng: 79.8612, receivedAt: new Date().toISOString() },
+  vehicle: { vehicleId: 'BUS-1', numberPlate: 'AB-1234' },
+  driver: { _id: 'driver-1', name: 'Kamal Perera' },
+  ...overrides,
+});
+
 function defaultHooks({
   drivers = DRIVERS,
   organizations = ORGANIZATIONS,
+  fleet = [],
   createMut,
   viewPwMut,
   revealMut,
@@ -82,6 +109,7 @@ function defaultHooks({
     data: { data: drivers }, isLoading: false, error: null, refetch: vi.fn(),
   });
   useOrganizations.mockReturnValue({ data: { data: organizations }, isLoading: false });
+  useManagerFleetLive.mockReturnValue({ data: { data: fleet }, isLoading: false, error: null });
   useCreateDriver.mockReturnValue(createMut || makeMutation());
   useUpdateDriver.mockReturnValue(makeMutation());
   useDeleteDriver.mockReturnValue(makeMutation());
@@ -145,6 +173,59 @@ describe('ManagerAccountsPage: driver directory', () => {
     setup({ drivers: [{ ...DRIVERS[0], vehicle: null }] });
 
     expect(screen.getByText('Unassigned')).toBeInTheDocument();
+  });
+});
+
+describe('ManagerAccountsPage: location column', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  const trackButton = (name = 'Kamal Perera') =>
+    screen.queryByRole('button', { name: `Track ${name} on the live map` });
+
+  it('marks a broadcasting driver live and opens their vehicle on the map', async () => {
+    const { user } = setup({ drivers: [DRIVERS[0]], fleet: [liveRecord()] });
+
+    expect(screen.getByText('Live')).toBeInTheDocument();
+    await user.click(trackButton());
+
+    // The map is addressed by vehicle, since that is what the tracking page
+    // and the socket subscribe to.
+    expect(navigate).toHaveBeenCalledWith('/manager/tracking?vehicle=BUS-1');
+  });
+
+  // live:true with an old fix is the backend's sweeper lagging, not a
+  // position worth trusting silently — but it is still worth opening.
+  it('marks a driver stale when the last fix is older than the stale window', async () => {
+    const stale = new Date(Date.now() - 5 * 60_000).toISOString();
+    const { user } = setup({
+      drivers: [DRIVERS[0]],
+      fleet: [liveRecord({ location: { lat: 6.9, lng: 79.8, receivedAt: stale } })],
+    });
+
+    expect(screen.getByText('Stale')).toBeInTheDocument();
+    await user.click(trackButton());
+    expect(navigate).toHaveBeenCalledWith('/manager/tracking?vehicle=BUS-1');
+  });
+
+  it('offers no map link for a driver who is not broadcasting', () => {
+    setup({ drivers: [DRIVERS[0]], fleet: [liveRecord({ live: false, location: null })] });
+
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(trackButton()).not.toBeInTheDocument();
+  });
+
+  it('treats a driver missing from the fleet snapshot as offline', () => {
+    setup({ drivers: [DRIVERS[0]], fleet: [] });
+
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(trackButton()).not.toBeInTheDocument();
+  });
+
+  it('says there is nothing to track when the driver has no vehicle', () => {
+    setup({ drivers: [DRIVERS[1]], fleet: [] });
+
+    expect(screen.getByText('No vehicle')).toBeInTheDocument();
+    expect(trackButton('Sunil Silva')).not.toBeInTheDocument();
   });
 });
 

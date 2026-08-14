@@ -67,6 +67,20 @@ function updatePayload(payload) {
   };
 }
 
+// The fleet snapshot on its own, with no socket. A list screen showing one
+// badge per row does not need lower-latency updates for a vehicle it is not
+// following, and opening a socket per row would blow through the backend's
+// subscription limits. It shares the tracking page's query key, so whichever
+// page loads first warms the other.
+export function useManagerFleetLive() {
+  return useQuery({
+    queryKey: qk.vehicles.managerLive(),
+    queryFn: () => adminApi.getManagerFleetLive(),
+    staleTime: 0,
+    refetchInterval: FALLBACK_POLL_MS,
+  });
+}
+
 export function useManagerFleetTracking(selectedVehicleId) {
   const fleetQ = useQuery({
     queryKey: qk.vehicles.managerLive(),

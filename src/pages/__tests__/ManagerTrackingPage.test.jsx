@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { ManagerTrackingPage } from '@/pages/ManagerTrackingPage';
 import { useManagerFleetTracking } from '@/hooks/use-tracking';
 import { getGoogleMapsApiKey } from '@/lib/googleMaps';
@@ -77,12 +78,16 @@ function mockTracking(overrides = {}) {
   });
 }
 
-function renderPage() {
-  return render(
+function page() {
+  return (
     <TooltipProvider>
       <ManagerTrackingPage />
-    </TooltipProvider>,
+    </TooltipProvider>
   );
+}
+
+function renderPage(path = '/manager/tracking') {
+  return render(<MemoryRouter initialEntries={[path]}>{page()}</MemoryRouter>);
 }
 
 describe('ManagerTrackingPage', () => {
@@ -167,11 +172,29 @@ describe('ManagerTrackingPage', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/loading/i);
 
     mockTracking({ fleet: [], isLoading: false, error: new Error('Fleet failed') });
-    rerender(<TooltipProvider><ManagerTrackingPage /></TooltipProvider>);
+    rerender(<MemoryRouter>{page()}</MemoryRouter>);
     expect(screen.getByText('Fleet failed')).toBeInTheDocument();
 
     mockTracking({ fleet: [], isLoading: false, error: null });
-    rerender(<TooltipProvider><ManagerTrackingPage /></TooltipProvider>);
+    rerender(<MemoryRouter>{page()}</MemoryRouter>);
     expect(screen.getByText('No vehicles in your fleet')).toBeInTheDocument();
+  });
+
+  // The drivers directory links here with a vehicle already chosen, and that
+  // choice has to survive the first render, where the fleet is still empty.
+  it('follows the vehicle named in the URL instead of the first one plotted', async () => {
+    mockTracking({ fleet: [], isLoading: true });
+    const { rerender } = renderPage('/manager/tracking?vehicle=VH-002');
+    expect(useManagerFleetTracking).toHaveBeenLastCalledWith('VH-002');
+
+    mockTracking();
+    rerender(<MemoryRouter initialEntries={['/manager/tracking?vehicle=VH-002']}>{page()}</MemoryRouter>);
+
+    await waitFor(() => {
+      expect(useManagerFleetTracking).toHaveBeenLastCalledWith('VH-002');
+    });
+    // The details panel is on VH-002, which has no driver, rather than on
+    // VH-001, the only vehicle with a position to plot.
+    expect(screen.getByText('Unassigned')).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { APIProvider, Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
 import { AlertTriangle, Bus as VehicleIcon, MapPin, WifiOff } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -245,19 +246,34 @@ function SelectedVehicleDetails({ record }) {
 }
 
 export function ManagerTrackingPage() {
-  const [selectedVehicleId, setSelectedVehicleId] = useState('');
+  // ?vehicle= is how the drivers directory hands a specific vehicle over.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedVehicleId, setSelectedVehicleId] = useState(
+    () => searchParams.get('vehicle') || '',
+  );
   const tracking = useManagerFleetTracking(selectedVehicleId);
   const fleet = useMemo(() => tracking.fleet || [], [tracking.fleet]);
 
   useEffect(() => {
     if (!fleet.length) {
-      setSelectedVehicleId('');
+      // An empty fleet while the first snapshot is still in flight is not a
+      // reason to drop a vehicle that was deep-linked in.
+      if (!tracking.isLoading) setSelectedVehicleId('');
       return;
     }
     if (fleet.some((record) => record.vehicleId === selectedVehicleId)) return;
     const firstWithPosition = fleet.find((record) => toPoint(record.location));
     setSelectedVehicleId((firstWithPosition || fleet[0]).vehicleId);
-  }, [fleet, selectedVehicleId]);
+  }, [fleet, selectedVehicleId, tracking.isLoading]);
+
+  // Keep the URL on whichever vehicle is actually being followed, so a reload
+  // or a copied link reopens the same one rather than the deep-linked one.
+  useEffect(() => {
+    if (!selectedVehicleId || searchParams.get('vehicle') === selectedVehicleId) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('vehicle', selectedVehicleId);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, selectedVehicleId, setSearchParams]);
 
   const selected = fleet.find((record) => record.vehicleId === selectedVehicleId) || null;
   const plotted = useMemo(

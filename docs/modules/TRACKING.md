@@ -26,6 +26,7 @@ as a resilience fallback. The selected vehicle additionally receives low-latency
 |---|---|
 | `src/pages/ManagerTrackingPage.jsx` | Atlas map page, fleet selector/list, markers, telemetry, and loading/empty/error/offline states. |
 | `src/hooks/use-tracking.js` | Fleet query, socket lifecycle, current-position merge, stale-state classification. |
+| `src/pages/ManagerAccountsPage.jsx` | The drivers directory's Location column: the same live/stale/offline state per driver, and the link into this page. |
 | `src/lib/tracking-socket.js` | The Socket.IO adapter and vehicle-scoped event names. |
 | `src/api.js` | `adminApi.getManagerFleetLive()`. |
 | `src/lib/queryKeys.js` | `qk.vehicles.managerLive()`. |
@@ -83,6 +84,21 @@ The full event and authorization contract is in
 
 GPS `speed` is the native location value in metres/second and is converted to km/h for display.
 
+## 5a. Entry points
+
+The page opens on the first vehicle with a position, unless `?vehicle=<vehicleId>` names one — which
+is how the drivers directory hands over. A deep-linked vehicle survives the first render, where the
+fleet snapshot has not arrived yet, and the URL is then kept in step (`replace`) with whatever
+vehicle is actually being followed.
+
+The drivers directory (`/manager/accounts`) carries a **Location** column driven by
+`useManagerFleetLive()` — the same fleet query and the same `trackingState()` classification, with
+no socket: one badge per row does not need lower-latency updates, and a socket per row would exceed
+the backend's subscription limits. Live and stale rows link here by `vehicleId`; offline rows and
+drivers with no vehicle say so and link nowhere, because there is no position to open. That column
+is about the journey, and is deliberately separate from the neighbouring **Status** column, which
+is about the account.
+
 ## 6. Security and scoping
 
 - The manager page is absent from the super-admin route tree.
@@ -109,7 +125,8 @@ GPS `speed` is the native location value in metres/second and is converted to km
 | API | `src/__tests__/api.test.js` | manager fleet live endpoint path. |
 | Unit | `src/lib/__tests__/tracking-socket.test.js` | active API-mode URL, auth, event names and payloads. |
 | Unit | `src/hooks/__tests__/use-tracking.test.jsx` | REST/socket freshness merge and live/stale/offline classification. |
-| RTL | `src/pages/__tests__/ManagerTrackingPage.test.jsx` | Google map/markers, missing-key guidance, telemetry, selection, first-fix state, socket fallback, and loading/error/empty states. |
+| RTL | `src/pages/__tests__/ManagerTrackingPage.test.jsx` | Google map/markers, missing-key guidance, telemetry, selection, first-fix state, socket fallback, loading/error/empty states, and the `?vehicle=` deep link. |
+| RTL | `src/pages/__tests__/ManagerAccountsPage.test.jsx` | the drivers directory Location column: live, stale, offline, missing from the snapshot, no vehicle, and the link it builds. |
 | RTL | `src/__tests__/App.test.jsx`, `src/layout/__tests__/AppShell.test.jsx` | manager route and navigation entry. |
 
 ## 9. Change protocol
