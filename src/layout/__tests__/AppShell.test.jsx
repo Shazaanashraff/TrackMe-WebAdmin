@@ -66,6 +66,7 @@ describe('AppShell', () => {
     renderShell({ role: 'admin', path: '/manager/dashboard' });
     expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Vehicles' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Live tracking' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Drivers' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Requests' })).toBeInTheDocument();
   });

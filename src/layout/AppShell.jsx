@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Activity, Route as RouteIcon, Settings,
-  Bus as VehicleIcon, UserCog, LogOut, Inbox, Code, ClipboardList,
+  Bus as VehicleIcon, MapPin, UserCog, LogOut, Inbox, Code, ClipboardList,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useEnrollmentRequestCount } from '@/hooks/use-enrollment-requests';
@@ -31,6 +31,7 @@ export const SUPER_ADMIN_NAV = [
 export const MANAGER_NAV = [
   { label: 'Overview', path: '/manager/dashboard', icon: LayoutDashboard },
   { label: 'Vehicles', path: '/manager/vehicles', icon: VehicleIcon },
+  { label: 'Live tracking', path: '/manager/tracking', icon: MapPin },
   { label: 'Drivers', path: '/manager/accounts', icon: UserCog },
   { label: 'Requests', path: '/manager/requests', icon: Inbox },
   { label: 'Enrollment form', path: '/manager/enrollment-form', icon: ClipboardList },

@@ -293,6 +293,11 @@ export const adminApi = {
 
   getManagerVehicles: () => request('/api/manager/vehicles'),
 
+  // Current position for every vehicle the authenticated manager owns. The
+  // tracking page keeps this as a polling fallback while one selected vehicle
+  // receives lower-latency updates over Socket.IO.
+  getManagerFleetLive: () => request('/api/manager/vehicles/live'),
+
   getManagerVehicleById: (vehicleId) => request(`/api/manager/vehicles/${vehicleId}`),
 
   updateManagerVehicle: (vehicleId, payload) =>

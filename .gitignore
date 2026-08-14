@@ -25,3 +25,10 @@ dist-ssr
 
 # Playwright CLI session artifacts (screenshots, console logs, page snapshots)
 .playwright-cli/
+
+# Local environment. VITE_* values are inlined into the built bundle, so a real
+# key here is public once deployed — but it must still never enter git history.
+# .env.example is the tracked template.
+.env
+.env.*
+!.env.example

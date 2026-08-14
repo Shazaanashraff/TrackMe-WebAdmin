@@ -40,6 +40,24 @@ describe('api.js request error handling', () => {
   });
 });
 
+describe('api.js live tracking', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  it('loads the authenticated manager fleet snapshot from the live endpoint', async () => {
+    mockFetchOnce(200, { success: true, data: [] });
+
+    await adminApi.getManagerFleetLive();
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/manager/vehicles/live'),
+      expect.any(Object),
+    );
+  });
+});
+
 function seedStoredAuth(token = 'access-token-1') {
   localStorage.setItem('admin-auth', JSON.stringify({
     token,

@@ -37,6 +37,9 @@ vi.mock('../pages/ManagerDashboardPage', () => ({
 vi.mock('../pages/ManagerVehiclesPage', () => ({
   ManagerVehiclesPage: () => <div>manager-vehicles-stub</div>
 }));
+vi.mock('../pages/ManagerTrackingPage', () => ({
+  ManagerTrackingPage: () => <div>manager-tracking-stub</div>
+}));
 vi.mock('../pages/ManagerAccountsPage', () => ({
   ManagerAccountsPage: () => <div>manager-accounts-stub</div>
 }));
@@ -166,6 +169,14 @@ describe('App — ProtectedShell role scoping', () => {
     renderApp('/manager/dashboard');
 
     expect(await screen.findByText('manager-dashboard-stub')).toBeInTheDocument();
+  });
+
+  it('a manager can reach the live tracking route', async () => {
+    writeStoredAuth({ token: 'mgr-token', user: { role: 'admin' } }, true);
+
+    renderApp('/manager/tracking');
+
+    expect(await screen.findByText('manager-tracking-stub')).toBeInTheDocument();
   });
 });
 

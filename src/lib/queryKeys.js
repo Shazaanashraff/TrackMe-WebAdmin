@@ -27,6 +27,7 @@ export const qk = {
   vehicles: {
     all: () => ['vehicles'],
     manager: () => ['vehicles', 'manager'],
+    managerLive: () => ['vehicles', 'manager', 'live'],
     byId: (vehicleId) => ['vehicles', vehicleId],
     assignableRoutes: () => ['routes', 'assignable'],
     managerRequests: () => ['manager-requests'],

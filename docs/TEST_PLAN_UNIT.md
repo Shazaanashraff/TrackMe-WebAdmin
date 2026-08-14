@@ -32,7 +32,7 @@
 | adminApi.requestDeleteBus | POST + payload |
 | adminApi.getManagerRequests | GET + auth header |
 | adminApi.resetManagerBusAccountPassword | PATCH + payload |
-| adminApi.getManagerBusLocation | minutes default and override |
+| adminApi.getManagerFleetLive | manager fleet live endpoint path |
 
 ## Auth Helpers
 | Item | Test focus |
@@ -46,7 +46,7 @@
 | managers helpers | validation, payload shaping |
 | routes helpers | stop normalization, payload shaping |
 | buses helpers | request validation, payload shaping |
-| tracking helpers | coord parsing, history window |
+| tracking helpers | REST/socket freshness merge, stale threshold, socket room lifecycle |
 | operations helpers | filter building, review payloads |
 | dashboard helpers | metric normalization, chart data |
 
@@ -56,7 +56,7 @@
 | ManagersPage | create/edit/reset/status flows |
 | RoutesPage | create route payload + errors |
 | ManagerBusesPage | request wizard steps + edit |
-| ManagerTrackingPage | selection + location history |
+| ManagerTrackingPage | fleet map, selection, telemetry, first-fix/offline/loading/empty/error states |
 | OperationsPage | filters, review dialog, update bus |
 | DashboardPage | cards render, error state |
 | App shell | role gating, logout |
