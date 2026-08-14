@@ -69,6 +69,7 @@ function defaultHooks({
   drivers = DRIVERS,
   organizations = ORGANIZATIONS,
   createMut,
+  updateMut,
   revealMut,
   rotateMut,
   revertMut,
@@ -78,7 +79,7 @@ function defaultHooks({
   });
   useOrganizations.mockReturnValue({ data: { data: organizations }, isLoading: false });
   useCreateDriver.mockReturnValue(createMut || makeMutation());
-  useUpdateDriver.mockReturnValue(makeMutation());
+  useUpdateDriver.mockReturnValue(updateMut || makeMutation());
   useDeleteDriver.mockReturnValue(makeMutation());
   useResetDriverPassword.mockReturnValue(makeMutation());
   useDriverEnrollmentKey.mockReturnValue(revealMut || makeMutation());
@@ -241,6 +242,64 @@ describe('ManagerAccountsPage: enrollment key rotation', () => {
 
     await openRowMenu(user);
     expect(await screen.findByRole('menuitem', { name: /restore previous key/i })).toBeInTheDocument();
+  });
+});
+
+describe('ManagerAccountsPage: disable driver confirmation (issue #50)', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  const openRowMenu = (user, name = 'Kamal Perera') =>
+    user.click(screen.getByRole('button', { name: `Actions for ${name}` }));
+
+  it('warns before disabling instead of disabling on the click itself', async () => {
+    const updateMut = makeMutation();
+    const { user } = setup({ updateMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /disable driver/i }));
+
+    expect(updateMut.mutateAsync).not.toHaveBeenCalled();
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+  });
+
+  it('disables nothing when the manager backs out', async () => {
+    const updateMut = makeMutation();
+    const { user } = setup({ updateMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /disable driver/i }));
+    await user.click(await screen.findByRole('button', { name: /cancel/i }));
+
+    expect(updateMut.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('disables once the warning is confirmed', async () => {
+    const updateMut = makeMutation();
+    const { user } = setup({ updateMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /disable driver/i }));
+    await user.click(await screen.findByRole('button', { name: /disable driver/i }));
+
+    expect(updateMut.mutateAsync).toHaveBeenCalledWith({
+      driverId: 'driver-1',
+      payload: { isActive: false },
+    });
+  });
+
+  it('enables an already-disabled driver immediately, with no confirmation', async () => {
+    const updateMut = makeMutation();
+    const disabledDriver = { ...DRIVERS[0], isActive: false };
+    const { user } = setup({ drivers: [disabledDriver], updateMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /enable driver/i }));
+
+    expect(updateMut.mutateAsync).toHaveBeenCalledWith({
+      driverId: 'driver-1',
+      payload: { isActive: true },
+    });
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 });
 
