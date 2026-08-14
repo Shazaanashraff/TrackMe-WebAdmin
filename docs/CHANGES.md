@@ -22,6 +22,25 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-14 — Create-vehicle wizard catches a duplicate Vehicle ID at step 0
+- **Branch:** issue/49-duplicate-vehicleid-check
+- **Modules touched:** vehicles/fleet (`ManagerVehiclesPage.jsx`) — no dedicated module doc yet
+  (see `docs/modules/BUSES.md` stub)
+- **What changed:**
+  - `validateStep` now takes the already-loaded vehicles list and, at step 0,
+    checks the entered `vehicleId` (case-insensitive, trimmed) against it,
+    returning an error naming the field instead of letting the manager reach
+    Review and get a generic server error three steps later.
+- **Why:** issue #49 — duplicate Vehicle ID only surfaced after all 3 wizard steps.
+- **Contract impact:** none — client-side only, using data already fetched by
+  `useManagerVehicles`. The backend still rejects duplicates server-side too.
+- **Tests:** `src/pages/__tests__/ManagerVehiclesPage.test.jsx` — added a case
+  asserting a case-insensitive duplicate Vehicle ID is caught at step 0 and the
+  wizard does not advance.
+- **Docs updated:** n/a (BUSES.md remains the pre-existing stub; unrelated to
+  this fix)
+- **Follow-ups / known issues:** none
+
 ## 2026-08-13 — Create-vehicle flow reflects the new bootstrap-then-approval rule
 - **Branch:** main
 - **Modules touched:** vehicles/fleet (`ManagerVehiclesPage.jsx`) — no dedicated module doc yet
