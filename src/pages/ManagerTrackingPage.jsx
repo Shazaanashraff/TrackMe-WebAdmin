@@ -328,7 +328,19 @@ export function ManagerTrackingPage() {
               aria-label="Fleet location map"
               className="relative min-h-[420px] overflow-hidden border-b border-border lg:border-b-0 lg:border-r"
             >
-              {googleMapsApiKey ? (
+              {plotted.length === 0 ? (
+                <div
+                  data-testid="fleet-map-idle"
+                  className="flex h-full min-h-[420px] flex-col items-center justify-center gap-2 bg-surface-muted px-6 text-center"
+                >
+                  <VehicleIcon aria-hidden className="size-8 text-muted-foreground" />
+                  <p className="font-semibold text-foreground">No vehicle is broadcasting</p>
+                  <p className="max-w-sm text-sm text-muted-foreground">
+                    The map opens as soon as a driver starts a journey. Positions appear here in
+                    real time.
+                  </p>
+                </div>
+              ) : googleMapsApiKey ? (
                 <APIProvider apiKey={googleMapsApiKey}>
                   <Map
                     defaultCenter={selectedPoint || DEFAULT_CENTER}

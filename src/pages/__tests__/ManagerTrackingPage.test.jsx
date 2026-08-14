@@ -133,6 +133,24 @@ describe('ManagerTrackingPage', () => {
     expect(await screen.findByText(/waiting for the first GPS fix/i)).toBeInTheDocument();
   });
 
+  // Mounting <Map> bills a Google "Dynamic Maps" load, so a fleet with nothing
+  // to plot must not instantiate one just to show an empty basemap.
+  it('does not mount a map when no vehicle has a position to plot', () => {
+    mockTracking({ fleet: [{ ...FLEET[1] }] });
+    renderPage();
+
+    expect(screen.getByTestId('fleet-map-idle')).toBeInTheDocument();
+    expect(screen.queryByTestId('fleet-map')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('google-api-provider')).not.toBeInTheDocument();
+  });
+
+  it('mounts the map as soon as one vehicle has a position', async () => {
+    renderPage();
+
+    expect(await screen.findByTestId('fleet-map')).toBeInTheDocument();
+    expect(screen.queryByTestId('fleet-map-idle')).not.toBeInTheDocument();
+  });
+
   it('shows the polling fallback warning when the socket is disconnected', () => {
     mockTracking({
       connected: false,
