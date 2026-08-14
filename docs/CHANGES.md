@@ -36,12 +36,21 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
   - `ManagerTrackingPage` now reads `?vehicle=`, keeps a deep-linked vehicle through the first
     render (where the fleet snapshot has not arrived), and keeps the URL in step with the vehicle
     actually being followed.
+  - **Fixed a crash on the tracking page** (found by following the new link in the browser):
+    `FleetMarkers` read `Marker` and `SymbolPath`, and `MapViewport` read `LatLngBounds`, off
+    `useMapsLibrary('maps')`. `Marker` is in the marker library and `SymbolPath`/`LatLngBounds` are
+    in core, so every plotted vehicle threw `Cannot read properties of undefined (reading
+    'CIRCLE')` and the app-level ErrorBoundary replaced the whole page. The unit test could not
+    catch it: its `useMapsLibrary` mock returned one object for every library name. The mock is
+    now split by library, and a marker's `icon.path` is asserted.
 - **Why:** a manager reading the drivers directory could see that an account was Active but not
   whether that driver was broadcasting, and had to go to the tracking page and re-find the vehicle
   by hand.
 - **Contract impact:** none — consumes the existing `GET /api/manager/vehicles/live`.
 - **Tests:** updated `src/pages/__tests__/ManagerAccountsPage.test.jsx` (five location-column
-  cases) and `src/pages/__tests__/ManagerTrackingPage.test.jsx` (router wrapper + deep link).
+  cases) and `src/pages/__tests__/ManagerTrackingPage.test.jsx` (router wrapper, deep link,
+  per-library maps mock, marker icon path). Verified in the browser against the running dev
+  server, not only in RTL.
 - **Docs updated:** `docs/modules/TRACKING.md`, two `docs/TESTING_GUIDE.md` rows.
 - **Follow-ups / known issues:** the column ages on the 30-second poll, so a driver going offline
   can read live for up to that long. `ManagerRequestsPage.test.jsx` has one failure predating this

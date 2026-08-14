@@ -114,6 +114,11 @@ is about the account.
   breadcrumb/polyline or 15/30/60-minute selector.
 - Socket fan-out assumes one backend instance. Scaling the backend horizontally requires the
   Socket.IO Redis adapter first; REST polling stays cross-process correct.
+- **Maps symbols come from three different libraries.** `useMapsLibrary('maps')` gives `Map`;
+  `Marker` is in `'marker'`; `SymbolPath` and `LatLngBounds` are in `'core'`. Asking for the wrong
+  library still resolves to a real object, so the mistake only surfaces where the missing name is
+  used — for markers, the first vehicle with a position, which crashes the page. Test mocks for
+  `useMapsLibrary` must therefore be keyed by library name.
 - Google Maps needs network access and a browser-restricted Maps JavaScript API key, independent
   of the TrackMe API. If the key is missing, telemetry and fleet selection remain available while
   the map shows explicit configuration guidance.

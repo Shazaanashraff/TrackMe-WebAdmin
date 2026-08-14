@@ -30,16 +30,26 @@ const googleMapsMock = vi.hoisted(() => {
   return { markerInstances, map, Marker, LatLngBounds };
 });
 
-vi.mock('@vis.gl/react-google-maps', () => ({
-  APIProvider: ({ children }) => <div data-testid="google-api-provider">{children}</div>,
-  Map: ({ children }) => <div data-testid="fleet-map">{children}</div>,
-  useMap: () => googleMapsMock.map,
-  useMapsLibrary: () => ({
-    Marker: googleMapsMock.Marker,
-    LatLngBounds: googleMapsMock.LatLngBounds,
-    SymbolPath: { CIRCLE: 'circle' },
-  }),
-}));
+// Split by library exactly as the Maps JS API splits it. A single object for
+// every library name would let the page ask for the wrong one and still pass
+// here, which is how `SymbolPath` off the maps library reached the browser and
+// crashed the page on its first plotted vehicle.
+vi.mock('@vis.gl/react-google-maps', () => {
+  const libraries = {
+    core: {
+      LatLngBounds: googleMapsMock.LatLngBounds,
+      SymbolPath: { CIRCLE: 'circle' },
+    },
+    marker: { Marker: googleMapsMock.Marker },
+    maps: { Map: class {} },
+  };
+  return {
+    APIProvider: ({ children }) => <div data-testid="google-api-provider">{children}</div>,
+    Map: ({ children }) => <div data-testid="fleet-map">{children}</div>,
+    useMap: () => googleMapsMock.map,
+    useMapsLibrary: (name) => libraries[name] ?? {},
+  };
+});
 
 vi.mock('@/lib/googleMaps', () => ({ getGoogleMapsApiKey: vi.fn() }));
 
@@ -106,6 +116,9 @@ describe('ManagerTrackingPage', () => {
     expect(screen.getByTestId('fleet-map')).toBeInTheDocument();
     await waitFor(() => expect(googleMapsMock.markerInstances.length).toBeGreaterThan(0));
     expect(googleMapsMock.markerInstances.at(-1).options.position).toEqual({ lat: 7.2906, lng: 80.6337 });
+    // Drawn from the marker and core libraries. Reading either name off the
+    // maps library instead leaves it undefined and throws on the first plot.
+    expect(googleMapsMock.markerInstances.at(-1).options.icon.path).toBe('circle');
     await waitFor(() => expect(screen.getByText('36 km/h')).toBeInTheDocument());
     expect(screen.getByText('90° E')).toBeInTheDocument();
     expect(screen.getAllByText('Kamal Perera')).toHaveLength(2);
