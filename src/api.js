@@ -369,6 +369,12 @@ export const adminApi = {
       body: JSON.stringify({ password })
     }),
 
+  // Returns the driver's password in the clear. Every call is audit-logged
+  // server-side, so never call it to prefetch or to populate a list — only in
+  // direct response to a manager asking for one specific driver.
+  getManagerDriverPassword: (driverId) =>
+    request(`/api/manager/drivers/${driverId}/password`),
+
   getDriverEnrollmentKey: (driverId) =>
     request(`/api/manager/drivers/${driverId}/enrollment-key`),
 
