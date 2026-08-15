@@ -127,8 +127,8 @@ function SandboxToggleCard() {
         {isSandbox && !serverSaysSandbox && health && (
           <Alert variant="warning">
             <AlertDescription>
-              This tab is set to sandbox, but the server at {getApiBaseUrl()} reports mode "
-              {health.mode}". Is the sandbox backend running (`npm run dev:sandbox` in backend)?
+              This tab is set to sandbox, but the server at {getApiBaseUrl()} reports mode &quot;
+              {health.mode}&quot;. Is the sandbox backend running (`npm run dev:sandbox` in backend)?
             </AlertDescription>
           </Alert>
         )}

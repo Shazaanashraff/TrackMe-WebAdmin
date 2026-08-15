@@ -11,4 +11,4 @@
 - Login -> manager dashboard
 - Request bus account -> status appears in requests
 - Edit bus details -> changes persist
-- Tracking page shows live location history
+- Tracking page shows the fleet snapshot and selected vehicle's current live position

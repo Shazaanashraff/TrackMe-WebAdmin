@@ -72,6 +72,15 @@ export function useResetDriverPassword() {
   });
 }
 
+// A mutation, not a query, despite being a GET: the server audit-logs every
+// read, so it must fire exactly when the manager asks and never be cached,
+// retried, or refetched in the background.
+export function useDriverPassword() {
+  return useMutation({
+    mutationFn: ({ driverId }) => adminApi.getManagerDriverPassword(driverId),
+  });
+}
+
 // Enrollment keys are fetched on demand rather than with the directory — the
 // key is a credential, so it is only pulled once a manager asks to see it.
 export function useDriverEnrollmentKey() {

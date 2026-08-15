@@ -108,7 +108,8 @@ Current behavior in [web-admin/src/api.js](../../web-admin/src/api.js):
 - `handleUnauthorized()` clears cached auth and redirects to login.
 - `login()` normalizes `token` and `accessToken`.
 - `getSystemRoutes()`, `getManagers()`, `getPendingBusRequests()`, and `getAuditLogs()` build query strings inline.
-- `getManagerBusLocation(busId, minutes = 15)` embeds default parameter handling.
+- `getManagerFleetLive()` is a parameter-free manager-scoped current-state read; tracking socket
+  event shaping lives in `lib/tracking-socket.js` and `hooks/use-tracking.js`.
 
 Recommended helpers:
 

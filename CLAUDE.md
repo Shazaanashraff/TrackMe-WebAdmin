@@ -58,15 +58,15 @@ git config core.hooksPath .githooks
 src/
   api.js            The single HTTP layer (adminApi). Every request goes through it.
   pages/            One file per route: Dashboard, ManagerDashboard, Managers,
-                    ManagerAccounts, ManagerBuses, ManagerPrivateRoutes,
-                    ManagerRouteApprovals, ManagerTracking, ManagerSettings,
+                    ManagerAccounts, ManagerVehicles, ManagerTracking, ManagerRequests,
+                    ManagerSettings,
                     Routes, Operations, Settings, StyleGuide, Login, ForgotPassword*
   hooks/            TanStack Query hooks: use-buses, use-dashboard, use-managers,
-                    use-operations, use-private-routes, use-route-approvals,
-                    use-system-routes, use-tracking, use-online-status, use-refresh
+                    use-operations, use-system-routes, use-tracking,
+                    use-online-status, use-refresh
   components/       ui/ (Radix + Tailwind primitives), auth/, shared/
   layout/           AppShell + nav
-  lib/              authSession, queryClient, polyline, map-tokens, formatCurrency
+  lib/              authSession, queryClient, tracking-socket, polyline, map-tokens
   theme/            design tokens
 ```
 

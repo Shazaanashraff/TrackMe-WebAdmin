@@ -27,6 +27,7 @@ export const qk = {
   vehicles: {
     all: () => ['vehicles'],
     manager: () => ['vehicles', 'manager'],
+    managerLive: () => ['vehicles', 'manager', 'live'],
     byId: (vehicleId) => ['vehicles', vehicleId],
     assignableRoutes: () => ['routes', 'assignable'],
     managerRequests: () => ['manager-requests'],
@@ -44,5 +45,9 @@ export const qk = {
     all: () => ['enrollment-requests'],
     list: (status = 'PENDING') => ['enrollment-requests', 'list', status],
     count: () => ['enrollment-requests', 'count'],
+  },
+  enrollmentSchema: {
+    manager: () => ['enrollment-schema', 'manager'],
+    organization: (organizationId) => ['enrollment-schema', 'organization', organizationId],
   },
 };

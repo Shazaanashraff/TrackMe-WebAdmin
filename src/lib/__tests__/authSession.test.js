@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   readStoredAuth,
   writeStoredAuth,
@@ -68,14 +68,12 @@ describe('writeStoredAuth', () => {
   it('returns the normalized auth object even when window is unavailable', () => {
     // Simulates an SSR/non-browser environment without needing a separate module registry.
     const originalWindow = global.window;
-    // eslint-disable-next-line no-global-assign
     global.window = undefined;
 
     try {
       const result = writeStoredAuth({ token: 't1' }, true);
       expect(result.token).toBe('t1');
     } finally {
-      // eslint-disable-next-line no-global-assign
       global.window = originalWindow;
     }
   });

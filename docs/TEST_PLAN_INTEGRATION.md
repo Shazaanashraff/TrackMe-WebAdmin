@@ -12,7 +12,8 @@ The web admin app should validate the following backend-owned flows from the bro
 - Super admin: dashboard, operations, bus requests, audit logs
 - Managers: create, list, detail, update, status toggle, reset password, assign buses
 - Buses: admin bus update, maintenance toggle, delete
-- Manager views: dashboard, buses, bus detail, bus account request, delete request, location history
+- Manager views: dashboard, vehicles, vehicle detail, account request, delete request, current
+  fleet location + selected-vehicle socket stream
 
 ## How To Test CRUD
 
@@ -31,7 +32,8 @@ For each flow, the test must verify:
 - Managers: duplicate email, invalid role assignment, reset password on inactive manager, assign buses with invalid ids.
 - Buses: delete active bus with dependent bookings, invalid maintenance payload, stale update.
 - Bus requests: invalid review payload, duplicate decision, unauthorized audit access.
-- Location history: empty window, invalid time range, no records found.
+- Live location: empty fleet, live-before-first-fix, stale/offline state, forbidden cross-manager
+  subscription, reconnect and REST polling fallback.
 
 ## Canonical References
 

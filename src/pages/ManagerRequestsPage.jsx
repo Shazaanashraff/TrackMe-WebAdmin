@@ -17,12 +17,9 @@ const formatWhen = (value) => {
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
 };
 
-// A managed profile shares a name with nobody in particular — the decision
-// moment (approve/decline, and the toast confirming it) is exactly where the
-// manager needs the owning account surfaced, not just the profile's own name.
 const passengerLabel = (passenger) => {
-  const name = passenger?.name || 'this passenger';
-  if (passenger?.isManagedProfile && passenger?.account?.email) {
+  const name = passenger?.name || 'this student';
+  if (passenger?.account?.email) {
     return `${name} (account: ${passenger.account.email})`;
   }
   return name;
@@ -63,7 +60,7 @@ export function ManagerRequestsPage() {
   const columns = useMemo(() => [
     {
       id: 'passenger',
-      header: 'Passenger',
+      header: 'Student / employee',
       accessorKey: 'passenger',
       enableSorting: false,
       cell: (i) => {
@@ -71,11 +68,7 @@ export function ManagerRequestsPage() {
         return (
           <div>
             <span className="font-medium">{passenger?.name || 'Unknown'}</span>
-            {passenger?.isManagedProfile && (
-              <div className="text-xs text-muted-foreground">
-                Managed profile{passenger.relation ? ` · ${passenger.relation}` : ''}
-              </div>
-            )}
+            {passenger?.riderCode && <div className="text-xs font-mono text-muted-foreground">{passenger.riderCode}</div>}
           </div>
         );
       },
@@ -87,8 +80,6 @@ export function ManagerRequestsPage() {
       enableSorting: false,
       cell: (i) => {
         const passenger = i.getValue();
-        // A managed profile has no email/phone of its own — the account that
-        // owns it is what the manager actually needs to identify them by.
         const email = passenger?.email || passenger?.account?.email;
         const phone = passenger?.account?.phoneNumber;
         if (!email && !phone) return <span className="text-muted-foreground">None</span>;
@@ -98,6 +89,22 @@ export function ManagerRequestsPage() {
             {phone && <div className="text-xs text-muted-foreground">{phone}</div>}
           </div>
         );
+      },
+    },
+    {
+      id: 'organizationDetails',
+      header: 'Organization details',
+      accessorKey: 'passenger',
+      enableSorting: false,
+      cell: (i) => {
+        const values = Object.entries(i.getValue()?.organizationValues || {});
+        return values.length ? (
+          <div className="space-y-0.5 text-xs">
+            {values.map(([key, value]) => (
+              <div key={key}><span className="text-muted-foreground">{key}: </span>{value}</div>
+            ))}
+          </div>
+        ) : <span className="text-muted-foreground">None</span>;
       },
     },
     {

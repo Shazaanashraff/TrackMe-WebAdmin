@@ -13,7 +13,8 @@ Each call must still be reachable from the UI (possibly via a hook) and exercise
 - [ ] **RoutesPage**: getSystemRoutes, createSystemRoute
 - [ ] **ManagerDashboardPage**: getManagerDashboard
 - [ ] **ManagerBusesPage**: getManagerBuses, getManagerAssignableRoutes, createBusAccountRequest, updateManagerBus, requestDeleteBus
-- [ ] **ManagerTrackingPage**: getManagerBuses, getManagerBusLocation, socket.io live stream (same events/rooms/cleanup)
+- [ ] **ManagerTrackingPage**: getManagerFleetLive, vehicle:subscribe/unsubscribe,
+  vehicle:update/status, active API-mode socket URL, and cleanup
 - [ ] **ManagerAccountsPage**: getManagerBuses, resetManagerBusAccountPassword
 - [ ] **ManagerRouteApprovalsPage**: getManagerCustomRoutes, getRouteChangeRequests, nameCustomRoute, resolveRouteChangeRequest
 - [ ] **ManagerPrivateRoutesPage**: getManagerOwnedRoutes, getRouteJoinRequests, getRouteMembers, updateRoutePrivacy, revealRoomKey, rotateRoomKey, decideJoinRequest, revokeRouteMember

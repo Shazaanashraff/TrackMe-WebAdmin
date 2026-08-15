@@ -33,7 +33,8 @@ One checkpoint per run. Tests green before ticking.
 ## Phase 4 — Manager pages
 - [x] CP 4.1 Dashboard — done: 2026-07-17
 - [x] CP 4.2 Buses — done: 2026-07-17
-- [x] CP 4.3 Tracking — done: 2026-07-17
+- [x] CP 4.3 Tracking — rebuilt 2026-08-14 after the old page was deleted; now consumes the
+  vehicle-scoped current-location contract (no fabricated history)
 - [x] CP 4.4 Accounts — done: 2026-07-17
 - [x] CP 4.5 Route Approvals — done: 2026-07-17
 - [x] CP 4.6 Private Routes — done: 2026-07-17
