@@ -109,7 +109,6 @@ const routeColumns = [
   { id: 'destination', header: 'To', accessorKey: 'destination' },
   { id: 'serviceType', header: 'Service', accessorKey: 'serviceType', cell: (i) => <Badge variant="secondary">{i.getValue()}</Badge> },
   { id: 'qrEnabled', header: 'QR', accessorKey: 'qrEnabled', cell: (i) => (i.getValue() ? <Badge>On</Badge> : <Badge variant="outline">Off</Badge>) },
-  { id: 'stops', header: 'Stops', accessorKey: 'stopsCount', cell: (i) => i.getValue() ?? 0 },
   { id: 'status', header: 'Status', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() !== false ? 'active' : 'inactive'} /> },
 ];
 

@@ -64,8 +64,11 @@
 ## Tracking
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
 |---|---|---|---|---|
-| adminApi.getManagerBusLocation() | unit (fetch) | src/__tests__/api.test.js | minutes default | query changes |
-| Tracking page flow | RTL | src/__tests__/pages/ManagerTrackingPage.test.jsx | selection + history | tracking UI changes |
+| adminApi.getManagerFleetLive() | unit (fetch) | src/__tests__/api.test.js | manager fleet live endpoint path | endpoint changes |
+| vehicle-scoped socket adapter | unit (Vitest) | src/lib/__tests__/tracking-socket.test.js | active API-mode URL, websocket auth, subscribe/unsubscribe event names and payloads | socket auth, event names, or sandbox API-mode behavior changes |
+| fleet/socket merge helpers | unit (Vitest) | src/hooks/__tests__/use-tracking.test.jsx | newer socket fix wins without dropping REST metadata; newer REST poll wins over an older patch; live/stale/offline classification | merge freshness or stale threshold changes |
+| Tracking page flow | RTL (Vitest) | src/pages/__tests__/ManagerTrackingPage.test.jsx | fleet map + selected telemetry, selection, live-before-first-fix, disconnected polling fallback, loading/error/empty states | tracking UI or current-location shape changes |
+| Tracking route + manager nav | RTL (Vitest) | src/__tests__/App.test.jsx, src/layout/__tests__/AppShell.test.jsx | manager route is reachable and the Live tracking nav entry is present | route or manager navigation changes |
 
 ## Dashboard
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |

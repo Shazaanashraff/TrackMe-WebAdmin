@@ -11,13 +11,15 @@ The documentation map for web-admin. [`../CLAUDE.md`](../CLAUDE.md) routes you h
   runner. Super-admin only, dev-only build.
 - **[modules/ENROLLMENT_REQUESTS.md](modules/ENROLLMENT_REQUESTS.md)** — manager's approval queue
   for private-driver enrollment requests, incl. managed-rider-profile account surfacing.
+- **[modules/TRACKING.md](modules/TRACKING.md)** — manager fleet snapshot, selected-vehicle live
+  socket stream, map states and authorization.
 
 The rest are all currently **stubs** — each names its source files and must be filled in by the
 next change touching it:
 [AUTH](modules/AUTH.md) · [DASHBOARD](modules/DASHBOARD.md) · [ACCOUNTS](modules/ACCOUNTS.md) ·
 [BUSES](modules/BUSES.md) · [ROUTES](modules/ROUTES.md) ·
 [PRIVATE_ROUTES](modules/PRIVATE_ROUTES.md) · [ROUTE_APPROVALS](modules/ROUTE_APPROVALS.md) ·
-[TRACKING](modules/TRACKING.md) · [OPERATIONS](modules/OPERATIONS.md) · [SETTINGS](modules/SETTINGS.md)
+[OPERATIONS](modules/OPERATIONS.md) · [SETTINGS](modules/SETTINGS.md)
 
 ## Guides
 - **[guides/ADDING_A_FEATURE.md](guides/ADDING_A_FEATURE.md)** — page → hook → `api.js`, plus role scoping.
