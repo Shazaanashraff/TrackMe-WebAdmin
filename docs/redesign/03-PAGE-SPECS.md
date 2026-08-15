@@ -112,17 +112,16 @@ Last seen (RelativeTime), actions ⋯ (Edit, View on map, Request delete).
 
 ### 4.3 Tracking (`/manager/tracking`)
 
-**Data:** `getManagerBuses` (picker), `getManagerBusLocation(busId, minutes)`, socket.io live
-stream (KEEP the existing socket contract exactly — events, rooms, cleanup).
-**Layout:** PageHeader ("Live tracking", actions: bus Select + history-window Select 15/30/60m).
-- Full-height Card containing the Leaflet map (rounded-lg overflow-hidden, themed tiles OK to
-  keep); LiveIndicator (live/stale/offline) top-right of card.
-- Side panel (or overlay card): selected bus — speed (tabular), heading, last update
-  RelativeTime, StatusBadge; Alert bar when data older than threshold ("GPS data is 12 min
-  old") instead of silently stale.
-**States:** map CardSkeleton while first location loads; no-bus-selected → EmptyState
-"Select a bus to start tracking"; socket disconnected → LiveIndicator offline + Alert +
-auto-retry note; ErrorState on location fetch failure.
+**Data:** `getManagerFleetLive()` (all current manager-owned vehicles, polled every 30s), plus a
+Socket.IO `vehicle:subscribe` for the selected vehicle. There is no history endpoint or trail.
+**Layout:** PageHeader ("Live tracking", action: vehicle Select).
+- Full-height flat Card containing Google Maps; selected vehicle recentres the view.
+- Side panel: fleet selector/list plus selected vehicle speed, heading, driver, route, last update,
+  coordinates, and LiveIndicator.
+- Alert when data is older than 90 seconds instead of silently stale.
+**States:** map CardSkeleton while first fleet snapshot loads; empty fleet → EmptyState; driver live
+before first fix → explicit waiting state; socket disconnected → LiveIndicator offline + Alert +
+REST-polling fallback note; ErrorState on fleet fetch failure.
 
 ### 4.4 Accounts (`/manager/accounts`) — absorbs part of 014; coordinates with todo 019
 

@@ -23,7 +23,7 @@ loading/empty/error coverage. Scope excludes the auth pages (done).
 | Server state | `useEffect` + `refreshSignal` prop drilling | **@tanstack/react-query** hooks wrapping `adminApi` | Matches Shabeer + user-app locked decision; gives isLoading/isFetching/error for free; the Topbar refresh button becomes `queryClient.invalidateQueries()` |
 | Toasts | MUI Snackbar | **sonner** | shadcn standard; undo-action support (Shabeer uses it for undo flows) |
 | Dialogs | MUI Dialog + `window.prompt()` | **shadcn Dialog / AlertDialog / Sheet** | Kills todo 010 (window.prompt) as a side effect |
-| Maps | react-leaflet | keep react-leaflet, restyled container | No reason to change |
+| Maps | react-leaflet + Google Maps | Keep route previews on Leaflet; use Google Maps for manager live tracking | Matches the mobile live-tracking stack |
 | Animation | framer-motion | **remove** — CSS transitions only | Shabeer avoid-list: no animation that delays a result |
 | Language | JSX | keep JSX | No TS migration scope creep in this track |
 

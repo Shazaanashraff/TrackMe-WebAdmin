@@ -11,12 +11,15 @@ vi.mock('@/hooks/use-drivers', () => ({
   useUpdateDriver: vi.fn(),
   useDeleteDriver: vi.fn(),
   useResetDriverPassword: vi.fn(),
+  useDriverPassword: vi.fn(),
   useDriverEnrollmentKey: vi.fn(),
   useRotateDriverEnrollmentKey: vi.fn(),
   useRevertDriverEnrollmentKey: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({ toast: vi.fn() }));
+
+import { toast } from 'sonner';
 
 import {
   useOrganizations,
@@ -25,6 +28,7 @@ import {
   useUpdateDriver,
   useDeleteDriver,
   useResetDriverPassword,
+  useDriverPassword,
   useDriverEnrollmentKey,
   useRotateDriverEnrollmentKey,
   useRevertDriverEnrollmentKey,
@@ -70,6 +74,7 @@ function defaultHooks({
   organizations = ORGANIZATIONS,
   createMut,
   updateMut,
+  viewPwMut,
   revealMut,
   rotateMut,
   revertMut,
@@ -82,6 +87,7 @@ function defaultHooks({
   useUpdateDriver.mockReturnValue(updateMut || makeMutation());
   useDeleteDriver.mockReturnValue(makeMutation());
   useResetDriverPassword.mockReturnValue(makeMutation());
+  useDriverPassword.mockReturnValue(viewPwMut || makeMutation());
   useDriverEnrollmentKey.mockReturnValue(revealMut || makeMutation());
   useRotateDriverEnrollmentKey.mockReturnValue(rotateMut || makeMutation());
   useRevertDriverEnrollmentKey.mockReturnValue(revertMut || makeMutation());
@@ -608,5 +614,86 @@ describe('ManagerAccountsPage: add driver form', () => {
     const summary = driverCode.closest('div').parentElement;
     expect(within(summary).getByText('Driver ID')).toBeInTheDocument();
     expect(screen.getByText('TMD-AAAA-BBBB-CCCC')).toBeInTheDocument();
+  });
+});
+
+describe('ManagerAccountsPage: viewing a driver password', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  const openRowMenu = (user, name = 'Kamal Perera') =>
+    user.click(screen.getByRole('button', { name: `Actions for ${name}` }));
+
+  const viewing = (password = 'DriverPass1!') => makeMutation({
+    mutateAsync: vi.fn().mockResolvedValue({ data: { password } }),
+  });
+
+  const openDialog = async (viewPwMut) => {
+    const { user } = setup({ viewPwMut });
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /view password/i }));
+    return user;
+  };
+
+  it('fetches only when asked, never with the directory', async () => {
+    const viewPwMut = viewing();
+    const { user } = setup({ viewPwMut });
+
+    // Rendering the list must not pull credentials for every row.
+    expect(viewPwMut.mutateAsync).not.toHaveBeenCalled();
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /view password/i }));
+
+    expect(viewPwMut.mutateAsync).toHaveBeenCalledWith({ driverId: 'driver-1' });
+  });
+
+  it('shows the password with the sign-in ID it goes with', async () => {
+    await openDialog(viewing('Secret123!'));
+
+    expect(await screen.findByTestId('driver-password-value')).toHaveTextContent('Secret123!');
+    // The ID is the half managers otherwise mistake for the enrollment key.
+    // Scoped to the dialog: it also appears in the row behind it.
+    const dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).getByText('DRV-4K7P-9XQ2')).toBeInTheDocument();
+  });
+
+  it('tells the manager the view was recorded', async () => {
+    await openDialog(viewing());
+
+    expect(await screen.findByText(/recorded against your account/i)).toBeInTheDocument();
+  });
+
+  it('explains a driver with nothing stored instead of showing a blank', async () => {
+    const viewPwMut = makeMutation({
+      mutateAsync: vi.fn().mockRejectedValue({ code: 'PASSWORD_NOT_RECOVERABLE' }),
+    });
+    const { user } = setup({ viewPwMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /view password/i }));
+
+    expect(toast).toHaveBeenCalledWith(expect.stringMatching(/reset it to set a new one/i));
+    expect(screen.queryByTestId('driver-password-value')).not.toBeInTheDocument();
+  });
+
+  it('says so when the server has the feature switched off', async () => {
+    const viewPwMut = makeMutation({
+      mutateAsync: vi.fn().mockRejectedValue({ code: 'PASSWORD_RECOVERY_DISABLED' }),
+    });
+    const { user } = setup({ viewPwMut });
+
+    await openRowMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: /view password/i }));
+
+    expect(toast).toHaveBeenCalledWith(expect.stringMatching(/switched off/i));
+  });
+
+  it('drops the password from state once the dialog closes', async () => {
+    const user = await openDialog(viewing('Secret123!'));
+    expect(await screen.findByTestId('driver-password-value')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /done/i }));
+
+    expect(screen.queryByTestId('driver-password-value')).not.toBeInTheDocument();
   });
 });

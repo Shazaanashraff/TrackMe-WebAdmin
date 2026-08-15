@@ -293,6 +293,11 @@ export const adminApi = {
 
   getManagerVehicles: () => request('/api/manager/vehicles'),
 
+  // Current position for every vehicle the authenticated manager owns. The
+  // tracking page keeps this as a polling fallback while one selected vehicle
+  // receives lower-latency updates over Socket.IO.
+  getManagerFleetLive: () => request('/api/manager/vehicles/live'),
+
   getManagerVehicleById: (vehicleId) => request(`/api/manager/vehicles/${vehicleId}`),
 
   updateManagerVehicle: (vehicleId, payload) =>
@@ -364,6 +369,12 @@ export const adminApi = {
       body: JSON.stringify({ password })
     }),
 
+  // Returns the driver's password in the clear. Every call is audit-logged
+  // server-side, so never call it to prefetch or to populate a list — only in
+  // direct response to a manager asking for one specific driver.
+  getManagerDriverPassword: (driverId) =>
+    request(`/api/manager/drivers/${driverId}/password`),
+
   getDriverEnrollmentKey: (driverId) =>
     request(`/api/manager/drivers/${driverId}/enrollment-key`),
 
@@ -391,5 +402,17 @@ export const adminApi = {
   rejectEnrollmentRequest: (id) =>
     request(`/api/manager/enrollment-requests/${id}/reject`, {
       method: 'POST'
+    }),
+
+  getManagerEnrollmentSchema: () => request('/api/manager/organization/enrollment-schema'),
+  updateManagerEnrollmentSchema: (fields) =>
+    request('/api/manager/organization/enrollment-schema', { method: 'PUT', body: JSON.stringify({ fields }) }),
+  getOrganizations: () => request('/api/super-admin/organizations'),
+  getOrganizationEnrollmentSchema: (organizationId) =>
+    request(`/api/super-admin/organizations/${organizationId}/enrollment-schema`),
+  updateOrganizationEnrollmentSchema: (organizationId, fields) =>
+    request(`/api/super-admin/organizations/${organizationId}/enrollment-schema`, {
+      method: 'PUT',
+      body: JSON.stringify({ fields })
     })
 };

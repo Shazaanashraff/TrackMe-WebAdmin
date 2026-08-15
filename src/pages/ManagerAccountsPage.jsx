@@ -34,6 +34,7 @@ import {
   useUpdateDriver,
   useDeleteDriver,
   useResetDriverPassword,
+  useDriverPassword,
   useDriverEnrollmentKey,
   useRotateDriverEnrollmentKey,
   useRevertDriverEnrollmentKey,
@@ -156,6 +157,7 @@ export function ManagerAccountsPage() {
   const updateM = useUpdateDriver();
   const deleteM = useDeleteDriver();
   const resetPwM = useResetDriverPassword();
+  const viewPwM = useDriverPassword();
   const revealKeyM = useDriverEnrollmentKey();
   const rotateKeyM = useRotateDriverEnrollmentKey();
   const revertKeyM = useRevertDriverEnrollmentKey();
@@ -170,6 +172,9 @@ export function ManagerAccountsPage() {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [resetTarget, setResetTarget] = useState(null);
+  // Held in state only while the dialog is open, and dropped on close — the
+  // password is never kept alongside the cached driver list.
+  const [viewedPassword, setViewedPassword] = useState(null);
   const [rotateTarget, setRotateTarget] = useState(null);
   const [disableTarget, setDisableTarget] = useState(null);
   const [newPassword, setNewPassword] = useState('');
@@ -349,6 +354,32 @@ export function ManagerAccountsPage() {
     try {
       await navigator.clipboard.writeText(revealedKeys[driverId]);
       toast('Enrollment key copied');
+    } catch {
+      toast('Could not copy to clipboard');
+    }
+  };
+
+  const handleViewPassword = async (driver) => {
+    try {
+      const res = await viewPwM.mutateAsync({ driverId: driver._id });
+      setViewedPassword({ driver, password: res?.data?.password || '' });
+    } catch (err) {
+      // The two expected refusals are worth distinguishing: one is a server
+      // setting, the other means this driver simply needs a reset.
+      if (err?.code === 'PASSWORD_RECOVERY_DISABLED') {
+        toast('Viewing driver passwords is switched off on this server');
+      } else if (err?.code === 'PASSWORD_NOT_RECOVERABLE') {
+        toast('No stored password for this driver — reset it to set a new one');
+      } else {
+        toast(err?.message || 'Could not load the password');
+      }
+    }
+  };
+
+  const handleCopyPassword = async () => {
+    try {
+      await navigator.clipboard.writeText(viewedPassword.password);
+      toast('Password copied');
     } catch {
       toast('Could not copy to clipboard');
     }
@@ -537,6 +568,9 @@ export function ManagerAccountsPage() {
                   Restore previous key
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem onSelect={() => handleViewPassword(driver)}>
+                View password
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setResetTarget(driver)}>
                 Reset password
               </DropdownMenuItem>
@@ -1119,6 +1153,50 @@ export function ManagerAccountsPage() {
         pending={updateM.isPending}
         onConfirm={handleConfirmDisable}
       />
+
+      {/* Read-only, and closed with a plain dismiss — there is nothing to
+          submit. The sign-in ID is shown alongside because the password is
+          useless without it, and the ID is the half managers reach for the
+          enrollment key by mistake. */}
+      <ConfirmDialog
+        open={Boolean(viewedPassword)}
+        onOpenChange={(open) => { if (!open) setViewedPassword(null); }}
+        title={`${viewedPassword?.driver?.name || 'Driver'}'s sign-in details`}
+        description="Give these to the driver so they can sign in to the driver app."
+        confirmLabel="Done"
+        onConfirm={() => setViewedPassword(null)}
+      >
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Driver ID
+            </p>
+            <code className="block whitespace-nowrap rounded bg-surface-muted px-2 py-1.5 text-sm">
+              {viewedPassword?.driver?.driverCode || 'No driver ID'}
+            </code>
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Password
+            </p>
+            <div className="flex items-center gap-2">
+              <code
+                data-testid="driver-password-value"
+                className="flex-1 break-all rounded bg-surface-muted px-2 py-1.5 text-sm"
+              >
+                {viewedPassword?.password}
+              </code>
+              <Button size="sm" variant="ghost" onClick={handleCopyPassword}>Copy</Button>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            This view is recorded against your account. Reset the password instead of sharing
+            it if the driver should be the only one who knows it.
+          </p>
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }

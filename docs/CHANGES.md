@@ -22,6 +22,35 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-15 — Fix pre-existing lint errors blocking CI on main
+- **Branch:** claude/peaceful-archimedes-6ofp3h
+- **Modules touched:** none (build/lint config + test files only)
+- **What changed:**
+  - `eslint.config.js` only declared `globals.browser`, so any `*.test.{js,jsx}` file using Node
+    globals (`Buffer`, `global`) failed `no-undef`. Added a `**/*.test.{js,jsx}` /
+    `**/__tests__/**` override that merges in `globals.node`.
+  - `src/lib/__tests__/authSession.test.js`: dropped an unused `vi` import and two
+    `eslint-disable-next-line no-global-assign` comments that were never actually suppressing
+    anything (the rule only fires on reassigning `global` itself, not `global.window`).
+  - `src/pages/DeveloperPage.jsx`: escaped two literal `"` characters in JSX text
+    (`react/no-unescaped-entities`).
+- **Why:** `main`'s "Lint & Build" CI check has been red for unrelated reasons since before this
+  session, blocking three already-reviewed, ready-to-merge PRs (#101, #102, #103) from merging —
+  `npm run lint` failed with 33 errors none of those PRs touched. Fixing the config here unblocks
+  them without touching any product code.
+- **Contract impact:** none.
+- **Tests:** `npm run lint` — 0 errors (27 pre-existing warnings, all `react-hooks/exhaustive-deps`
+  / `react-refresh/only-export-components`, unchanged). `npm run build` — green. `npm test` — 609/610
+  green; the one pre-existing failure (`ManagerRequestsPage.test.jsx` — "Managed profile · Daughter"
+  text not found) reproduces identically on `main` before this change and is unrelated (CI's
+  "Lint & Build" job does not run `npm test` at all, so it wasn't blocking anything, but it's a
+  real gap worth a follow-up issue).
+- **Docs updated:** this entry only — no module behavior changed.
+- **Migration:** none.
+- **Follow-ups / known issues:** `ManagerRequestsPage.test.jsx`'s "Managed profile · Daughter"
+  assertion fails on current `main` — pre-existing, not introduced here, worth filing as its own
+  issue.
+
 ## 2026-08-14 — Disabling a driver now requires confirmation, like other destructive actions
 - **Branch:** issue/50-confirm-disable-driver
 - **Modules touched:** accounts (`ManagerAccountsPage.jsx`) — no dedicated module doc yet
@@ -43,6 +72,38 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 - **Docs updated:** n/a (ACCOUNTS.md remains the pre-existing stub; unrelated
   to this fix)
 - **Follow-ups / known issues:** none
+
+## 2026-08-14 — Rebuild manager live tracking on the vehicle-scoped contract
+- **Branch:** main
+- **Modules touched:** tracking — [`docs/modules/TRACKING.md`](modules/TRACKING.md) (rewritten)
+- **What changed:**
+  - Restored `/manager/tracking` and its manager-nav entry with an Atlas Google Maps fleet map,
+    current-state markers, selected-vehicle telemetry, stale/first-fix/offline states, and honest
+    loading/empty/error surfaces.
+  - Added `adminApi.getManagerFleetLive()` + `qk.vehicles.managerLive()`. The fleet snapshot polls
+    every 30 seconds as a fallback; no breadcrumb history is fabricated because the backend stores
+    one current-location document per vehicle.
+  - Added `tracking-socket.js` and `useManagerFleetTracking`: one selected vehicle at a time joins
+    `vehicle:subscribe`, consumes `vehicle:update` / `vehicle:status`, unsubscribes on selection or
+    cleanup, and resolves the socket-vs-REST result by timestamp. The socket uses `getApiBaseUrl()`
+    so Developer Mode's sandbox toggle applies to realtime too.
+- **Why:** backend live location and the rider consumer were shipped on 2026-08-14, but the manager
+  page named as a consumer in backend `REALTIME.md` had been deleted in `fee5555` and was never
+  rebuilt. Its archived implementation depended on deleted bus rooms and history endpoints.
+- **Contract impact:** consumes the additive backend `GET /api/manager/vehicles/live` and
+  `vehicle:subscribe` / `vehicle:unsubscribe` / `vehicle:update` / `vehicle:status` contract from
+  `TrackMe-backend/docs/modules/REALTIME.md`; no backend shape changed in this session.
+- **Tests:** added `src/lib/__tests__/tracking-socket.test.js`,
+  `src/hooks/__tests__/use-tracking.test.jsx`, and
+  `src/pages/__tests__/ManagerTrackingPage.test.jsx`; extended API, route, and nav suites.
+- **Docs updated:** `docs/modules/TRACKING.md`, `docs/TESTING_GUIDE.md`, unit/integration/E2E
+  plans, tracking strategy/refactor docs, redesign page/checklist/progress docs, `docs/README.md`,
+  `CLAUDE.md`, this log.
+- **Follow-ups / known issues:** Google Maps requires `VITE_GOOGLE_MAPS_KEY`, a browser-restricted
+  Maps JavaScript API key, and network access. Repository-wide
+  `npm test` had one unrelated pre-existing failure before this work in
+  `ManagerRequestsPage.test.jsx` (missing “Managed profile · Daughter”); repository-wide lint also
+  remains red on pre-existing auth/developer test errors.
 
 ## 2026-08-13 — Create-vehicle flow reflects the new bootstrap-then-approval rule
 - **Branch:** main

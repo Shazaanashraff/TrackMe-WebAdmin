@@ -31,6 +31,8 @@ const ROUTE_LABELS = {
   '/manager/vehicles': 'Vehicles',
   '/manager/accounts': 'Drivers',
   '/manager/requests': 'Enrollment requests',
+  '/manager/enrollment-form': 'Enrollment form',
+  '/enrollment-form': 'Enrollment form',
   '/manager/settings': 'Settings',
 };
 

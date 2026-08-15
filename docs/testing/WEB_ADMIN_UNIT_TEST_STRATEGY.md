@@ -177,8 +177,7 @@ Test cases:
 - `handleUnauthorized()` does nothing for unrelated error messages.
 - `login()` normalizes the returned auth object into a consistent token shape.
 - `getSystemRoutes()`, `getManagers()`, `getPendingBusRequests()`, and `getAuditLogs()` build correct query strings.
-- `getManagerBusLocation(busId, minutes = 15)` uses `15` when minutes is omitted.
-- `getManagerBusLocation()` uses the provided minutes when present.
+- `getManagerFleetLive()` calls the manager-scoped current-location endpoint.
 
 Edge cases to include:
 
@@ -364,9 +363,8 @@ Component test ideas with RTL:
 
 Target files:
 
-- `web-admin/src/helpers/tracking/trackingTransforms.js`
-- `web-admin/src/helpers/tracking/trackingWindow.js`
-- `web-admin/src/helpers/tracking/trackingSocket.js`
+- `src/hooks/use-tracking.js`
+- `src/lib/tracking-socket.js`
 
 Current page source:
 
@@ -374,19 +372,18 @@ Current page source:
 
 Primary goals:
 
-- Verify coordinate parsing.
-- Verify rolling history window logic.
-- Verify the live snapshot model.
+- Verify REST/socket freshness merging.
+- Verify live/stale/offline classification.
+- Verify the selected vehicle's socket room lifecycle.
 
 Test cases:
 
-- `toLatLng()` returns `[lat, lng]` for valid numeric values.
-- `toLatLng()` returns `null` for missing, invalid, or non-finite numbers.
-- `mapHistoryToPathPoints()` filters out invalid points.
-- `trimHistoryWindow()` keeps only points inside the requested time window.
-- `buildTrackingSnapshot()` merges live updates into prior state correctly.
-- Live history should keep the previous route ID when the payload does not include one.
-- Latest point and history are both updated when a new bus message arrives.
+- A newer socket fix wins without dropping REST-only driver/vehicle metadata.
+- A newer REST poll wins over an older socket patch.
+- `live:true` with no location remains live (waiting for the first GPS fix).
+- `receivedAt` older than 90 seconds classifies as stale.
+- Selection change emits `vehicle:unsubscribe` for the old vehicle and `vehicle:subscribe` for the
+  new one; unmount unsubscribes and disconnects.
 
 Edge cases to include:
 
