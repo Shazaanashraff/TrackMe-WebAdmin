@@ -56,13 +56,17 @@ const EMPTY_CREATE = {
 
 // A vehicle needs an ID and a plate; everything else about it, including who
 // drives it, can be filled in later from this same page.
-function validateStep(form, step) {
+function validateStep(form, step, vehicles = []) {
   if (step === 0) {
     if (!form.vehicleId.trim() || !form.numberPlate.trim()) {
       return 'Please complete Vehicle ID and Number Plate.';
     }
     if (!isValidPlate(form.numberPlate)) {
       return PLATE_FORMAT_MESSAGE;
+    }
+    const enteredId = form.vehicleId.trim().toLowerCase();
+    if (vehicles.some((v) => (v.vehicleId || '').trim().toLowerCase() === enteredId)) {
+      return `Vehicle ID "${form.vehicleId.trim()}" is already in use.`;
     }
   }
   if (step === 1) {
@@ -132,7 +136,7 @@ export function ManagerVehiclesPage() {
   };
 
   const handleNext = () => {
-    const err = validateStep(createForm, createStep);
+    const err = validateStep(createForm, createStep, vehicles);
     if (err) { setCreateError(err); return; }
     setCreateError(null);
     setCreateStep((s) => Math.min(s + 1, 2));

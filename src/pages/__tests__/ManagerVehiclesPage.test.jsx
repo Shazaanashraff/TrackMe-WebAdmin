@@ -187,6 +187,20 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     expect(screen.queryByLabelText(/initial password/i)).not.toBeInTheDocument();
   }, 20000);
 
+  it('will not advance past step 0 with a Vehicle ID already in the fleet (issue #49)', async () => {
+    const { user } = setup({ vehicles: VEHICLES }); // VEHICLES[0].vehicleId === 'VEHICLE-1'
+
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+    // Case-insensitive duplicate of the existing vehicle's ID.
+    await user.type(screen.getByLabelText(/vehicle id/i), 'vehicle-1');
+    await user.type(screen.getByLabelText(/number plate/i), 'ABC-1234');
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+
+    expect(await screen.findByText(/already in use/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/initial password/i)).not.toBeInTheDocument();
+  }, 20000);
+
   it('tidies an accepted plate into its canonical form on blur', async () => {
     const { user } = setup();
 
