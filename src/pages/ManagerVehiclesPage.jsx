@@ -181,6 +181,10 @@ export function ManagerVehiclesPage() {
   const handleSaveEdit = async () => {
     if (!editVehicle) return;
     setEditError(null);
+    if (!isValidPlate(editForm.numberPlate)) {
+      setEditError(PLATE_FORMAT_MESSAGE);
+      return;
+    }
     try {
       await updateVehicleM.mutateAsync({
         vehicleId: editVehicle.vehicleId,
