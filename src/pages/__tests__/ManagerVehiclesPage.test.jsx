@@ -369,6 +369,22 @@ describe('ManagerVehiclesPage edit and delete', () => {
     expect(updateMut.mutateAsync.mock.calls[0][0].vehicleId).toBe('VEHICLE-1');
   });
 
+  it('rejects an invalid plate format on save, same message as create, without submitting (issue #41)', async () => {
+    const updateMut = makeMutation();
+    const { user } = setup({ updateMut });
+
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+    await screen.findByRole('dialog');
+
+    const plateInput = screen.getByLabelText(/number plate/i);
+    await user.clear(plateInput);
+    await user.type(plateInput, 'NOTAPLATE');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    expect(await screen.findByText(/enter a sri lankan number plate/i)).toBeInTheDocument();
+    expect(updateMut.mutateAsync).not.toHaveBeenCalled();
+  });
+
   it('opens delete confirmation dialog when Delete Req is clicked', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: /delete req/i }));
