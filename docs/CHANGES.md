@@ -51,6 +51,28 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
   assertion fails on current `main` — pre-existing, not introduced here, worth filing as its own
   issue.
 
+## 2026-08-14 — Disabling a driver now requires confirmation, like other destructive actions
+- **Branch:** issue/50-confirm-disable-driver
+- **Modules touched:** accounts (`ManagerAccountsPage.jsx`) — no dedicated module doc yet
+  (see `docs/modules/ACCOUNTS.md` stub)
+- **What changed:**
+  - The "Disable driver" row-menu item now opens a `ConfirmDialog` (same
+    pattern as "Replace enrollment key" / "Delete driver") stating that it
+    immediately revokes the driver's ability to sign in and drive, before
+    calling the existing `handleToggleActive`.
+  - "Enable driver" (the reverse, low-stakes direction) still fires immediately
+    with no dialog — unchanged.
+- **Why:** issue #50 — disabling a driver fired immediately from the dropdown
+  with no confirmation, unlike the lower-impact "Replace enrollment key" action.
+- **Contract impact:** none — same `PUT` driver-update call as before, only the
+  UI's confirmation step changed.
+- **Tests:** `src/pages/__tests__/ManagerAccountsPage.test.jsx` — new "disable
+  driver confirmation" describe block: warns before disabling, backs out on
+  Cancel, disables once confirmed, and confirms enabling still has no dialog.
+- **Docs updated:** n/a (ACCOUNTS.md remains the pre-existing stub; unrelated
+  to this fix)
+- **Follow-ups / known issues:** none
+
 ## 2026-08-14 — Vehicle edit enforces the same plate format as create
 - **Branch:** issue/41-plate-validation-on-edit
 - **Modules touched:** vehicles/fleet (`ManagerVehiclesPage.jsx`) — no dedicated module doc yet
