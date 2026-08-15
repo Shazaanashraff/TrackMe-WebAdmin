@@ -176,6 +176,7 @@ export function ManagerAccountsPage() {
   // password is never kept alongside the cached driver list.
   const [viewedPassword, setViewedPassword] = useState(null);
   const [rotateTarget, setRotateTarget] = useState(null);
+  const [disableTarget, setDisableTarget] = useState(null);
   const [newPassword, setNewPassword] = useState('');
 
   // Keys are credentials, so they stay hidden until asked for and are held per
@@ -289,6 +290,17 @@ export function ManagerAccountsPage() {
     } catch (err) {
       toast(`Failed: ${err?.message || 'Unknown error'}`);
     }
+  };
+
+  // Enabling a driver back is low-stakes and reversible with one more click,
+  // so it fires immediately. Disabling revokes their ability to sign in and
+  // drive right away, which is destructive enough to ask first — consistent
+  // with the confirmation already required to replace an enrollment key.
+  const handleConfirmDisable = async () => {
+    if (!disableTarget) return;
+    const driver = disableTarget;
+    setDisableTarget(null);
+    await handleToggleActive(driver);
   };
 
   // The server decides whether an undo is still available, so the option
@@ -562,7 +574,11 @@ export function ManagerAccountsPage() {
               <DropdownMenuItem onSelect={() => setResetTarget(driver)}>
                 Reset password
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => handleToggleActive(driver)}>
+              <DropdownMenuItem
+                onSelect={() => (driver.isActive === false
+                  ? handleToggleActive(driver)
+                  : setDisableTarget(driver))}
+              >
                 {driver.isActive === false ? 'Enable driver' : 'Disable driver'}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -1126,6 +1142,17 @@ export function ManagerAccountsPage() {
           </li>
         </ul>
       </ConfirmDialog>
+
+      <ConfirmDialog
+        open={Boolean(disableTarget)}
+        onOpenChange={(open) => { if (!open && !updateM.isPending) setDisableTarget(null); }}
+        title={`Disable ${disableTarget?.name || 'this driver'}?`}
+        description="This immediately revokes their ability to sign in and drive. You can re-enable them at any time from this same menu."
+        confirmLabel="Disable Driver"
+        destructive
+        pending={updateM.isPending}
+        onConfirm={handleConfirmDisable}
+      />
 
       {/* Read-only, and closed with a plain dismiss — there is nothing to
           submit. The sign-in ID is shown alongside because the password is
