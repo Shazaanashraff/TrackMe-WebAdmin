@@ -22,6 +22,41 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-16 — Resolve the Vehicle Requests table's Vehicle column to a friendly name
+- **Branch:** issue/63-vehicle-requests-table-names
+- **Modules touched:** docs/modules/OPERATIONS.md (still a stub, not filled in as part of this
+  change — see Follow-ups)
+- **What changed:**
+  - `OperationsPage.jsx`'s `requestColumns` Vehicle column showed the bare `vehicleId` code with
+    no lookup. The request's own `payload` already carries a human name — `payload.vehicle.vehicleName`
+    for a `CREATE_VEHICLE_ACCOUNT` request, `payload.vehicleSnapshot.vehicleName` for a
+    `DELETE_VEHICLE` one (see TrackMe-backend `managerController.createManagerVehicle` /
+    `requestVehicleDelete`) — so the column now shows `"name (code)"` when either is present,
+    falling back to the raw code otherwise.
+  - The issue also flagged the Manager column as "only resolves a name if `managerId` happens to
+    already be a populated object." Checked against the current backend
+    (`superAdminController.getPendingVehicleRequests`): it always calls
+    `.populate('managerId', 'name email')`, so that column's existing `i.getValue()?.name || 'None'`
+    is already correct for every response this endpoint can return. No change made there — verifying
+    and leaving it alone beats fixing a case that no longer occurs.
+- **Why:** Closes #63 — a super-admin reviewing a request had to cross-reference the vehicle code
+  against another page to know which vehicle a request was about.
+- **Contract impact:** none — reads a field (`payload.vehicle.vehicleName` /
+  `payload.vehicleSnapshot.vehicleName`) the backend already sends, no new request.
+- **Tests:** `src/pages/__tests__/OperationsPage.test.jsx` — 1 new case (resolves to
+  `"name (code)"` given a payload with a vehicle name); the existing raw-code assertion
+  (`REQ_A`, no `payload`) still passes unchanged, covering the fallback. Full suite: `npm test` —
+  618/619 green; the one pre-existing failure (`ManagerRequestsPage.test.jsx`) is unrelated (see
+  the 2026-08-15 and 2026-08-16 #67 entries above). `npm run lint` — clean on both touched files
+  (only the four pre-existing `OperationsPage.jsx` exhaustive-deps warnings, confirmed identical
+  on `main` before this change).
+- **Docs updated:** TESTING_GUIDE.md — new row.
+- **Follow-ups / known issues:** `docs/modules/OPERATIONS.md` is still an unwritten stub (same
+  pre-existing gap noted for BUSES.md in the #67 entry above) — out of scope for this one-column
+  fix.
+
+---
+
 ## 2026-08-16 — Resolve route id to a friendly name in the Vehicles table
 - **Branch:** issue/67-vehicles-table-route-label
 - **Modules touched:** docs/modules/BUSES.md (still a stub — source of truth is

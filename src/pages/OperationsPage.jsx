@@ -122,7 +122,19 @@ export function OperationsPage() {
   const requestColumns = useMemo(() => [
     { id: 'type', header: 'Type', accessorKey: 'type' },
     { id: 'manager', header: 'Manager', accessorKey: 'managerId', cell: (i) => i.getValue()?.name || 'None' },
-    { id: 'vehicleId', header: 'Vehicle', accessorKey: 'vehicleId' },
+    {
+      id: 'vehicleId',
+      header: 'Vehicle',
+      accessorKey: 'vehicleId',
+      cell: (i) => {
+        const vehicleId = i.getValue();
+        // CREATE_VEHICLE_ACCOUNT carries the proposed vehicle under `payload.vehicle`;
+        // DELETE_VEHICLE carries the vehicle being removed under `payload.vehicleSnapshot`.
+        const payload = i.row.original.payload;
+        const vehicleName = payload?.vehicle?.vehicleName || payload?.vehicleSnapshot?.vehicleName;
+        return vehicleName ? `${vehicleName} (${vehicleId})` : vehicleId;
+      },
+    },
     { id: 'submitted', header: 'Submitted', accessorKey: 'createdAt', cell: (i) => i.getValue() ? <RelativeTime date={i.getValue()} /> : 'None' },
     { id: 'reason', header: 'Reason', accessorKey: 'reason', cell: (i) => i.getValue() || 'None' },
     {
