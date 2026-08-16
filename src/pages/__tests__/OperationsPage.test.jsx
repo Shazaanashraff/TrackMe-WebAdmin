@@ -51,6 +51,16 @@ const REQ_A = {
   status: 'PENDING',
 };
 
+// A CREATE_VEHICLE_ACCOUNT request as the backend actually returns it — the
+// proposed vehicle's details live under payload.vehicle (see
+// TrackMe-backend managerController.createManagerVehicle).
+const REQ_WITH_VEHICLE_NAME = {
+  ...REQ_A,
+  _id: 'r2',
+  vehicleId: 'VEHICLE-002',
+  payload: { vehicle: { vehicleName: 'Shuttle 99', numberPlate: 'AB-1234' } },
+};
+
 const AUDIT_A = {
   _id: 'a1',
   createdAt: '2026-07-17T09:00:00Z',
@@ -230,6 +240,14 @@ describe('OperationsPage', () => {
     expect(screen.getByText('NEW_VEHICLE')).toBeInTheDocument();
     expect(screen.getByText('VEHICLE-001')).toBeInTheDocument();
     expect(screen.getByText('Expanding fleet')).toBeInTheDocument();
+  });
+
+  // Issue #63: the Vehicle column showed the raw code with no lookup against
+  // the request's own payload, even when a human-readable name was right there.
+  it('resolves the Vehicle column to a friendly name (code) when the request payload carries one', () => {
+    setup({ requests: [REQ_WITH_VEHICLE_NAME] });
+    expect(screen.getByText('Shuttle 99 (VEHICLE-002)')).toBeInTheDocument();
+    expect(screen.queryByText('VEHICLE-002')).not.toBeInTheDocument();
   });
 
   it('shows Approve and Reject buttons for each request', () => {
