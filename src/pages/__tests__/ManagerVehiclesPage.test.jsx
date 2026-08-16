@@ -144,6 +144,20 @@ describe('ManagerVehiclesPage', () => {
     setup({ vehicles: [] });
     expect(screen.getByText(/no vehicles yet/i)).toBeInTheDocument();
   });
+
+  // Issue #67: the table used to show the raw route code with no lookup,
+  // inconsistent with the friendly "name (code)" label the route pickers use.
+  it('resolves the route column to a friendly name (code), not the raw route id', () => {
+    setup(); // VEHICLES[0].routeId === 'PUB-1', which ROUTES names "Public Route"
+    expect(screen.getByText('Public Route (PUB-1)')).toBeInTheDocument();
+    expect(screen.queryByText('PUB-1')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the raw route id when it is not in the assignable routes list', () => {
+    const orphanVehicle = { ...VEHICLES[0], routeId: 'ORPHAN-ROUTE' };
+    setup({ vehicles: [orphanVehicle] });
+    expect(screen.getByText('ORPHAN-ROUTE')).toBeInTheDocument();
+  });
 });
 
 // ----------------------------------------------------------------

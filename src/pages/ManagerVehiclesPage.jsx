@@ -109,7 +109,7 @@ export function ManagerVehiclesPage() {
   const [deleteError, setDeleteError] = useState(null);
 
   const vehicles = vehiclesQ.data?.data || [];
-  const routes = routesQ.data?.data || [];
+  const routes = useMemo(() => routesQ.data?.data || [], [routesQ.data]);
   const organizations = organizationsQ.data?.data || [];
 
   const summary = useMemo(() => {
@@ -117,6 +117,13 @@ export function ManagerVehiclesPage() {
     const active = vehicles.filter((b) => b.isActive !== false).length;
     return { total, active, inactive: total - active };
   }, [vehicles]);
+
+  // Same "name (code)" label the create/edit route pickers already use, so the
+  // table reads the same way the rest of this page does (issue #67).
+  const routeNameById = useMemo(
+    () => new Map(routes.map((r) => [r.routeId, r.routeName])),
+    [routes],
+  );
 
   const setCreate = (key) => (e) => setCreateForm((p) => ({ ...p, [key]: e.target.value }));
 
@@ -241,7 +248,12 @@ export function ManagerVehiclesPage() {
       id: 'route',
       header: 'Route',
       accessorKey: 'routeId',
-      cell: (i) => i.getValue() || <span className="text-muted-foreground">Not set</span>,
+      cell: (i) => {
+        const routeId = i.getValue();
+        if (!routeId) return <span className="text-muted-foreground">Not set</span>;
+        const routeName = routeNameById.get(routeId);
+        return routeName ? `${routeName} (${routeId})` : routeId;
+      },
     },
     { id: 'service', header: 'Service', accessorKey: 'serviceType' },
     { id: 'state', header: 'Status', accessorKey: 'isActive', enableSorting: false, cell: (i) => <StatusBadge status={i.getValue() !== false ? 'active' : 'inactive'} /> },
@@ -257,7 +269,7 @@ export function ManagerVehiclesPage() {
         );
       },
     },
-  ], []);
+  ], [routeNameById]);
 
   return (
     <div className="space-y-6">

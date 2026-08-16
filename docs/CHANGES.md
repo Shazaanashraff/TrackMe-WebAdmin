@@ -22,6 +22,35 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-16 — Resolve route id to a friendly name in the Vehicles table
+- **Branch:** issue/67-vehicles-table-route-label
+- **Modules touched:** docs/modules/BUSES.md (still a stub — source of truth is
+  `ManagerVehiclesPage.jsx`; not filled in as part of this change, see Follow-ups)
+- **What changed:**
+  - `ManagerVehiclesPage.jsx`'s table Route column showed the raw `routeId` with no lookup,
+    while the create wizard's route picker already showed `"name (code)"`. The column now looks
+    the id up against the same `useManagerAssignableRoutes` list the picker uses and shows the
+    same `"name (code)"` label, falling back to the raw id when the vehicle's route isn't in that
+    list (an orphaned/unassignable route — same fallback the edit dropdown already uses).
+- **Why:** Closes #67 — the raw code made the table harder to scan than necessary and was
+  inconsistent with the rest of the page.
+- **Contract impact:** none — display-only, no new API calls (reuses already-fetched route data).
+- **Tests:** `src/pages/__tests__/ManagerVehiclesPage.test.jsx` — 2 new cases (resolves to
+  `"name (code)"`; falls back to the raw id for an unlisted route). Full suite:
+  `npm test` — 617/618 green; the one pre-existing failure
+  (`ManagerRequestsPage.test.jsx` — "Managed profile · Daughter") reproduces identically on
+  `main` before this change (see the 2026-08-15 entry above) and is unrelated. `npm run lint` —
+  clean on both touched files (only the pre-existing `vehicles` exhaustive-deps warning on a line
+  this change didn't touch).
+- **Docs updated:** TESTING_GUIDE.md — new "Vehicles table route column (issue #67)" row.
+- **Follow-ups / known issues:** `docs/modules/BUSES.md` is still an unwritten stub (per its own
+  header) and its "source of truth" pointer names `ManagerBusesPage.jsx`/`use-buses.js`, which no
+  longer exist under those names (now `ManagerVehiclesPage.jsx`/`use-vehicles.js`) — pre-existing
+  drift, not introduced by this change, but flagging it since it makes the stub misleading rather
+  than just incomplete. Writing the full module doc is out of scope for this one-column fix.
+
+---
+
 ## 2026-08-15 — Fix pre-existing lint errors blocking CI on main
 - **Branch:** claude/peaceful-archimedes-6ofp3h
 - **Modules touched:** none (build/lint config + test files only)
