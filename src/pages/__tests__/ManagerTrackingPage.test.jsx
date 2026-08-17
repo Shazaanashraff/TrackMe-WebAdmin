@@ -166,7 +166,14 @@ describe('ManagerTrackingPage', () => {
     const { rerender } = renderPage();
     expect(screen.getByRole('status')).toHaveTextContent(/loading/i);
 
-    mockTracking({ fleet: [], isLoading: false, error: new Error('Fleet failed') });
+    // A status-bearing error (a real response the server sent back, just with
+    // a status ErrorState has no specific copy for) so this fixture represents
+    // a genuine rejection rather than a network failure — the two now render
+    // different text (issue #76), and this test isn't the one that locks in
+    // that distinction (see error-state.test.jsx for that).
+    const fleetError = new Error('Fleet failed');
+    fleetError.status = 400;
+    mockTracking({ fleet: [], isLoading: false, error: fleetError });
     rerender(<TooltipProvider><ManagerTrackingPage /></TooltipProvider>);
     expect(screen.getByText('Fleet failed')).toBeInTheDocument();
 

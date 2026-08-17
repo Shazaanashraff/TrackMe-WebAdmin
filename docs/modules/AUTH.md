@@ -78,6 +78,18 @@ Backend side: [`AUTH.md`](../../../backend/docs/modules/AUTH.md) — four-collec
   refresh only calls `clearStoredAuth()` when `err.status` is `401` or `403` — anything else (a
   blip, the backend restarting) leaves the stored session alone rather than logging the user out
   on every flaky reload.
+- **The same `error.status`-presence signal is how the app-wide `ErrorState` component tells a
+  network/timeout failure apart from a server rejection**, not just during token refresh.
+  `src/components/shared/error-state.jsx`'s `humanizeError` checks `error.status` first (401/403/
+  404/5xx get specific copy); an error with **no** `status` at all — the request never got a
+  response — renders "Network error. Check your connection and try again." instead of falling
+  through to raw, often-unhelpful message text. This matters because a real fetch-level failure's
+  message varies by browser/cause ("Failed to fetch", Safari's "Load failed", a timeout
+  `AbortError`) and doesn't reliably contain the word "network", so message-text sniffing alone
+  used to miss most of them (issue #76). `AsyncSection`/`ErrorState` consumers (`DashboardPage`,
+  `ManagerDashboardPage`, `ManagerTrackingPage`, `OperationsPage`, `RoutesPage`) get this for free;
+  a status-bearing error whose status doesn't match one of the specific buckets still shows its own
+  message verbatim (e.g. a 400 validation rejection), unchanged from before.
 - **`REFRESH_EXEMPT_PATHS`** in `api.js` is why login itself never gets caught in a refresh-retry
   loop: login, refresh, logout, and the three forgot-password endpoints are excluded from the
   "401 → try refresh → retry" path, since none of them can be fixed by refreshing a token that

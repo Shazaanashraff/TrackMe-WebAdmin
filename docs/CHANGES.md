@@ -22,6 +22,46 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-17 — ErrorState distinguishes network failures from server rejections by status
+
+- **Branch:** issue/76-network-vs-server-rejection-errors
+- **Modules touched:** Auth (docs/modules/AUTH.md)
+- **What changed:** Every failure through `api.js` collapsed into the same generic `Error`, and
+  `error-state.jsx`'s `humanizeError` classified it purely by sniffing the message text for words
+  like "network" — which a real fetch-level failure's message doesn't reliably contain (varies by
+  browser/cause: "Failed to fetch", Safari's "Load failed", a timeout `AbortError`). Rewrote
+  `humanizeError` to check `error.status` first (`api.js`'s `request()` only ever sets it for a
+  response that DID come back): a status-bearing error gets the existing 401/403/404/5xx-specific
+  copy (or its own message verbatim if the status doesn't match one of those, unchanged behavior
+  for e.g. a 400 validation rejection); an error with **no** `status` at all — regardless of
+  message wording — now renders a distinct, retry-oriented "Network error. Check your connection
+  and try again." Every `AsyncSection`/`ErrorState` consumer (`DashboardPage`,
+  `ManagerDashboardPage`, `ManagerTrackingPage`, `OperationsPage`, `RoutesPage`) gets this for
+  free from the one shared component.
+- **Why:** Closes #76.
+- **Contract impact:** none — client-only error-classification change, no request/response shape
+  touched.
+- **Tests:** `src/components/shared/__tests__/error-state.test.jsx` — 4 new cases: a simulated
+  network failure (no `.status`, an unrecognized message) gets the network message; `.status`
+  wins over message wording when both are present; a status-bearing but otherwise-unmatched
+  rejection still shows its own message verbatim (unchanged); an `ErrorState`-level render test
+  for the network case with a retry button. Verified the new tests aren't vacuous by temporarily
+  reverting `error-state.jsx` and confirming they fail. One existing fixture
+  (`ManagerTrackingPage.test.jsx`) used a status-less `Error('Fleet failed')` to stand in for a
+  generic fetch failure — gave it `.status = 400` so it represents what it always meant to (a real
+  rejection with a custom message), since under the stricter new logic a truly status-less error
+  is genuinely a network failure now.
+- **Docs updated:** docs/modules/AUTH.md §5, docs/modules/TRACKING.md §5 (its REST-error fixture
+  touched, cross-referenced to AUTH.md rather than duplicating the logic), docs/TESTING_GUIDE.md
+  (Auth and Session section).
+- **Follow-ups / known issues:** this fixes the shared `ErrorState` component (query-level load
+  failures on the 5 pages that use it) but does not touch the ~38 individual
+  `toast(\`Failed: ${err.message}\`)` call sites across mutation handlers app-wide — those still
+  show the raw backend/network message with no network-vs-rejection distinction. Auditing and
+  updating every one of those is a much larger, separate piece of work outside this issue's
+  acceptance criteria (which named `error.status`'s existing role, already exercised by
+  `ErrorState`, as the mechanism to use — it didn't ask for an app-wide toast-copy rewrite).
+
 ## 2026-08-17 — Regression test proving login shows a distinct deactivated-account message
 
 - **Branch:** issue/70-distinct-login-failure-messages
