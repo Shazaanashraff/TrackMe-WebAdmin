@@ -333,6 +333,16 @@ describe('OperationsPage', () => {
     expect(screen.getByLabelText(/reason/i)).toHaveValue('Not compliant');
   });
 
+  it('caps the rejection reason at 500 characters with inline character feedback (issue #69)', async () => {
+    const { user } = setup({ requests: [REQ_A] });
+    await user.click(screen.getByRole('button', { name: /reject/i }));
+    await screen.findByRole('heading', { name: /reject request/i });
+    const textarea = screen.getByLabelText(/reason/i);
+    expect(textarea).toHaveAttribute('maxlength', '500');
+    await user.type(textarea, 'Not compliant');
+    expect(screen.getByText('13/500')).toBeInTheDocument();
+  });
+
   it('shows empty state when no requests exist', () => {
     setup({ requests: [] });
     expect(screen.getByText('No requests')).toBeInTheDocument();

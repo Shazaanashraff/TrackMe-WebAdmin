@@ -48,6 +48,27 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
   fixed the file mode as part of this push since it's a one-line, zero-risk permission fix that
   the repo's own doc-check safety net depends on.
 
+## 2026-08-17 — Rejection-reason textarea gets a length cap and inline character feedback
+
+- **Branch:** issue/69-reject-reason-length-cap
+- **Modules touched:** Operations (docs/modules/OPERATIONS.md)
+- **What changed:** `ConfirmDialog`'s reason textarea had no character limit and no inline
+  length feedback, so an excessively long rejection reason risked only a generic backend 400
+  with no field-level indication of what was wrong. Added an optional `reasonMaxLength` prop to
+  the shared `ConfirmDialog`: renders a live `n/max` character count, caps typing via the native
+  `maxLength` attribute, and (for the non-typed-input edge case) disables Confirm with an inline
+  "too long" message if the reason somehow exceeds the cap. `OperationsPage`'s reject-request
+  dialog now passes `reasonMaxLength={500}`. `ManagerVehiclesPage`'s other `ConfirmDialog`
+  consumer is unaffected — the prop is opt-in and defaults to uncapped.
+- **Why:** Closes #69.
+- **Contract impact:** none — client-only validation; the backend's `decisionNote` field has no
+  matching schema-level cap, so this is a UI-side choice, not a mirrored contract.
+- **Tests:** `src/components/shared/__tests__/confirm-dialog.test.jsx` — new cases for the
+  character count, native cap, and over-limit block. `src/pages/__tests__/OperationsPage.test.jsx`
+  — new case confirming the reject dialog wires `reasonMaxLength={500}` through.
+- **Docs updated:** docs/modules/OPERATIONS.md §5, docs/TESTING_GUIDE.md (Operations section).
+- **Follow-ups / known issues:** none.
+
 ## 2026-08-17 — Operations re-syncs the selected manager on repeated "View" clicks
 
 - **Branch:** issue/65-operations-managerid-resync

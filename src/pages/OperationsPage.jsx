@@ -329,6 +329,7 @@ export function OperationsPage() {
         }
         confirmLabel={reviewTarget?.decision === 'APPROVE' ? 'Approve' : 'Reject'}
         requireReason={reviewTarget?.decision === 'REJECT'}
+        reasonMaxLength={500}
         pending={reviewM.isPending}
         onConfirm={handleReview}
       />
