@@ -74,6 +74,14 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
   character count, so an excessively long reason is caught before submit instead of surfacing only
   as a generic server-error toast (issue #69). The backend's `ManagerVehicleRequest.decisionNote`
   has no matching schema-level cap; 500 is a UI-side choice, not a mirrored contract.
+- **This page's "Pending Requests" stat and `DashboardPage.jsx`'s `pendingCount` deliberately share
+  one cache entry**, not two independently-fetched queries — both call
+  `usePendingVehicleRequests({ status: 'PENDING' })` with identical params, which TanStack Query
+  hashes to the same key (`qk.vehicleRequests.pending({status:'PENDING'})`), and
+  `useReviewVehicleRequest`'s `onSuccess` invalidates `qk.vehicleRequests.all()`, a prefix of that
+  key. Approving/rejecting a request on this page refreshes both surfaces with a single refetch,
+  no manual cross-page invalidation needed (issue #61) — keep the params identical between the two
+  call sites, or this silently splits back into two cache entries.
 
 ## 6. Known gotchas
 

@@ -22,6 +22,36 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-17 — Regression test proving Dashboard/Operations pending counts stay in sync
+
+- **Branch:** issue/61-shared-pending-requests-invalidation
+- **Modules touched:** Operations (docs/modules/OPERATIONS.md)
+- **What changed:** Issue #61 flagged `DashboardPage.jsx`'s `pendingCount` and `OperationsPage.jsx`'s
+  pending-request count as "two independently-fetched queries with no shared cache key or
+  invalidation trigger." Verified against current `main`: both already call
+  `usePendingVehicleRequests({ status: 'PENDING' })` with identical params — the same hook, same
+  key — so TanStack Query already treats them as one cache entry, and
+  `useReviewVehicleRequest`'s `onSuccess` already invalidates `qk.vehicleRequests.all()`, a prefix
+  of that key. No source change was needed; the premise no longer holds (or never did within a
+  single browser tab/QueryClient — the issue's "different tab" scenario is genuinely a separate
+  QueryClient instance and out of scope for client-side cache sharing). What was missing was a
+  test actually proving it, which the issue's own acceptance criteria calls for regardless. Added
+  one, and confirmed it's not vacuous by temporarily removing the invalidation call and watching
+  it fail (single call site, `getPendingVehicleRequests` called once more than expected) before
+  reverting.
+- **Why:** Closes #61.
+- **Contract impact:** none — test-only change, no source modified.
+- **Tests:** `src/hooks/__tests__/use-operations.test.jsx` — new case: two independent
+  `usePendingVehicleRequests({status:'PENDING'})` consumers share one network call; a
+  `useReviewVehicleRequest` mutation refreshes both from a single invalidation (exactly 2 total
+  fetch calls: initial + one shared refetch).
+- **Docs updated:** docs/modules/OPERATIONS.md §5 (documents the deliberate shared cache key —
+  don't let the two call sites' params drift apart), docs/TESTING_GUIDE.md (Operations section).
+- **Follow-ups / known issues:** `docs/modules/DASHBOARD.md` is still an unwritten stub (per its
+  own header); not filled in here since this change touches no `DashboardPage.jsx` code and the
+  issue's named owning module is `OPERATIONS.md` — same reasoning as the #63/#67 entries above for
+  deferring an unrelated stub.
+
 ## 2026-08-17 — Manager status-toggle and delete failures show a persistent, specific error
 
 - **Branch:** issue/43-manager-row-error-state
