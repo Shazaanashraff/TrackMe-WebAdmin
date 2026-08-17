@@ -51,7 +51,9 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
   generic fetch failure — gave it `.status = 400` so it represents what it always meant to (a real
   rejection with a custom message), since under the stricter new logic a truly status-less error
   is genuinely a network failure now.
-- **Docs updated:** docs/modules/AUTH.md §5, docs/TESTING_GUIDE.md (Auth and Session section).
+- **Docs updated:** docs/modules/AUTH.md §5, docs/modules/TRACKING.md §5 (its REST-error fixture
+  touched, cross-referenced to AUTH.md rather than duplicating the logic), docs/TESTING_GUIDE.md
+  (Auth and Session section).
 - **Follow-ups / known issues:** this fixes the shared `ErrorState` component (query-level load
   failures on the 5 pages that use it) but does not touch the ~38 individual
   `toast(\`Failed: ${err.message}\`)` call sites across mutation handlers app-wide — those still
