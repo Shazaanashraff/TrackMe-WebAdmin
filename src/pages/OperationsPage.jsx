@@ -324,8 +324,8 @@ export function OperationsPage() {
         title={reviewTarget?.decision === 'APPROVE' ? 'Approve Request' : 'Reject Request'}
         description={
           reviewTarget?.decision === 'APPROVE'
-            ? 'This will approve the vehicle account request.'
-            : 'This will reject the request. A reason is required.'
+            ? 'This will approve the vehicle account request. This decision is final and cannot be reversed from this portal.'
+            : 'This will reject the request. A reason is required. This decision is final and cannot be reversed from this portal.'
         }
         confirmLabel={reviewTarget?.decision === 'APPROVE' ? 'Approve' : 'Reject'}
         requireReason={reviewTarget?.decision === 'REJECT'}

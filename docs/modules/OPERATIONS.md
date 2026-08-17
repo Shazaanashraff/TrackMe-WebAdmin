@@ -82,6 +82,15 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
   key. Approving/rejecting a request on this page refreshes both surfaces with a single refetch,
   no manual cross-page invalidation needed (issue #61) — keep the params identical between the two
   call sites, or this silently splits back into two cache entries.
+- **A review decision has no undo or reopen path anywhere — not in this UI, not in the backend.**
+  Neither `superAdminController.js` nor `superAdminRoutes.js` expose any endpoint to revert or
+  re-review a `ManagerVehicleRequest` once its status leaves `PENDING`. Rather than inventing a
+  client-side-only "undo" that can't actually reverse the server-side effects of an approval
+  (e.g. `Vehicle.create()`), the approve/reject `ConfirmDialog`'s description states plainly that
+  the decision is final and cannot be reversed from this portal, so a super-admin knows before
+  confirming rather than discovering it after a misclick (issue #77). If a real reopen path is
+  ever built, it needs a backend endpoint first — this is not a change to make unilaterally from
+  the frontend alone.
 
 ## 6. Known gotchas
 
