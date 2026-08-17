@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 
 export function ConfirmDialog({
   open,
@@ -21,6 +22,10 @@ export function ConfirmDialog({
   pending = false,
   onConfirm,
   requireReason = false,
+  // Optional character cap for the reason textarea. When set, blocks typing
+  // past the limit (native textarea maxLength) and shows a live count;
+  // when unset, the textarea is uncapped (existing callers keep prior behavior).
+  reasonMaxLength,
   // Extra warning detail, rendered as a sibling of the description rather than
   // inside it: AlertDialogDescription is a <p>, so lists and callouts cannot
   // legally nest there.
@@ -32,7 +37,8 @@ export function ConfirmDialog({
   error,
 }) {
   const [reason, setReason] = useState('');
-  const canConfirm = !requireReason || reason.trim().length > 0;
+  const overLimit = reasonMaxLength != null && reason.length > reasonMaxLength;
+  const canConfirm = (!requireReason || reason.trim().length > 0) && !overLimit;
 
   useEffect(() => {
     if (!open) setReason('');
@@ -59,13 +65,28 @@ export function ConfirmDialog({
           </p>
         )}
         {requireReason && (
-          <Textarea
-            placeholder="Reason (required)"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            className="min-h-[80px]"
-            aria-label="Reason"
-          />
+          <div>
+            <Textarea
+              placeholder="Reason (required)"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="min-h-[80px]"
+              aria-label="Reason"
+              maxLength={reasonMaxLength}
+            />
+            {reasonMaxLength != null && (
+              <p
+                className={cn(
+                  'mt-1 text-right text-xs',
+                  overLimit ? 'text-status-danger' : 'text-muted-foreground'
+                )}
+              >
+                {overLimit
+                  ? `Reason is too long (${reason.length}/${reasonMaxLength})`
+                  : `${reason.length}/${reasonMaxLength}`}
+              </p>
+            )}
+          </div>
         )}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>

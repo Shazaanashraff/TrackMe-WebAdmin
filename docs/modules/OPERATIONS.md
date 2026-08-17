@@ -70,6 +70,10 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
   instead of flashing the table back to a full loading skeleton (issue #52).
 - `useOperationManagerDetail` is `enabled: Boolean(managerId)` — it won't fire until a manager is
   picked, which is why the detail pane is empty rather than loading on first paint.
+- The reject-request `ConfirmDialog` passes `reasonMaxLength={500}` — a client-side cap with a live
+  character count, so an excessively long reason is caught before submit instead of surfacing only
+  as a generic server-error toast (issue #69). The backend's `ManagerVehicleRequest.decisionNote`
+  has no matching schema-level cap; 500 is a UI-side choice, not a mirrored contract.
 
 ## 6. Known gotchas
 
