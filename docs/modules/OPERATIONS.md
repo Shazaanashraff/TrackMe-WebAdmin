@@ -61,6 +61,9 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
   an action isn't showing up, the gap is that the controller never wrote it.
 - **Tab/filter state lives in the URL** (`useSearchParams`), so views are linkable and a reload
   keeps context. Don't move it into local state.
+- `usePendingVehicleRequests` uses `placeholderData: keepPreviousData` so toggling the PENDING/
+  APPROVED/REJECTED filter keeps showing the previous filter's rows while the next page loads,
+  instead of flashing the table back to a full loading skeleton (issue #52).
 - `useOperationManagerDetail` is `enabled: Boolean(managerId)` — it won't fire until a manager is
   picked, which is why the detail pane is empty rather than loading on first paint.
 
