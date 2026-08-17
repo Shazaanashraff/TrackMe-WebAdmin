@@ -79,6 +79,13 @@ model in [`AUTH.md`](../../../backend/docs/modules/AUTH.md).
   it routes through `ConfirmDialog`; re-enabling is one click since it's reversible.
 - Deleting a manager cascades to unassigning their vehicles client-side (query invalidation), but
   the actual vehicle-unassignment happens server-side — this page doesn't recompute it.
+- **A failed status toggle or delete never just reverts silently.** `ManagersPage` tracks a
+  `toggleErrors` map (`managerId -> message`) so a failed Activate/Deactivate leaves a persistent,
+  dismissible error next to that row's action buttons instead of only a transient toast; it clears
+  on a successful retry of that same row. The delete `ConfirmDialog` follows the same
+  `deleteError`-state pattern already used by `ManagerVehiclesPage`'s delete-request dialog (issue
+  #48): it stays open on failure with the error shown inline via the dialog's `error` prop, rather
+  than closing and leaving only a toast (issue #43).
 
 ## 6. Known gotchas
 
@@ -94,7 +101,7 @@ model in [`AUTH.md`](../../../backend/docs/modules/AUTH.md).
 
 | Layer | File | What it locks |
 |---|---|---|
-| Unit | `src/pages/__tests__/ManagersPage.test.jsx` | manager directory CRUD, button migration (issue #49-ui). |
+| Unit | `src/pages/__tests__/ManagersPage.test.jsx` | manager directory CRUD, button migration (issue #49-ui), persistent row-scoped status-toggle error + inline delete-failure error (issue #43). |
 | Unit | `src/pages/__tests__/ManagerAccountsPage.test.jsx` | driver directory, create-driver validation, enrollment-key rotate/revert/reveal, per-row reveal pending independence (issue #68), disable-driver confirmation (issue #50). |
 | Unit | `src/components/shared/__tests__/confirm-dialog.test.jsx` | shared confirm/reject-with-reason modal behavior reused by disable-driver here. |
 

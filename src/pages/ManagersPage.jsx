@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, UserCheck, UserX } from 'lucide-react';
+import { Plus, Users, UserCheck, UserX, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
@@ -76,9 +76,14 @@ export function ManagersPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [serverError, setServerError] = useState(null);
+  // managerId -> failure message, so a failed status toggle leaves a specific,
+  // persistent explanation near the row instead of just a fleeting toast
+  // (issue #43).
+  const [toggleErrors, setToggleErrors] = useState({});
 
   const rows = managersQ.data?.data || [];
 
@@ -159,7 +164,16 @@ export function ManagersPage() {
     }
   };
 
+  const clearToggleError = (managerId) =>
+    setToggleErrors((prev) => {
+      if (!(managerId in prev)) return prev;
+      const next = { ...prev };
+      delete next[managerId];
+      return next;
+    });
+
   const handleToggleStatus = async (row) => {
+    clearToggleError(row._id);
     try {
       await statusM.mutateAsync({
         managerId: row._id,
@@ -167,12 +181,15 @@ export function ManagersPage() {
       });
       toast(`Manager ${row.isActive === false ? 'activated' : 'deactivated'}`);
     } catch (err) {
-      toast(`Failed: ${err?.message || 'Unknown error'}`);
+      // A persistent, row-scoped message survives after the row reverts —
+      // a toast alone gives no lasting explanation of what went wrong.
+      setToggleErrors((prev) => ({ ...prev, [row._id]: err?.message || 'Unknown error' }));
     }
   };
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
+    setDeleteError(null);
     try {
       const result = await deleteM.mutateAsync({ managerId: deleteTarget._id });
       const freed = result?.data?.unassignedVehicles ?? 0;
@@ -183,7 +200,9 @@ export function ManagersPage() {
       );
       setDeleteTarget(null);
     } catch (err) {
-      toast(`Failed: ${err?.message || 'Unknown error'}`);
+      // Keep the dialog open on failure so the error is visible inline
+      // (not just a transient toast) and the super admin can retry in place.
+      setDeleteError(err);
     }
   };
 
@@ -218,36 +237,52 @@ export function ManagersPage() {
         // Deleting is irreversible, so it only unlocks once the manager has been
         // deactivated — the reversible step always comes first.
         const isInactive = row.isActive === false;
+        const toggleError = toggleErrors[row._id];
         return (
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={() => navigate(`/operations?managerId=${row._id}`)}>
-              View
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
-              Edit
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={toggling}
-              onClick={() => handleToggleStatus(row)}
-            >
-              {isInactive ? 'Activate' : 'Deactivate'}
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              disabled={!isInactive || deleteM.isPending}
-              title={isInactive ? undefined : 'Deactivate this manager before deleting'}
-              onClick={() => setDeleteTarget(row)}
-            >
-              Delete
-            </Button>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={() => navigate(`/operations?managerId=${row._id}`)}>
+                View
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={toggling}
+                onClick={() => handleToggleStatus(row)}
+              >
+                {isInactive ? 'Activate' : 'Deactivate'}
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={!isInactive || deleteM.isPending}
+                title={isInactive ? undefined : 'Deactivate this manager before deleting'}
+                onClick={() => { setDeleteError(null); setDeleteTarget(row); }}
+              >
+                Delete
+              </Button>
+            </div>
+            {toggleError && (
+              <div className="flex items-center gap-1.5 text-xs text-status-danger">
+                <span>{toggleError}</span>
+                <button
+                  type="button"
+                  onClick={() => clearToggleError(row._id)}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Dismiss error"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
           </div>
         );
       },
     },
-  ], [statusM.isPending, statusM.variables, deleteM.isPending]);
+  ], [statusM.isPending, statusM.variables, deleteM.isPending, toggleErrors]);
 
   return (
     <div className="space-y-6">
@@ -281,13 +316,14 @@ export function ManagersPage() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        onOpenChange={(open) => { if (!open && !deleteM.isPending) setDeleteTarget(null); }}
+        onOpenChange={(open) => { if (!open && !deleteM.isPending) { setDeleteTarget(null); setDeleteError(null); } }}
         title={`Delete ${deleteTarget?.name || 'this manager'}?`}
         description="This permanently deletes the manager account and cannot be undone. Any vehicles they own are unassigned and stay in the fleet."
         confirmLabel="Delete Manager"
         destructive
         pending={deleteM.isPending}
         onConfirm={handleConfirmDelete}
+        error={deleteError}
       />
 
       <FormDialog
