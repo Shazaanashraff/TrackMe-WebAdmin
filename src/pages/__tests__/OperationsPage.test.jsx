@@ -295,6 +295,23 @@ describe('OperationsPage', () => {
     expect(screen.getByLabelText(/reason/i)).toBeInTheDocument();
   });
 
+  // There is no undo or reopen path for a reviewed request anywhere in the UI
+  // or the backend — the dialog must say so before the super-admin commits to
+  // a misclick, since there's no way back from this screen after (issue #77).
+  it('warns that an approve decision is final before it is confirmed', async () => {
+    const { user } = setup({ requests: [REQ_A] });
+    await user.click(screen.getByRole('button', { name: /approve/i }));
+    await screen.findByRole('heading', { name: /approve request/i });
+    expect(screen.getByText(/final and cannot be reversed/i)).toBeInTheDocument();
+  });
+
+  it('warns that a reject decision is final before it is confirmed', async () => {
+    const { user } = setup({ requests: [REQ_A] });
+    await user.click(screen.getByRole('button', { name: /reject/i }));
+    await screen.findByRole('heading', { name: /reject request/i });
+    expect(screen.getByText(/final and cannot be reversed/i)).toBeInTheDocument();
+  });
+
   it('calls reviewMutation with APPROVE decision on confirm', async () => {
     const reviewMut = makeMutation();
     const { user } = setup({ requests: [REQ_A], reviewMut });
