@@ -22,6 +22,48 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-17 — Show the managed-profile tag on the requests table
+- **Branch:** main
+- **Modules touched:** `docs/modules/ENROLLMENT_REQUESTS.md` (not yet updated — see follow-ups)
+- **What changed:** `ManagerRequestsPage`'s "Student / employee" column now renders "Managed
+  profile" (plus " · <relation>" when `passenger.relation` is set, e.g. "Managed profile ·
+  Daughter") under the name when `passenger.isManagedProfile` is true. The Account column and the
+  confirm-dialog label already handled the managed-profile case correctly (falling back to
+  `passenger.account.email`/`phoneNumber`); only the name cell was missing this.
+- **Why:** `ManagerRequestsPage.test.jsx`'s managed-profile suite already asserted this text
+  existed — the test was written ahead of the implementation and caught a real gap, spotted while
+  verifying the suite after a large upstream sync.
+- **Contract impact:** none — `passenger.isManagedProfile`/`passenger.relation` already existed on
+  the enrollment request payload; this only changed how the existing fields are displayed.
+- **Tests:** no new tests — the existing `ManagerRequestsPage.test.jsx` assertion (line 133) now
+  passes; full file verified green (8/8).
+- **Docs updated:** none yet — `docs/modules/ENROLLMENT_REQUESTS.md` should get a line noting the
+  managed-profile tag if that doc describes the requests table's columns.
+- **Follow-ups / known issues:** none.
+
+---
+
+## 2026-08-17 — Vercel deploy readiness: SPA rewrite
+- **Branch:** main
+- **Modules touched:** none of `docs/modules/` — deploy/infra config, not a feature
+- **What changed:** added `vercel.json` with a catch-all rewrite to `/index.html`. The app uses
+  `BrowserRouter` (`src/main.jsx`), so a static host with no rewrite rule 404s on any direct/deep
+  link (e.g. refreshing on `/manager/tracking`) — Vercel doesn't fall back to `index.html` by
+  default the way `vite preview`'s dev server does.
+- **Why:** pre-deploy audit before putting web-admin on Vercel.
+- **Contract impact:** none.
+- **Tests:** none — static hosting config, not app behavior. Verified with a local
+  `npm run build && npm run preview`: build succeeds, the app renders and redirects to `/login`
+  correctly, and a direct request to an arbitrary deep path returns the SPA shell (200,
+  `text/html`) rather than a 404 — matching what the Vercel rewrite will produce.
+- **Docs updated:** this entry only.
+- **Follow-ups / known issues:** `npm install` was needed to sync `node_modules` with
+  `@vis.gl/react-google-maps` (already in `package.json`/lock from an earlier merged change,
+  ManagerTrackingPage's map) — the build failed before that with an unresolved-import error,
+  unrelated to this change itself.
+
+---
+
 ## 2026-08-16 — Resolve the Vehicle Requests table's Vehicle column to a friendly name
 - **Branch:** issue/63-vehicle-requests-table-names
 - **Modules touched:** docs/modules/OPERATIONS.md (still a stub, not filled in as part of this

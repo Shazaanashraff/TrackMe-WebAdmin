@@ -68,6 +68,11 @@ export function ManagerRequestsPage() {
         return (
           <div>
             <span className="font-medium">{passenger?.name || 'Unknown'}</span>
+            {passenger?.isManagedProfile && (
+              <div className="text-xs text-muted-foreground">
+                Managed profile{passenger?.relation ? ` · ${passenger.relation}` : ''}
+              </div>
+            )}
             {passenger?.riderCode && <div className="text-xs font-mono text-muted-foreground">{passenger.riderCode}</div>}
           </div>
         );
