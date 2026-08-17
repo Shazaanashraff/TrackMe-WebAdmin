@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Activity, Bus as VehicleIcon, CheckCircle, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
@@ -37,6 +37,15 @@ export function OperationsPage() {
   const [requestStatus, setRequestStatus] = useState('PENDING');
   const [auditManagerId, setAuditManagerId] = useState('');
   const [vehicleDialogError, setVehicleDialogError] = useState(null);
+
+  // The Managers page's "View" action navigates here with ?managerId=X. Re-sync
+  // the selection whenever that param changes so a second View click while this
+  // page is already mounted actually switches the detail panel (issue #65) —
+  // the initial useState read above only covers the first mount.
+  useEffect(() => {
+    const managerId = searchParams.get('managerId');
+    if (managerId) setSelectedManagerId(managerId);
+  }, [searchParams]);
 
   const overviewQ = useOperationsOverview();
   const detailQ = useOperationManagerDetail(selectedManagerId);

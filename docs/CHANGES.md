@@ -22,6 +22,24 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-17 — Operations re-syncs the selected manager on repeated "View" clicks
+
+- **Branch:** issue/65-operations-managerid-resync
+- **Modules touched:** Operations (docs/modules/OPERATIONS.md)
+- **What changed:** `OperationsPage` read `?managerId=` from the URL only as the initial
+  `useState` value, so navigating "View" for a different manager from the Managers page while
+  Operations stayed mounted never switched the detail panel. Added a `useEffect` watching
+  `searchParams` that re-syncs `selectedManagerId` on every change, not just on first mount.
+- **Why:** Closes #65.
+- **Contract impact:** none — client-only navigation/state fix.
+- **Tests:** `src/pages/__tests__/OperationsPage.test.jsx` — new case: renders Operations at
+  `?managerId=m1`, clicks a link that navigates to `?managerId=m2` without remounting, asserts
+  `useOperationManagerDetail` is called with `m2`.
+- **Docs updated:** docs/modules/OPERATIONS.md §5, docs/TESTING_GUIDE.md (Operations section).
+- **Follow-ups / known issues:** none.
+
+---
+
 ## 2026-08-16 — Resolve the Vehicle Requests table's Vehicle column to a friendly name
 - **Branch:** issue/63-vehicle-requests-table-names
 - **Modules touched:** docs/modules/OPERATIONS.md (still a stub, not filled in as part of this

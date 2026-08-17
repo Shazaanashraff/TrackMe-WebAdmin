@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Link } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { OperationsPage } from '../OperationsPage';
 
@@ -228,6 +228,31 @@ describe('OperationsPage', () => {
   it('preselects the manager passed via ?managerId= instead of requiring a click', () => {
     setup({ detail: DETAIL_A }, { initialEntries: ['/operations?managerId=m2'] });
     expect(useOperationManagerDetail).toHaveBeenCalledWith('m2');
+  });
+
+  it('re-syncs the selected manager when ?managerId= changes while already mounted (issue #65)', async () => {
+    defaultHooks({ detail: DETAIL_A });
+    const user = userEvent.setup();
+
+    render(
+      <TooltipProvider>
+        <MemoryRouter initialEntries={['/operations?managerId=m1']}>
+          <Link to="/operations?managerId=m2">go to m2</Link>
+          <OperationsPage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    );
+
+    expect(useOperationManagerDetail).toHaveBeenCalledWith('m1');
+
+    // Simulates clicking "View" for a different manager from the Managers page
+    // while Operations is already mounted — the URL changes but the component
+    // never remounts.
+    await user.click(screen.getByText('go to m2'));
+
+    await waitFor(() => {
+      expect(useOperationManagerDetail).toHaveBeenLastCalledWith('m2');
+    });
   });
 
   it('shows empty state panel when no managers exist', () => {

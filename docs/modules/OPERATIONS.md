@@ -61,6 +61,10 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
   an action isn't showing up, the gap is that the controller never wrote it.
 - **Tab/filter state lives in the URL** (`useSearchParams`), so views are linkable and a reload
   keeps context. Don't move it into local state.
+- The selected manager also **re-syncs on `?managerId=` changes after mount**, not just on
+  initial load — a `useEffect` watches `searchParams` so a second "View" click from the Managers
+  page while Operations is already mounted actually switches the detail panel (issue #65). Don't
+  drop this back to a one-time `useState` read.
 - `useOperationManagerDetail` is `enabled: Boolean(managerId)` — it won't fire until a manager is
   picked, which is why the detail pane is empty rather than loading on first paint.
 
