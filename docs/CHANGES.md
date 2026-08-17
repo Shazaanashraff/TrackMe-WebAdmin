@@ -22,6 +22,29 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-17 — Regression test proving login shows a distinct deactivated-account message
+
+- **Branch:** issue/70-distinct-login-failure-messages
+- **Modules touched:** Auth (docs/modules/AUTH.md — filled in from the template as part of this
+  change, since the doc was still a stub)
+- **What changed:** Issue #70 flagged the login error as "a single generic string for both wrong
+  password and account deactivated." Verified against current `main` before changing anything:
+  the backend's `authController.login` already returns a distinct 401 `"Invalid email or
+  password"` vs. 403 `"Account has been deactivated. Contact super admin."`, and
+  `LoginShell.handleLogin`'s catch (`setError(err.message || 'Login failed')`) already renders
+  whatever the backend sent with no normalization — `LoginPage` displays it as-is. No source
+  change was needed. A test already existed for the wrong-password case but none for the
+  deactivated case, which is exactly what the issue's own acceptance criteria calls for
+  ("a test for each distinct login-failure message") — added the missing one.
+- **Why:** Closes #70.
+- **Contract impact:** none — test-only change, no source modified.
+- **Tests:** `src/__tests__/App.test.jsx` — new case: a 403 deactivated-account rejection shows
+  its own message and explicitly asserts the wrong-password message is absent, proving the two
+  don't collapse into one string.
+- **Docs updated:** docs/modules/AUTH.md (written from the template — was previously an unfilled
+  stub), docs/TESTING_GUIDE.md (Auth and Session section).
+- **Follow-ups / known issues:** none.
+
 ## 2026-08-17 — Regression test proving Dashboard/Operations pending counts stay in sync
 
 - **Branch:** issue/61-shared-pending-requests-invalidation

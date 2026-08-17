@@ -135,6 +135,30 @@ describe('App — LoginShell', () => {
     expect(await screen.findByText('Invalid email or password')).toBeInTheDocument();
   });
 
+  // Wrong credentials and a deactivated account are different problems needing
+  // different next steps (retry the password vs. contact an admin) — the
+  // backend already sends a distinct message for each (authController.js's
+  // login: 401 "Invalid email or password" vs. 403 "Account has been
+  // deactivated..."), and handleLogin's catch renders err.message verbatim
+  // with no normalization, so the two must never collapse into one generic
+  // string (issue #70).
+  it('shows a distinct, actionable message for a deactivated account, different from a wrong-password message', async () => {
+    const deactivatedError = new Error('Account has been deactivated. Contact super admin.');
+    deactivatedError.status = 403;
+    adminApi.login.mockRejectedValueOnce(deactivatedError);
+    const user = userEvent.setup();
+    renderApp('/login');
+
+    await user.type(await screen.findByLabelText(/^Manager Email/i), 'suspended@trackme.com');
+    await user.type(screen.getByLabelText(/^Password/), 'correct-but-deactivated');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(
+      await screen.findByText('Account has been deactivated. Contact super admin.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Invalid email or password')).not.toBeInTheDocument();
+  });
+
   it('redirects an already-authenticated super-admin away from /login to their dashboard', async () => {
     writeStoredAuth({ token: 'sa-token', user: { role: 'super-admin' } }, true);
 
