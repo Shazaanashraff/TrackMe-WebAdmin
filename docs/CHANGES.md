@@ -58,6 +58,32 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
   managed-profile tag if that doc describes the requests table's columns.
 - **Follow-ups / known issues:** none.
 
+## 2026-08-17 — Operations review dialog warns a decision is final before confirming
+
+- **Branch:** issue/77-operations-review-finality-warning
+- **Modules touched:** Operations (docs/modules/OPERATIONS.md)
+- **What changed:** Once a super-admin confirmed an approve/reject decision on a vehicle request,
+  there was no undo, no edit-after-submit, and no visible warning beforehand that the decision
+  couldn't be reversed. Checked the backend first: neither `superAdminController.js` nor
+  `superAdminRoutes.js` expose any endpoint to revert or re-review a `ManagerVehicleRequest` once
+  its status leaves `PENDING` — so a real undo/reopen feature isn't something this frontend-only
+  session can build (it would need a new backend endpoint first, a decision beyond a single-repo
+  routine to make unilaterally). Took the issue's own "at minimum" fallback instead: the approve
+  and reject `ConfirmDialog` descriptions now both state plainly that the decision is final and
+  cannot be reversed from this portal, so a super-admin knows before confirming, not after a
+  misclick.
+- **Also:** restored 5 rows in `docs/TESTING_GUIDE.md` (issues #43, #69, #61, #68, #66) that an
+  earlier PR in this session (#114) accidentally reverted — see that entry's note in this file and
+  the dedicated commit on this branch for the full explanation.
+- **Why:** Closes #77.
+- **Contract impact:** none — copy-only change, no request/response shape touched.
+- **Tests:** `src/pages/__tests__/OperationsPage.test.jsx` — 2 new cases: the finality warning
+  text appears in both the approve and the reject `ConfirmDialog`.
+- **Docs updated:** docs/modules/OPERATIONS.md §5, docs/TESTING_GUIDE.md (Operations section).
+- **Follow-ups / known issues:** if a real reopen/undo path is ever built, it needs a backend
+  endpoint first (`ManagerVehicleRequest` has no state transition out of APPROVED/REJECTED today)
+  — update this warning's copy to match at that point, don't just delete it.
+
 ## 2026-08-17 — ErrorState distinguishes network failures from server rejections by status
 
 - **Branch:** issue/76-network-vs-server-rejection-errors
