@@ -277,6 +277,48 @@ describe('ManagersPage', () => {
     );
   });
 
+  it('shows a persistent, row-scoped error when a status toggle fails (issue #43)', async () => {
+    const statusMut = makeMutation({
+      mutateAsync: vi.fn().mockRejectedValue(new Error('Manager has an active bus assignment')),
+    });
+    const { user } = setup({ statusMut });
+
+    const deactivateBtns = screen.getAllByRole('button', { name: /deactivate/i });
+    await user.click(deactivateBtns[0]);
+
+    expect(await screen.findByText('Manager has an active bus assignment')).toBeInTheDocument();
+  });
+
+  it('keeps a failed toggle error visible until dismissed, independent of other rows', async () => {
+    const statusMut = makeMutation({
+      mutateAsync: vi.fn().mockRejectedValue(new Error('Network error')),
+    });
+    const { user } = setup({ statusMut });
+
+    const deactivateBtns = screen.getAllByRole('button', { name: /deactivate/i });
+    await user.click(deactivateBtns[0]);
+    await screen.findByText('Network error');
+
+    await user.click(screen.getByRole('button', { name: /dismiss error/i }));
+    expect(screen.queryByText('Network error')).not.toBeInTheDocument();
+  });
+
+  it('clears a row\'s toggle error once that row is retried', async () => {
+    const statusMut = makeMutation({
+      mutateAsync: vi.fn()
+        .mockRejectedValueOnce(new Error('Server unavailable'))
+        .mockResolvedValueOnce({}),
+    });
+    const { user } = setup({ statusMut });
+
+    const deactivateBtns = screen.getAllByRole('button', { name: /deactivate/i });
+    await user.click(deactivateBtns[0]);
+    await screen.findByText('Server unavailable');
+
+    await user.click(screen.getByRole('button', { name: /deactivate/i }));
+    expect(screen.queryByText('Server unavailable')).not.toBeInTheDocument();
+  });
+
   // Deleting is irreversible, so the button only unlocks once a manager has been
   // deactivated — MGR_A is active, MGR_B is not.
   describe('Delete manager', () => {
@@ -338,6 +380,20 @@ describe('ManagersPage', () => {
       expect(within(dialog).getByText(/cannot be undone/i)).toBeInTheDocument();
       // The vehicles must be described as surviving, not deleted alongside.
       expect(within(dialog).getByText(/unassigned/i)).toBeInTheDocument();
+    });
+
+    it('keeps the confirm dialog open and shows the error inline when delete fails (issue #43)', async () => {
+      const deleteMut = makeMutation({
+        mutateAsync: vi.fn().mockRejectedValue(new Error('Manager still owns a vehicle')),
+      });
+      const { user } = setup({ deleteMut });
+
+      await user.click(deleteButtons()[1]);
+      const dialog = await screen.findByRole('alertdialog');
+      await user.click(within(dialog).getByRole('button', { name: /delete manager/i }));
+
+      await screen.findByText('Manager still owns a vehicle');
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument();
     });
   });
 

@@ -61,8 +61,27 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
   an action isn't showing up, the gap is that the controller never wrote it.
 - **Tab/filter state lives in the URL** (`useSearchParams`), so views are linkable and a reload
   keeps context. Don't move it into local state.
+- The selected manager also **re-syncs on `?managerId=` changes after mount**, not just on
+  initial load — a `useEffect` watches `searchParams` so a second "View" click from the Managers
+  page while Operations is already mounted actually switches the detail panel (issue #65). Don't
+  drop this back to a one-time `useState` read.
+- `usePendingVehicleRequests` uses `placeholderData: keepPreviousData` so toggling the PENDING/
+  APPROVED/REJECTED filter keeps showing the previous filter's rows while the next page loads,
+  instead of flashing the table back to a full loading skeleton (issue #52).
 - `useOperationManagerDetail` is `enabled: Boolean(managerId)` — it won't fire until a manager is
   picked, which is why the detail pane is empty rather than loading on first paint.
+- The reject-request `ConfirmDialog` passes `reasonMaxLength={500}` — a client-side cap with a live
+  character count, so an excessively long reason is caught before submit instead of surfacing only
+  as a generic server-error toast (issue #69). The backend's `ManagerVehicleRequest.decisionNote`
+  has no matching schema-level cap; 500 is a UI-side choice, not a mirrored contract.
+- **This page's "Pending Requests" stat and `DashboardPage.jsx`'s `pendingCount` deliberately share
+  one cache entry**, not two independently-fetched queries — both call
+  `usePendingVehicleRequests({ status: 'PENDING' })` with identical params, which TanStack Query
+  hashes to the same key (`qk.vehicleRequests.pending({status:'PENDING'})`), and
+  `useReviewVehicleRequest`'s `onSuccess` invalidates `qk.vehicleRequests.all()`, a prefix of that
+  key. Approving/rejecting a request on this page refreshes both surfaces with a single refetch,
+  no manual cross-page invalidation needed (issue #61) — keep the params identical between the two
+  call sites, or this silently splits back into two cache entries.
 
 ## 6. Known gotchas
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Link } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { OperationsPage } from '../OperationsPage';
 
@@ -230,6 +230,31 @@ describe('OperationsPage', () => {
     expect(useOperationManagerDetail).toHaveBeenCalledWith('m2');
   });
 
+  it('re-syncs the selected manager when ?managerId= changes while already mounted (issue #65)', async () => {
+    defaultHooks({ detail: DETAIL_A });
+    const user = userEvent.setup();
+
+    render(
+      <TooltipProvider>
+        <MemoryRouter initialEntries={['/operations?managerId=m1']}>
+          <Link to="/operations?managerId=m2">go to m2</Link>
+          <OperationsPage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    );
+
+    expect(useOperationManagerDetail).toHaveBeenCalledWith('m1');
+
+    // Simulates clicking "View" for a different manager from the Managers page
+    // while Operations is already mounted — the URL changes but the component
+    // never remounts.
+    await user.click(screen.getByText('go to m2'));
+
+    await waitFor(() => {
+      expect(useOperationManagerDetail).toHaveBeenLastCalledWith('m2');
+    });
+  });
+
   it('shows empty state panel when no managers exist', () => {
     setup({ overview: [] });
     expect(screen.getByText('No manager selected')).toBeInTheDocument();
@@ -306,6 +331,16 @@ describe('OperationsPage', () => {
     await waitFor(() => expect(reviewMut.mutateAsync).toHaveBeenCalled());
     expect(screen.getByRole('heading', { name: /reject request/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/reason/i)).toHaveValue('Not compliant');
+  });
+
+  it('caps the rejection reason at 500 characters with inline character feedback (issue #69)', async () => {
+    const { user } = setup({ requests: [REQ_A] });
+    await user.click(screen.getByRole('button', { name: /reject/i }));
+    await screen.findByRole('heading', { name: /reject request/i });
+    const textarea = screen.getByLabelText(/reason/i);
+    expect(textarea).toHaveAttribute('maxlength', '500');
+    await user.type(textarea, 'Not compliant');
+    expect(screen.getByText('13/500')).toBeInTheDocument();
   });
 
   it('shows empty state when no requests exist', () => {

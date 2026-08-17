@@ -58,6 +58,165 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
   managed-profile tag if that doc describes the requests table's columns.
 - **Follow-ups / known issues:** none.
 
+## 2026-08-17 — Regression test proving login shows a distinct deactivated-account message
+
+- **Branch:** issue/70-distinct-login-failure-messages
+- **Modules touched:** Auth (docs/modules/AUTH.md — filled in from the template as part of this
+  change, since the doc was still a stub)
+- **What changed:** Issue #70 flagged the login error as "a single generic string for both wrong
+  password and account deactivated." Verified against current `main` before changing anything:
+  the backend's `authController.login` already returns a distinct 401 `"Invalid email or
+  password"` vs. 403 `"Account has been deactivated. Contact super admin."`, and
+  `LoginShell.handleLogin`'s catch (`setError(err.message || 'Login failed')`) already renders
+  whatever the backend sent with no normalization — `LoginPage` displays it as-is. No source
+  change was needed. A test already existed for the wrong-password case but none for the
+  deactivated case, which is exactly what the issue's own acceptance criteria calls for
+  ("a test for each distinct login-failure message") — added the missing one.
+- **Why:** Closes #70.
+- **Contract impact:** none — test-only change, no source modified.
+- **Tests:** `src/__tests__/App.test.jsx` — new case: a 403 deactivated-account rejection shows
+  its own message and explicitly asserts the wrong-password message is absent, proving the two
+  don't collapse into one string.
+- **Docs updated:** docs/modules/AUTH.md (written from the template — was previously an unfilled
+  stub), docs/TESTING_GUIDE.md (Auth and Session section).
+- **Follow-ups / known issues:** none.
+
+## 2026-08-17 — Regression test proving Dashboard/Operations pending counts stay in sync
+
+- **Branch:** issue/61-shared-pending-requests-invalidation
+- **Modules touched:** Operations (docs/modules/OPERATIONS.md)
+- **What changed:** Issue #61 flagged `DashboardPage.jsx`'s `pendingCount` and `OperationsPage.jsx`'s
+  pending-request count as "two independently-fetched queries with no shared cache key or
+  invalidation trigger." Verified against current `main`: both already call
+  `usePendingVehicleRequests({ status: 'PENDING' })` with identical params — the same hook, same
+  key — so TanStack Query already treats them as one cache entry, and
+  `useReviewVehicleRequest`'s `onSuccess` already invalidates `qk.vehicleRequests.all()`, a prefix
+  of that key. No source change was needed; the premise no longer holds (or never did within a
+  single browser tab/QueryClient — the issue's "different tab" scenario is genuinely a separate
+  QueryClient instance and out of scope for client-side cache sharing). What was missing was a
+  test actually proving it, which the issue's own acceptance criteria calls for regardless. Added
+  one, and confirmed it's not vacuous by temporarily removing the invalidation call and watching
+  it fail (single call site, `getPendingVehicleRequests` called once more than expected) before
+  reverting.
+- **Why:** Closes #61.
+- **Contract impact:** none — test-only change, no source modified.
+- **Tests:** `src/hooks/__tests__/use-operations.test.jsx` — new case: two independent
+  `usePendingVehicleRequests({status:'PENDING'})` consumers share one network call; a
+  `useReviewVehicleRequest` mutation refreshes both from a single invalidation (exactly 2 total
+  fetch calls: initial + one shared refetch).
+- **Docs updated:** docs/modules/OPERATIONS.md §5 (documents the deliberate shared cache key —
+  don't let the two call sites' params drift apart), docs/TESTING_GUIDE.md (Operations section).
+- **Follow-ups / known issues:** `docs/modules/DASHBOARD.md` is still an unwritten stub (per its
+  own header); not filled in here since this change touches no `DashboardPage.jsx` code and the
+  issue's named owning module is `OPERATIONS.md` — same reasoning as the #63/#67 entries above for
+  deferring an unrelated stub.
+
+## 2026-08-17 — Manager status-toggle and delete failures show a persistent, specific error
+
+- **Branch:** issue/43-manager-row-error-state
+- **Modules touched:** Accounts (docs/modules/ACCOUNTS.md)
+- **What changed:** `ManagersPage.jsx`'s `handleToggleStatus`/`handleConfirmDelete` showed only a
+  generic `toast(\`Failed: ${err?.message}\`)` on failure — no inline, row-level, or field-level
+  error, and the row just silently reverted. Added a `toggleErrors` map (`managerId -> message`)
+  so a failed Activate/Deactivate now leaves a persistent, dismissible error next to that row's
+  action buttons (cleared automatically on a successful retry of the same row). The delete
+  `ConfirmDialog` now follows the same `deleteError`-state pattern `ManagerVehiclesPage` already
+  uses (issue #48): it stays open on failure with the error shown inline via the dialog's `error`
+  prop instead of only a toast.
+- **Why:** Closes #43.
+- **Contract impact:** none — client-only error-surfacing change.
+- **Tests:** `src/pages/__tests__/ManagersPage.test.jsx` — 4 new cases: persistent row error on a
+  failed toggle; dismissing that error; the error clearing on a successful retry of the same row;
+  the delete `ConfirmDialog` staying open with the error shown inline on a failed delete.
+- **Docs updated:** docs/modules/ACCOUNTS.md §5/§7, docs/TESTING_GUIDE.md (Managers section).
+- **Follow-ups / known issues:** none.
+
+## 2026-08-17 — Vehicle table shows a pending-deletion indicator
+
+- **Branch:** issue/66-vehicle-delete-request-pending-indicator
+- **Modules touched:** Buses (docs/modules/BUSES.md — filled in from the template as part of this
+  change, since the doc was still a stub)
+- **What changed:** `ManagerVehiclesPage.jsx`'s delete action is actually a request needing
+  super-admin approval ("Delete Req" / "Request Vehicle Deletion"), but the Status column only
+  ever showed Active/Inactive — nothing in the table indicated a deletion request was in flight
+  once the confirm dialog closed. The page now also reads `useManagerRequests()` (already fetched
+  elsewhere on this page's mutations, no new endpoint call), derives the set of vehicle ids with a
+  PENDING `DELETE_VEHICLE` request, and shows a second "Deletion pending" badge next to the
+  Active/Inactive one for matching rows. The badge clears itself via the existing query
+  invalidation once the request leaves PENDING — no new polling.
+- **Why:** Closes #66.
+- **Contract impact:** none — reads a field (`GET /api/manager/requests`) this page's own
+  mutations were already invalidating; no new request added.
+- **Tests:** `src/pages/__tests__/ManagerVehiclesPage.test.jsx` — 3 new cases: badge shows for a
+  PENDING `DELETE_VEHICLE` request on the matching vehicle; no badge once the request is no longer
+  PENDING; no badge for a request against a different vehicle or a different request type.
+- **Docs updated:** docs/modules/BUSES.md (written from the template — was previously an unfilled
+  stub), docs/TESTING_GUIDE.md (Routes/Vehicles section).
+- **Follow-ups / known issues:** none.
+
+## 2026-08-17 — Enrollment-key reveal pending state is now tracked per row
+
+- **Branch:** issue/68-per-row-reveal-key-pending-state
+- **Modules touched:** Accounts (docs/modules/ACCOUNTS.md — filled in from the template as part
+  of this change, since the doc was still a stub)
+- **What changed:** `ManagerAccountsPage.jsx` used a single shared `useDriverEnrollmentKey()`
+  mutation for the "Show key" action across every driver row, deriving each row's pending state
+  from `revealKeyM.isPending && revealKeyM.variables?.driverId === driver._id`. TanStack Query's
+  mutation `variables` reflects only the most recent call, so clicking "Show key" on one row then
+  a different row before the first resolved could make the first row's spinner disappear while
+  its request was still in flight. Added a local `revealingIds` state (`driverId -> boolean`), set
+  before `mutateAsync` and cleared in a `finally`, so each row's pending state is now derived
+  independently instead of off the shared mutation object.
+- **Why:** Closes #68.
+- **Contract impact:** none — client-only state-tracking fix, no request/response shape change.
+- **Tests:** `src/pages/__tests__/ManagerAccountsPage.test.jsx` — new case simulating rapid
+  clicks on two different rows' "Show key" buttons with independently-controlled deferred
+  promises, asserting each row's loading/result state stays correct regardless of resolution
+  order.
+- **Docs updated:** docs/modules/ACCOUNTS.md (written from the template — was previously an
+  unfilled stub), docs/TESTING_GUIDE.md (Accounts section).
+- **Follow-ups / known issues:** `.githooks/pre-push` was not executable in this clone (so the
+  docs-staleness check silently never ran on push despite `core.hooksPath` being configured) —
+  fixed the file mode as part of this push since it's a one-line, zero-risk permission fix that
+  the repo's own doc-check safety net depends on.
+
+## 2026-08-17 — Rejection-reason textarea gets a length cap and inline character feedback
+
+- **Branch:** issue/69-reject-reason-length-cap
+- **Modules touched:** Operations (docs/modules/OPERATIONS.md)
+- **What changed:** `ConfirmDialog`'s reason textarea had no character limit and no inline
+  length feedback, so an excessively long rejection reason risked only a generic backend 400
+  with no field-level indication of what was wrong. Added an optional `reasonMaxLength` prop to
+  the shared `ConfirmDialog`: renders a live `n/max` character count, caps typing via the native
+  `maxLength` attribute, and (for the non-typed-input edge case) disables Confirm with an inline
+  "too long" message if the reason somehow exceeds the cap. `OperationsPage`'s reject-request
+  dialog now passes `reasonMaxLength={500}`. `ManagerVehiclesPage`'s other `ConfirmDialog`
+  consumer is unaffected — the prop is opt-in and defaults to uncapped.
+- **Why:** Closes #69.
+- **Contract impact:** none — client-only validation; the backend's `decisionNote` field has no
+  matching schema-level cap, so this is a UI-side choice, not a mirrored contract.
+- **Tests:** `src/components/shared/__tests__/confirm-dialog.test.jsx` — new cases for the
+  character count, native cap, and over-limit block. `src/pages/__tests__/OperationsPage.test.jsx`
+  — new case confirming the reject dialog wires `reasonMaxLength={500}` through.
+- **Docs updated:** docs/modules/OPERATIONS.md §5, docs/TESTING_GUIDE.md (Operations section).
+- **Follow-ups / known issues:** none.
+
+## 2026-08-17 — Operations re-syncs the selected manager on repeated "View" clicks
+
+- **Branch:** issue/65-operations-managerid-resync
+- **Modules touched:** Operations (docs/modules/OPERATIONS.md)
+- **What changed:** `OperationsPage` read `?managerId=` from the URL only as the initial
+  `useState` value, so navigating "View" for a different manager from the Managers page while
+  Operations stayed mounted never switched the detail panel. Added a `useEffect` watching
+  `searchParams` that re-syncs `selectedManagerId` on every change, not just on first mount.
+- **Why:** Closes #65.
+- **Contract impact:** none — client-only navigation/state fix.
+- **Tests:** `src/pages/__tests__/OperationsPage.test.jsx` — new case: renders Operations at
+  `?managerId=m1`, clicks a link that navigates to `?managerId=m2` without remounting, asserts
+  `useOperationManagerDetail` is called with `m2`.
+- **Docs updated:** docs/modules/OPERATIONS.md §5, docs/TESTING_GUIDE.md (Operations section).
+- **Follow-ups / known issues:** none.
+
 ---
 
 ## 2026-08-17 — Vercel deploy readiness: SPA rewrite
@@ -78,6 +237,21 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
   `@vis.gl/react-google-maps` (already in `package.json`/lock from an earlier merged change,
   ManagerTrackingPage's map) — the build failed before that with an unresolved-import error,
   unrelated to this change itself.
+
+## 2026-08-17 — Vehicle Requests filter keeps previous rows visible while it reloads
+
+- **Branch:** issue/52-keep-previous-vehicle-requests
+- **Modules touched:** Operations (docs/modules/OPERATIONS.md)
+- **What changed:** `usePendingVehicleRequests` now sets `placeholderData: keepPreviousData`, so
+  toggling the Vehicle Requests status filter (PENDING/APPROVED/REJECTED) keeps the previous
+  filter's rows on screen while the next page loads instead of flashing back to a full loading
+  skeleton on every toggle.
+- **Why:** Closes #52.
+- **Contract impact:** none — client-only query behavior change.
+- **Tests:** added `src/hooks/__tests__/use-operations.test.jsx` (new file); asserts the query
+  keeps showing prior data with `isPlaceholderData: true` mid-refetch, then swaps to the new data.
+- **Docs updated:** docs/modules/OPERATIONS.md §5, docs/TESTING_GUIDE.md (Operations section).
+- **Follow-ups / known issues:** none.
 
 ---
 

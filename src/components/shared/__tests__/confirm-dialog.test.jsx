@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConfirmDialog } from '../confirm-dialog';
 
@@ -97,5 +97,38 @@ describe('ConfirmDialog', () => {
   it('renders no error text when error is not provided', () => {
     setup();
     expect(screen.queryByText(/server unavailable|something went wrong/i)).toBeNull();
+  });
+
+  it('does not show a character count when reasonMaxLength is unset', async () => {
+    const { user } = setup({ requireReason: true });
+    await user.type(screen.getByRole('textbox', { name: /reason/i }), 'Some reason');
+    expect(screen.queryByText(/\d+\/\d+/)).toBeNull();
+  });
+
+  it('shows a live character count when reasonMaxLength is set', async () => {
+    const { user } = setup({ requireReason: true, reasonMaxLength: 20 });
+    expect(screen.getByText('0/20')).toBeInTheDocument();
+    await user.type(screen.getByRole('textbox', { name: /reason/i }), 'Duplicate');
+    expect(screen.getByText('9/20')).toBeInTheDocument();
+  });
+
+  it('caps typed input at reasonMaxLength via the native textarea limit', async () => {
+    const { user } = setup({ requireReason: true, reasonMaxLength: 5 });
+    const textarea = screen.getByRole('textbox', { name: /reason/i });
+    await user.type(textarea, 'This is way too long');
+    expect(textarea).toHaveValue('This ');
+    expect(screen.getByText('5/5')).toBeInTheDocument();
+  });
+
+  it('blocks confirm and shows an inline message when reason exceeds reasonMaxLength', async () => {
+    const onConfirm = vi.fn();
+    const { user } = setup({ onConfirm, requireReason: true, reasonMaxLength: 5 });
+    const textarea = screen.getByRole('textbox', { name: /reason/i });
+    fireEvent.change(textarea, { target: { value: 'This is way too long' } });
+    const btn = screen.getByRole('button', { name: /confirm/i });
+    expect(btn).toBeDisabled();
+    expect(screen.getByText(/reason is too long/i)).toBeInTheDocument();
+    await user.click(btn);
+    expect(onConfirm).not.toHaveBeenCalled();
   });
 });
