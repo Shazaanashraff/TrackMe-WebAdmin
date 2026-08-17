@@ -22,6 +22,26 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-17 — Manager status-toggle and delete failures show a persistent, specific error
+
+- **Branch:** issue/43-manager-row-error-state
+- **Modules touched:** Accounts (docs/modules/ACCOUNTS.md)
+- **What changed:** `ManagersPage.jsx`'s `handleToggleStatus`/`handleConfirmDelete` showed only a
+  generic `toast(\`Failed: ${err?.message}\`)` on failure — no inline, row-level, or field-level
+  error, and the row just silently reverted. Added a `toggleErrors` map (`managerId -> message`)
+  so a failed Activate/Deactivate now leaves a persistent, dismissible error next to that row's
+  action buttons (cleared automatically on a successful retry of the same row). The delete
+  `ConfirmDialog` now follows the same `deleteError`-state pattern `ManagerVehiclesPage` already
+  uses (issue #48): it stays open on failure with the error shown inline via the dialog's `error`
+  prop instead of only a toast.
+- **Why:** Closes #43.
+- **Contract impact:** none — client-only error-surfacing change.
+- **Tests:** `src/pages/__tests__/ManagersPage.test.jsx` — 4 new cases: persistent row error on a
+  failed toggle; dismissing that error; the error clearing on a successful retry of the same row;
+  the delete `ConfirmDialog` staying open with the error shown inline on a failed delete.
+- **Docs updated:** docs/modules/ACCOUNTS.md §5/§7, docs/TESTING_GUIDE.md (Managers section).
+- **Follow-ups / known issues:** none.
+
 ## 2026-08-17 — Vehicle table shows a pending-deletion indicator
 
 - **Branch:** issue/66-vehicle-delete-request-pending-indicator

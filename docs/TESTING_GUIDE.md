@@ -24,6 +24,7 @@
 | adminApi.createManager() | unit (fetch) | src/__tests__/api.test.js | POST payload | manager schema changes |
 | adminApi.updateManagerStatus() | unit (fetch) | src/__tests__/api.test.js | PATCH payload | status rules change |
 | Managers page flow | RTL | src/__tests__/pages/ManagersPage.test.jsx | create/edit/reset | UI flow changes |
+| Manager status-toggle and delete failure states (issue #43) | RTL (Vitest) | src/pages/__tests__/ManagersPage.test.jsx | a failed status toggle leaves a persistent, row-scoped error message (not just a toast) that can be dismissed or is cleared by retrying that row; a failed delete keeps the `ConfirmDialog` open with the error shown inline via its `error` prop, matching the same pattern used elsewhere (issue #48) | `handleToggleStatus`/`handleConfirmDelete`'s failure handling changes |
 
 ## Routes
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
