@@ -65,6 +65,9 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
   initial load — a `useEffect` watches `searchParams` so a second "View" click from the Managers
   page while Operations is already mounted actually switches the detail panel (issue #65). Don't
   drop this back to a one-time `useState` read.
+- `usePendingVehicleRequests` uses `placeholderData: keepPreviousData` so toggling the PENDING/
+  APPROVED/REJECTED filter keeps showing the previous filter's rows while the next page loads,
+  instead of flashing the table back to a full loading skeleton (issue #52).
 - `useOperationManagerDetail` is `enabled: Boolean(managerId)` — it won't fire until a manager is
   picked, which is why the detail pane is empty rather than loading on first paint.
 

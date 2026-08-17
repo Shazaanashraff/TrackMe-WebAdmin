@@ -40,6 +40,23 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-17 — Vehicle Requests filter keeps previous rows visible while it reloads
+
+- **Branch:** issue/52-keep-previous-vehicle-requests
+- **Modules touched:** Operations (docs/modules/OPERATIONS.md)
+- **What changed:** `usePendingVehicleRequests` now sets `placeholderData: keepPreviousData`, so
+  toggling the Vehicle Requests status filter (PENDING/APPROVED/REJECTED) keeps the previous
+  filter's rows on screen while the next page loads instead of flashing back to a full loading
+  skeleton on every toggle.
+- **Why:** Closes #52.
+- **Contract impact:** none — client-only query behavior change.
+- **Tests:** added `src/hooks/__tests__/use-operations.test.jsx` (new file); asserts the query
+  keeps showing prior data with `isPlaceholderData: true` mid-refetch, then swaps to the new data.
+- **Docs updated:** docs/modules/OPERATIONS.md §5, docs/TESTING_GUIDE.md (Operations section).
+- **Follow-ups / known issues:** none.
+
+---
+
 ## 2026-08-16 — Resolve the Vehicle Requests table's Vehicle column to a friendly name
 - **Branch:** issue/63-vehicle-requests-table-names
 - **Modules touched:** docs/modules/OPERATIONS.md (still a stub, not filled in as part of this
