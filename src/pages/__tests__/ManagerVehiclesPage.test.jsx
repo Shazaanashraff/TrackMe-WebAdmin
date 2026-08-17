@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ManagerVehiclesPage } from '../ManagerVehiclesPage';
@@ -532,4 +532,75 @@ describe('ManagerVehiclesPage create — bootstrap vs request', () => {
     expect(toast).toHaveBeenCalledWith(expect.stringMatching(/submitted for super admin approval/i));
     expect(toast).not.toHaveBeenCalledWith(expect.stringMatching(/driver id/i));
   }, 20000);
+});
+
+// ----------------------------------------------------------------
+// Discard confirmation on accidental dismissal (issue #8)
+// ----------------------------------------------------------------
+describe('ManagerVehiclesPage create-dialog discard confirmation', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('closes immediately without prompting when Escape is pressed on an untouched form', async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('prompts to discard on Escape once the form has unsaved data, keeping the dialog and data on Cancel', async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+    await user.type(screen.getByLabelText(/vehicle id/i), 'VEHICLE-99');
+
+    await user.keyboard('{Escape}');
+
+    const confirm = await screen.findByRole('alertdialog');
+    expect(within(confirm).getByText('Discard changes?')).toBeInTheDocument();
+    // The add-vehicle dialog and its typed data are still there underneath —
+    // `hidden: true` because Radix marks background content aria-hidden while
+    // the discard prompt is on top of it, not because it was actually closed.
+    expect(screen.getByRole('dialog', { hidden: true })).toBeInTheDocument();
+    expect(screen.getByLabelText(/vehicle id/i)).toHaveValue('VEHICLE-99');
+
+    await user.click(within(confirm).getByRole('button', { name: /^cancel$/i }));
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(screen.getByLabelText(/vehicle id/i)).toHaveValue('VEHICLE-99');
+  });
+
+  it('discards the form and closes the dialog when the discard prompt is confirmed', async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+    await user.type(screen.getByLabelText(/vehicle id/i), 'VEHICLE-99');
+
+    await user.keyboard('{Escape}');
+    const confirm = await screen.findByRole('alertdialog');
+
+    await user.click(within(confirm).getByRole('button', { name: /^discard$/i }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('discards immediately via the explicit Cancel button, without a prompt', async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+    await user.type(screen.getByLabelText(/vehicle id/i), 'VEHICLE-99');
+
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
 });

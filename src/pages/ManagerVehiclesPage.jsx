@@ -43,6 +43,15 @@ const ORG_CATEGORIES = [
 ];
 const VEHICLE_TYPES = ['AC', 'NON-AC', 'DELUXE', 'SLEEPER'];
 const MAINTENANCE_STATUSES = ['ACTIVE', 'MAINTENANCE', 'OUT_OF_SERVICE'];
+// components/shared/step-rail.jsx (issue #8) does not apply here: it is a labelled
+// overview for an all-at-once, ungated multi-section form ("every section stays
+// visible and editable below it"), while this dialog is a gated wizard —
+// handleNext/handleBack only advance past validateStep, and steps 2-3 aren't
+// rendered until the prior step passes. Wiring StepRail in would mean redesigning
+// this dialog into that different, always-visible-sections pattern, not a drop-in
+// swap. The data-loss risk this issue is actually about (accidental outside-click/
+// Escape dismissal) is unrelated to which of those two navigation patterns is used,
+// and is fixed below via a discard-confirmation instead.
 const CREATE_STEPS = ['Vehicle Details', 'Driver (optional)', 'Review & Create'];
 
 const EMPTY_CREATE = {
@@ -102,6 +111,7 @@ export function ManagerVehiclesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createStep, setCreateStep] = useState(0);
   const [createError, setCreateError] = useState(null);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
 
   const [editVehicle, setEditVehicle] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -154,6 +164,26 @@ export function ManagerVehiclesPage() {
     setCreateForm(EMPTY_CREATE);
     setCreateStep(0);
     setCreateError(null);
+  };
+
+  // Several drivers' full details can be sitting in this form — an accidental
+  // outside-click or Escape shouldn't silently throw that away (issue #8). The
+  // explicit Cancel button stays an immediate discard; this only guards the
+  // dialog's own dismiss path.
+  const isCreateFormDirty = JSON.stringify(createForm) !== JSON.stringify(EMPTY_CREATE);
+
+  const handleCreateOpenChange = (open) => {
+    if (open) return;
+    if (isCreateFormDirty) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
+    closeCreate();
+  };
+
+  const confirmDiscardCreate = () => {
+    setDiscardConfirmOpen(false);
+    closeCreate();
   };
 
   const handleNext = () => {
@@ -331,7 +361,7 @@ export function ManagerVehiclesPage() {
       />
 
       {/* Multi-step create dialog */}
-      <Dialog open={createOpen} onOpenChange={(v) => { if (!v) closeCreate(); }}>
+      <Dialog open={createOpen} onOpenChange={handleCreateOpenChange}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add Vehicle</DialogTitle>
@@ -677,6 +707,17 @@ export function ManagerVehiclesPage() {
           </div>
         </div>
       </FormDialog>
+
+      {/* Discard unsaved create-form data on accidental outside-click/Escape */}
+      <ConfirmDialog
+        open={discardConfirmOpen}
+        onOpenChange={setDiscardConfirmOpen}
+        title="Discard changes?"
+        description="You have unsaved vehicle details. Closing now will discard them."
+        confirmLabel="Discard"
+        destructive
+        onConfirm={confirmDiscardCreate}
+      />
 
       {/* Delete request confirmation */}
       <ConfirmDialog
