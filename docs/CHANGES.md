@@ -22,6 +22,36 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-17 — Confirm before discarding the add-vehicle dialog (issue #8)
+- **Branch:** claude/tender-fermi-sjt7qr
+- **Modules touched:** [`docs/modules/BUSES.md`](modules/BUSES.md)
+- **What changed:** The 3-step add-vehicle dialog in `ManagerVehiclesPage.jsx` reset the entire
+  form (including several drivers' full details) to empty on any outside-click/Escape dismissal,
+  with no confirmation — one misclick could lose several minutes of real work. Added a dirty-check
+  (`isCreateFormDirty`) and a "Discard changes?" confirmation (reusing the existing
+  `ConfirmDialog`) that intercepts the dialog's own dismiss path (`onOpenChange`) when the form
+  has unsaved data; the underlying dialog and its data stay intact until confirmed or cancelled.
+  The explicit Cancel button is left as an immediate discard (a deliberate action, not an
+  accidental one). Also investigated whether the orphaned `components/shared/step-rail.jsx` was
+  meant to solve this per the issue's second bullet — it isn't: it's a labelled overview for an
+  ungated, always-visible-sections form layout, a different navigation pattern from this dialog's
+  gated wizard, and wiring it in would mean redesigning the dialog rather than a drop-in fix. Left
+  an explanatory comment in the source instead of wiring it in.
+- **Why:** issue #8 — quality-flaw audit finding, confirmed present.
+- **Contract impact:** none — client-only UI change.
+- **Tests:** `src/pages/__tests__/ManagerVehiclesPage.test.jsx` — 4 new tests: untouched form
+  closes immediately on Escape with no prompt; a dirty form prompts on Escape, keeping the dialog
+  and typed data intact, Cancel dismisses just the prompt; confirming Discard closes the dialog
+  and resets the form; the explicit Cancel button still discards immediately without a prompt.
+  Full suite green (60 files / 646 tests), lint clean.
+- **Docs updated:** `docs/TESTING_GUIDE.md` (new row).
+- **Follow-ups / known issues:** the edit-vehicle dialog (`FormDialog`, same page) has the same
+  no-confirmation-on-dismiss pattern via `setEditVehicle(null)`, but this issue's title/acceptance
+  criteria scope to the *add*-vehicle dialog specifically — left as-is, worth a follow-up issue if
+  wanted.
+
+---
+
 ## 2026-08-17 — Clear production dependency vulnerabilities
 - **Branch:** main
 - **Modules touched:** none — dependency maintenance, not a feature
