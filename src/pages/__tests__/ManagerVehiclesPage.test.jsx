@@ -7,6 +7,7 @@ import { ManagerVehiclesPage } from '../ManagerVehiclesPage';
 vi.mock('@/hooks/use-vehicles', () => ({
   useManagerVehicles: vi.fn(),
   useManagerAssignableRoutes: vi.fn(),
+  useManagerRequests: vi.fn(),
   useCreateManagerVehicle: vi.fn(),
   useUpdateManagerVehicle: vi.fn(),
   useRequestDeleteVehicle: vi.fn(),
@@ -22,6 +23,7 @@ vi.mock('sonner', () => ({ toast: vi.fn() }));
 import {
   useManagerVehicles,
   useManagerAssignableRoutes,
+  useManagerRequests,
   useCreateManagerVehicle,
   useUpdateManagerVehicle,
   useRequestDeleteVehicle,
@@ -82,7 +84,7 @@ function makeMutation(overrides = {}) {
 }
 
 function defaultHooks({
-  vehicles = VEHICLES, routes = ROUTES, loading = false, error = null,
+  vehicles = VEHICLES, routes = ROUTES, requests = [], loading = false, error = null,
   createMut, updateMut, deleteMut,
 } = {}) {
   useManagerVehicles.mockReturnValue({
@@ -94,6 +96,10 @@ function defaultHooks({
   });
   useManagerAssignableRoutes.mockReturnValue({
     data: routes ? { data: routes } : undefined,
+    isLoading: false,
+  });
+  useManagerRequests.mockReturnValue({
+    data: { data: requests },
     isLoading: false,
   });
   useCreateManagerVehicle.mockReturnValue(createMut || makeMutation());
@@ -443,6 +449,34 @@ describe('ManagerVehiclesPage edit and delete', () => {
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
     expect(screen.getByText(/server unavailable/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/reason \(required\)/i)).toHaveValue('Vehicle retired');
+  });
+
+  it('shows a pending-deletion indicator when a DELETE_VEHICLE request is outstanding (issue #66)', () => {
+    setup({
+      requests: [
+        { vehicleId: 'VEHICLE-1', type: 'DELETE_VEHICLE', status: 'PENDING' },
+      ],
+    });
+    expect(screen.getByText('Deletion pending')).toBeInTheDocument();
+  });
+
+  it('shows no pending-deletion indicator once the request is no longer PENDING', () => {
+    setup({
+      requests: [
+        { vehicleId: 'VEHICLE-1', type: 'DELETE_VEHICLE', status: 'APPROVED' },
+      ],
+    });
+    expect(screen.queryByText('Deletion pending')).not.toBeInTheDocument();
+  });
+
+  it('does not show a pending-deletion indicator for a request against a different vehicle or type', () => {
+    setup({
+      requests: [
+        { vehicleId: 'VEHICLE-99', type: 'DELETE_VEHICLE', status: 'PENDING' },
+        { vehicleId: 'VEHICLE-1', type: 'CREATE_VEHICLE_ACCOUNT', status: 'PENDING' },
+      ],
+    });
+    expect(screen.queryByText('Deletion pending')).not.toBeInTheDocument();
   });
 });
 

@@ -28,6 +28,7 @@ import {
 import {
   useManagerVehicles,
   useManagerAssignableRoutes,
+  useManagerRequests,
   useCreateManagerVehicle,
   useUpdateManagerVehicle,
   useRequestDeleteVehicle,
@@ -90,6 +91,7 @@ function validateStep(form, step, vehicles = []) {
 export function ManagerVehiclesPage() {
   const vehiclesQ = useManagerVehicles();
   const routesQ = useManagerAssignableRoutes();
+  const requestsQ = useManagerRequests();
   const [createForm, setCreateForm] = useState(EMPTY_CREATE);
   // Per category, so it only loads once one is picked.
   const organizationsQ = useOrganizations(createForm.organizationCategory);
@@ -124,6 +126,18 @@ export function ManagerVehiclesPage() {
     () => new Map(routes.map((r) => [r.routeId, r.routeName])),
     [routes],
   );
+
+  // A delete "request" needs super-admin approval before it does anything —
+  // without this, nothing in the table shows a request is even in flight
+  // once the confirm dialog closes (issue #66).
+  const pendingDeleteVehicleIds = useMemo(() => {
+    const requests = requestsQ.data?.data || [];
+    return new Set(
+      requests
+        .filter((r) => r.type === 'DELETE_VEHICLE' && r.status === 'PENDING')
+        .map((r) => r.vehicleId)
+    );
+  }, [requestsQ.data]);
 
   const setCreate = (key) => (e) => setCreateForm((p) => ({ ...p, [key]: e.target.value }));
 
@@ -256,7 +270,23 @@ export function ManagerVehiclesPage() {
       },
     },
     { id: 'service', header: 'Service', accessorKey: 'serviceType' },
-    { id: 'state', header: 'Status', accessorKey: 'isActive', enableSorting: false, cell: (i) => <StatusBadge status={i.getValue() !== false ? 'active' : 'inactive'} /> },
+    {
+      id: 'state',
+      header: 'Status',
+      accessorKey: 'isActive',
+      enableSorting: false,
+      cell: (i) => {
+        const vehicle = i.row.original;
+        return (
+          <div className="flex items-center gap-1.5">
+            <StatusBadge status={i.getValue() !== false ? 'active' : 'inactive'} />
+            {pendingDeleteVehicleIds.has(vehicle.vehicleId) ? (
+              <StatusBadge status="pending" label="Deletion pending" />
+            ) : null}
+          </div>
+        );
+      },
+    },
     {
       id: 'actions', header: '', accessorKey: '_id', enableSorting: false,
       cell: (i) => {
@@ -269,7 +299,7 @@ export function ManagerVehiclesPage() {
         );
       },
     },
-  ], [routeNameById]);
+  ], [routeNameById, pendingDeleteVehicleIds]);
 
   return (
     <div className="space-y-6">

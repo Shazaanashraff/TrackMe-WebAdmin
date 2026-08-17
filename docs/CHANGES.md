@@ -22,6 +22,29 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-17 — Vehicle table shows a pending-deletion indicator
+
+- **Branch:** issue/66-vehicle-delete-request-pending-indicator
+- **Modules touched:** Buses (docs/modules/BUSES.md — filled in from the template as part of this
+  change, since the doc was still a stub)
+- **What changed:** `ManagerVehiclesPage.jsx`'s delete action is actually a request needing
+  super-admin approval ("Delete Req" / "Request Vehicle Deletion"), but the Status column only
+  ever showed Active/Inactive — nothing in the table indicated a deletion request was in flight
+  once the confirm dialog closed. The page now also reads `useManagerRequests()` (already fetched
+  elsewhere on this page's mutations, no new endpoint call), derives the set of vehicle ids with a
+  PENDING `DELETE_VEHICLE` request, and shows a second "Deletion pending" badge next to the
+  Active/Inactive one for matching rows. The badge clears itself via the existing query
+  invalidation once the request leaves PENDING — no new polling.
+- **Why:** Closes #66.
+- **Contract impact:** none — reads a field (`GET /api/manager/requests`) this page's own
+  mutations were already invalidating; no new request added.
+- **Tests:** `src/pages/__tests__/ManagerVehiclesPage.test.jsx` — 3 new cases: badge shows for a
+  PENDING `DELETE_VEHICLE` request on the matching vehicle; no badge once the request is no longer
+  PENDING; no badge for a request against a different vehicle or a different request type.
+- **Docs updated:** docs/modules/BUSES.md (written from the template — was previously an unfilled
+  stub), docs/TESTING_GUIDE.md (Routes/Vehicles section).
+- **Follow-ups / known issues:** none.
+
 ## 2026-08-17 — Enrollment-key reveal pending state is now tracked per row
 
 - **Branch:** issue/68-per-row-reveal-key-pending-state
