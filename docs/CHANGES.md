@@ -22,6 +22,23 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-17 — Clear production dependency vulnerabilities
+- **Branch:** main
+- **Modules touched:** none — dependency maintenance, not a feature
+- **What changed:** `npm audit fix` (no `--force`) bumped `react-router-dom` 7.13.1 → 7.18.2
+  (same major, patch-level) and its transitive chain, closing the deserialization/XSS/open-redirect
+  advisories flagged against the pre-7.18 line.
+- **Why:** pre-launch security audit.
+- **Contract impact:** none.
+- **Tests:** none new — full suite re-run (59/59 files, 619/619 tests) on the upgraded
+  react-router-dom, no regressions.
+- **Docs updated:** this entry only.
+- **Follow-ups / known issues:** `npm audit --production` is clean (0 vulnerabilities). Dev-only
+  vite/esbuild/vitest advisories remain (never ship in the built app) — the available fix is a
+  major Vite bump, deliberately not forced to avoid risking the already-verified Vercel build.
+
+---
+
 ## 2026-08-17 — Show the managed-profile tag on the requests table
 - **Branch:** main
 - **Modules touched:** `docs/modules/ENROLLMENT_REQUESTS.md` (not yet updated — see follow-ups)
