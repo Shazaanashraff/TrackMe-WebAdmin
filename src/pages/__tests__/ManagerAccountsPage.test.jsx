@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ManagerAccountsPage } from '../ManagerAccountsPage';
@@ -248,6 +248,42 @@ describe('ManagerAccountsPage: enrollment key rotation', () => {
 
     await openRowMenu(user);
     expect(await screen.findByRole('menuitem', { name: /restore previous key/i })).toBeInTheDocument();
+  });
+
+  it('keeps each row\'s pending state independent under rapid clicks on different rows (issue #68)', async () => {
+    const deferred = {};
+    const revealMut = makeMutation({
+      mutateAsync: vi.fn(
+        ({ driverId }) => new Promise((resolve) => { deferred[driverId] = resolve; })
+      ),
+    });
+    const { user } = setup({ revealMut });
+
+    // Click "Show key" on driver-1 first — its row starts loading while
+    // driver-2's is still idle.
+    await user.click(screen.getAllByRole('button', { name: /show key/i })[0]);
+    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    const remaining = screen.getAllByRole('button', { name: /show key/i });
+    expect(remaining).toHaveLength(1);
+
+    // Click driver-2's "Show key" before driver-1's request resolves. With a
+    // single shared mutation instance, driver-1's row would incorrectly stop
+    // showing "Loading…" the moment this second call starts, since the shared
+    // mutation's `variables` would now point at driver-2.
+    await user.click(remaining[0]);
+    expect(screen.getAllByText('Loading…')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /show key/i })).not.toBeInTheDocument();
+
+    // Resolve driver-1's request only — driver-2 must still show its own
+    // independent pending state.
+    await act(async () => { deferred['driver-1']({ data: { enrollmentKey: 'TMD-KEY-0001', canRevert: true } }); });
+    await waitFor(() => expect(screen.getByText('TMD-KEY-0001')).toBeInTheDocument());
+    expect(screen.getAllByText('Loading…')).toHaveLength(1);
+
+    // Resolve driver-2's request — nothing left pending.
+    await act(async () => { deferred['driver-2']({ data: { enrollmentKey: 'TMD-KEY-0002', canRevert: true } }); });
+    await waitFor(() => expect(screen.getByText('TMD-KEY-0002')).toBeInTheDocument());
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
   });
 });
 

@@ -22,6 +22,32 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-17 — Enrollment-key reveal pending state is now tracked per row
+
+- **Branch:** issue/68-per-row-reveal-key-pending-state
+- **Modules touched:** Accounts (docs/modules/ACCOUNTS.md — filled in from the template as part
+  of this change, since the doc was still a stub)
+- **What changed:** `ManagerAccountsPage.jsx` used a single shared `useDriverEnrollmentKey()`
+  mutation for the "Show key" action across every driver row, deriving each row's pending state
+  from `revealKeyM.isPending && revealKeyM.variables?.driverId === driver._id`. TanStack Query's
+  mutation `variables` reflects only the most recent call, so clicking "Show key" on one row then
+  a different row before the first resolved could make the first row's spinner disappear while
+  its request was still in flight. Added a local `revealingIds` state (`driverId -> boolean`), set
+  before `mutateAsync` and cleared in a `finally`, so each row's pending state is now derived
+  independently instead of off the shared mutation object.
+- **Why:** Closes #68.
+- **Contract impact:** none — client-only state-tracking fix, no request/response shape change.
+- **Tests:** `src/pages/__tests__/ManagerAccountsPage.test.jsx` — new case simulating rapid
+  clicks on two different rows' "Show key" buttons with independently-controlled deferred
+  promises, asserting each row's loading/result state stays correct regardless of resolution
+  order.
+- **Docs updated:** docs/modules/ACCOUNTS.md (written from the template — was previously an
+  unfilled stub), docs/TESTING_GUIDE.md (Accounts section).
+- **Follow-ups / known issues:** `.githooks/pre-push` was not executable in this clone (so the
+  docs-staleness check silently never ran on push despite `core.hooksPath` being configured) —
+  fixed the file mode as part of this push since it's a one-line, zero-risk permission fix that
+  the repo's own doc-check safety net depends on.
+
 ## 2026-08-17 — Rejection-reason textarea gets a length cap and inline character feedback
 
 - **Branch:** issue/69-reject-reason-length-cap

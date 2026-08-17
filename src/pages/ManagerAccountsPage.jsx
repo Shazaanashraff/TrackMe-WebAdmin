@@ -184,6 +184,12 @@ export function ManagerAccountsPage() {
   const [revealedKeys, setRevealedKeys] = useState({});
   // driverId -> the last replacement can still be undone.
   const [revertable, setRevertable] = useState({});
+  // driverId -> reveal request in flight. `revealKeyM` is a single shared
+  // mutation instance for the whole table, so its own isPending/variables
+  // reflect only the most recent call — a keyed map here is what lets two
+  // rows' pending state stay independent when a manager clicks "Show key" on
+  // one row, then another, before the first response arrives.
+  const [revealingIds, setRevealingIds] = useState({});
 
   const drivers = driversQ.data?.data || [];
   const organizations = organizationsQ.data?.data || [];
@@ -309,12 +315,19 @@ export function ManagerAccountsPage() {
     setRevertable((prev) => ({ ...prev, [driverId]: Boolean(canRevert) }));
 
   const handleRevealKey = async (driver) => {
+    setRevealingIds((prev) => ({ ...prev, [driver._id]: true }));
     try {
       const result = await revealKeyM.mutateAsync({ driverId: driver._id });
       setRevealedKeys((prev) => ({ ...prev, [driver._id]: result?.data?.enrollmentKey }));
       rememberRevertable(driver._id, result?.data?.canRevert);
     } catch (err) {
       toast(`Failed: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setRevealingIds((prev) => {
+        const next = { ...prev };
+        delete next[driver._id];
+        return next;
+      });
     }
   };
 
@@ -484,7 +497,7 @@ export function ManagerAccountsPage() {
       cell: (info) => {
         const driver = info.row.original;
         const key = revealedKeys[driver._id];
-        const pending = revealKeyM.isPending && revealKeyM.variables?.driverId === driver._id;
+        const pending = Boolean(revealingIds[driver._id]);
         // Privacy changes what the key does, so it is flagged on the key itself
         // rather than as a column of its own.
         const lock = driver.isPrivate ? (
@@ -592,7 +605,7 @@ export function ManagerAccountsPage() {
         );
       },
     },
-  ], [revealedKeys, revertable, revealKeyM.isPending, revealKeyM.variables]);
+  ], [revealedKeys, revertable, revealingIds]);
 
   return (
     <div className="space-y-6">
