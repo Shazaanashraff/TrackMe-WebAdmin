@@ -237,7 +237,7 @@ export function OperationsPage() {
               emptyTitle="No manager selected"
               emptyDescription="Click a row in the managers table to view their detail."
             >
-              <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
                 {[
                   { label: 'Total Vehicles', value: detailStats.total },
                   { label: 'Active Vehicles', value: detailStats.active },
