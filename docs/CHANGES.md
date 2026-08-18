@@ -22,6 +22,25 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-18 — Operations manager-detail stat cards adapt to tablet widths (issue #22)
+- **Branch:** issue/22-operations-tablet-grid
+- **Modules touched:** [`docs/modules/OPERATIONS.md`](modules/OPERATIONS.md)
+- **What changed:** the manager-detail panel's 4-stat grid (`OperationsPage.jsx`, Total
+  Vehicles/Active Vehicles/Bookings/Revenue) was a fixed `grid-cols-2` with no responsive
+  breakpoints. Changed to `grid-cols-1 sm:grid-cols-2` so each stat gets its own row on narrow
+  widths instead of two cramped columns.
+- **Why:** the fixed 2-column layout stayed cramped at all viewport widths, including
+  tablet/small-laptop windows, per the 2026-08-07 quality-flaw audit.
+- **Contract impact:** none — purely a Tailwind class change, no data/logic touched.
+- **Tests:** none added — this is a CSS-only breakpoint change with no new behavior to assert,
+  consistent with how prior CSS-only issues in this repo were handled (e.g. issue #79's PR).
+  Full suite re-run green: 648/648 (no existing test asserted the old fixed-2-column class).
+  `npm run lint`: 0 errors.
+- **Docs updated:** docs/TESTING_GUIDE.md.
+- **Follow-ups / known issues:** none.
+
+---
+
 ## 2026-08-18 — Operations status badges stop conflating deactivation with connectivity (issue #14)
 - **Branch:** issue/14-operations-status-badge
 - **Modules touched:** [`docs/modules/OPERATIONS.md`](modules/OPERATIONS.md)
