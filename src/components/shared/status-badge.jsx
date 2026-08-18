@@ -12,6 +12,11 @@ const STATUS_MAP = {
   // manager accounts
   active: { variant: 'settled', label: 'Active' },
   suspended: { variant: 'danger', label: 'Suspended' },
+  // deliberate deactivation (distinct from a vehicle that's simply not
+  // currently connected — the backend only exposes isActive, not a live
+  // connection signal, so this reads the deactivation flag honestly instead
+  // of mislabeling it as "Offline")
+  deactivated: { variant: 'secondary', label: 'Deactivated' },
   // route privacy
   public: { variant: 'progress', label: 'Public' },
   private: { variant: 'pending', label: 'Private' },

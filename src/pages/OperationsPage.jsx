@@ -109,13 +109,21 @@ export function OperationsPage() {
     { id: 'manager', header: 'Manager', accessorKey: 'managerName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
     { id: 'vehicles', header: 'Vehicles', accessorFn: (row) => row.fleet?.totalVehicles ?? 0, cell: (i) => i.getValue() },
     { id: 'bookings', header: 'Bookings', accessorFn: (row) => row.bookings?.totalBookings ?? 0, cell: (i) => i.getValue() },
-    { id: 'status', header: 'Status', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'online' : 'offline'} /> },
+    // isActive is the manager account's active/suspended flag, not a live
+    // connection signal — matches the label ManagersPage already uses for the
+    // same field (issue #14).
+    { id: 'status', header: 'Status', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'active' : 'suspended'} /> },
   ], []);
 
   const vehicleColumns = useMemo(() => [
     { id: 'name', header: 'Vehicle', accessorKey: 'vehicleName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
     { id: 'service', header: 'Service', accessorKey: 'serviceType', cell: (i) => <Badge variant="secondary">{i.getValue() || 'PUBLIC'}</Badge> },
-    { id: 'state', header: 'State', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'online' : 'offline'} /> },
+    // isActive is the vehicle's deliberate-deactivation flag — the backend has
+    // no separate live-connection signal here, so labeling it "Online"/"Offline"
+    // implied a real-time state this data can't back up, and conflated a
+    // deliberately deactivated vehicle with one that's simply disconnected
+    // (issue #14). "Active"/"Deactivated" reads the field honestly.
+    { id: 'state', header: 'State', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'active' : 'deactivated'} /> },
     { id: 'rating', header: 'Rating', accessorKey: 'reviewMetrics', cell: (i) => i.getValue()?.averageRating?.toFixed(1) ?? 'None' },
     { id: 'bookings', header: 'Bookings', accessorKey: 'bookingMetrics', cell: (i) => i.getValue()?.totalBookings ?? 0 },
     {

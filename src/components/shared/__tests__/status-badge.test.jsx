@@ -47,6 +47,12 @@ describe('StatusBadge — manager / route / GPS', () => {
     expect(screen.getByText('Suspended')).toBeInTheDocument();
   });
 
+  it('deactivated → secondary badge, distinct from offline (issue #14)', () => {
+    render(<StatusBadge status="deactivated" />);
+    expect(screen.getByText('Deactivated')).toBeInTheDocument();
+    expect(screen.queryByText('Offline')).toBeNull();
+  });
+
   it('public → progress badge', () => {
     render(<StatusBadge status="public" />);
     expect(screen.getByText('Public')).toBeInTheDocument();
