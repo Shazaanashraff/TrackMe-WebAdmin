@@ -162,10 +162,12 @@ describe('OperationsPage', () => {
     expect(screen.getByText('Bob Jones')).toBeInTheDocument();
   });
 
-  it('shows online/offline status badges for managers', () => {
+  it('shows active/suspended status badges for managers, not a live-connection label (issue #14)', () => {
     setup();
-    expect(screen.getByText('Online')).toBeInTheDocument();
-    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.getByText('Suspended')).toBeInTheDocument();
+    expect(screen.queryByText('Online')).toBeNull();
+    expect(screen.queryByText('Offline')).toBeNull();
   });
 
   // The Vehicles/Bookings columns used to sort on the raw fleet/bookings object
@@ -223,6 +225,34 @@ describe('OperationsPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Vehicle Alpha')).toBeInTheDocument();
     });
+  });
+
+  it('shows active/deactivated status badges for vehicles, not a live-connection label (issue #14)', async () => {
+    const detailWithDeactivatedVehicle = {
+      ...DETAIL_A,
+      vehicles: [
+        ...DETAIL_A.vehicles,
+        {
+          _id: 'b2',
+          vehicleName: 'Vehicle Beta',
+          serviceType: 'PUBLIC',
+          isActive: false,
+          bookingMetrics: { totalBookings: 0, totalRevenue: 0 },
+          reviewMetrics: { averageRating: null },
+        },
+      ],
+    };
+    const { user } = setup({ detail: detailWithDeactivatedVehicle });
+    await user.click(screen.getByText('Alice Smith'));
+    await waitFor(() => {
+      expect(screen.getByText('Vehicle Beta')).toBeInTheDocument();
+    });
+    // "Active" also labels Alice's manager-account status in the overview
+    // table above, so there are two matches once the detail table renders.
+    expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Deactivated')).toBeInTheDocument();
+    expect(screen.queryByText('Online')).toBeNull();
+    expect(screen.queryByText('Offline')).toBeNull();
   });
 
   it('preselects the manager passed via ?managerId= instead of requiring a click', () => {

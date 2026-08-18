@@ -22,6 +22,33 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-18 — Operations status badges stop conflating deactivation with connectivity (issue #14)
+- **Branch:** issue/14-operations-status-badge
+- **Modules touched:** [`docs/modules/OPERATIONS.md`](modules/OPERATIONS.md)
+- **What changed:**
+  - `OperationsPage.jsx`'s manager-overview and vehicle-detail tables mapped `isActive` to a
+    `StatusBadge status="online"/"offline"` — but the backend exposes no live-connection signal
+    for either resource, only the deactivation flag. Changed both to `active`/`suspended`
+    (managers, matching `ManagersPage`'s existing label for the same field) and
+    `active`/`deactivated` (vehicles).
+  - Added a `deactivated` entry to `status-badge.jsx`'s `STATUS_MAP` (secondary/neutral variant,
+    distinct from the danger-red `offline`/`suspended` styling — deliberate deactivation isn't an
+    alarm state).
+- **Why:** a super-admin scanning either table couldn't tell "this vehicle needs troubleshooting"
+  from "someone deliberately deactivated it" — both rendered as the same red "Offline" badge.
+- **Contract impact:** none — no backend endpoint changed; this only relabels how the existing
+  `isActive` field already returned by `getOperationsOverview`/`getManagerBusDetails` is displayed.
+- **Tests:** `src/pages/__tests__/OperationsPage.test.jsx` (rewrote the manager-status assertion,
+  added a vehicle-detail case with an active + a deactivated vehicle),
+  `src/components/shared/__tests__/status-badge.test.jsx` (new `deactivated` case). Full suite
+  green: 648/648. `npm run lint`: 0 errors (pre-existing warnings only, none in touched files).
+- **Docs updated:** docs/TESTING_GUIDE.md.
+- **Follow-ups / known issues:** if the backend ever adds a real live-connection signal (e.g. from
+  the tracking socket), this would be worth revisiting — `online`/`offline` would become accurate
+  again and could stack alongside `active`/`deactivated` rather than replace it.
+
+---
+
 ## 2026-08-17 — Confirm before discarding the add-vehicle dialog (issue #8)
 - **Branch:** claude/tender-fermi-sjt7qr
 - **Modules touched:** [`docs/modules/BUSES.md`](modules/BUSES.md)
