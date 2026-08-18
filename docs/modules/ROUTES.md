@@ -21,4 +21,8 @@ Pay particular attention to:
   not the UI, is the gate;
 - the **backend contract**: verify real endpoint paths against `backend/src` rather than
   inferring them, and link the matching `backend/docs/modules/*.md`;
-- the route catalogue lives under `/api/bus/` on the backend, not `/api/routes/`.
+- as of issue #39, `RoutesPage.jsx` also edits (`PUT`), deactivates/activates (`PATCH .../toggle`),
+  and deletes (`DELETE`) a route — all three go to `/api/routes/:routeId(/toggle)` on the backend,
+  confirmed against `backend/src/routes/routeRoutes.js`. (A prior version of this note claimed the
+  catalogue lived under `/api/bus/` — that was never true for this page; `getSystemRoutes` /
+  `createSystemRoute` / the three new mutations all call `/api/routes`.)

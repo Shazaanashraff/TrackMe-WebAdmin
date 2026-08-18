@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Plus, Trash2, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, ArrowUp, ArrowDown, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable } from '@/components/shared/data-table';
 import { AsyncSection } from '@/components/shared/async-section';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +18,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { useSystemRoutes, useCreateSystemRoute } from '@/hooks/use-system-routes';
+import {
+  useSystemRoutes, useCreateSystemRoute, useUpdateSystemRoute,
+  useToggleSystemRouteStatus, useDeleteSystemRoute,
+} from '@/hooks/use-system-routes';
 import { useManagers } from '@/hooks/use-managers';
 import { SERVICE_TYPES } from '@/lib/serviceTypes';
 
@@ -88,6 +93,30 @@ function validateForm(form) {
 let nextStopClientId = 0;
 const makeEmptyStop = () => ({ clientId: `stop-${nextStopClientId++}`, stopName: '', lat: '', lng: '' });
 
+const EMPTY_EDIT_FORM = { routeName: '', source: '', destination: '', distance: '', fare: '', serviceType: 'PUBLIC' };
+
+function routeToEditForm(route) {
+  return {
+    routeName: route.routeName || '',
+    source: route.source || '',
+    destination: route.destination || '',
+    distance: route.distance != null ? String(route.distance) : '',
+    fare: route.fare != null ? String(route.fare) : '',
+    serviceType: route.serviceType || 'PUBLIC',
+  };
+}
+
+// Edit only touches the scalar fields above — stops are left as created,
+// same scope the acceptance criteria for this action asks for.
+function validateEditForm(form) {
+  if (!form.routeName.trim()) return 'Route Name is required.';
+  if (!form.source.trim()) return 'Source is required.';
+  if (!form.destination.trim()) return 'Destination is required.';
+  if (!form.distance || Number.isNaN(Number(form.distance)) || Number(form.distance) <= 0) return 'Distance must be a positive number.';
+  if (!form.fare || Number.isNaN(Number(form.fare)) || Number(form.fare) <= 0) return 'Fare must be a positive number.';
+  return null;
+}
+
 // Case-insensitive lookup keyed by the trimmed, lowercased, "Province"-suffix-stripped
 // form of each known province name — so 'western', 'WESTERN PROVINCE', or 'Western Province'
 // all resolve to the canonical 'Western' rather than silently falling into Unassigned.
@@ -102,19 +131,64 @@ function normalizeProvince(rawValue) {
   return PROVINCE_LOOKUP.get(key) || null;
 }
 
-const routeColumns = [
-  { id: 'routeId', header: 'Route ID', accessorKey: 'routeId' },
-  { id: 'routeName', header: 'Route Name', accessorKey: 'routeName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
-  { id: 'source', header: 'From', accessorKey: 'source' },
-  { id: 'destination', header: 'To', accessorKey: 'destination' },
-  { id: 'serviceType', header: 'Service', accessorKey: 'serviceType', cell: (i) => <Badge variant="secondary">{i.getValue()}</Badge> },
-  { id: 'qrEnabled', header: 'QR', accessorKey: 'qrEnabled', cell: (i) => (i.getValue() ? <Badge>On</Badge> : <Badge variant="outline">Off</Badge>) },
-  { id: 'status', header: 'Status', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() !== false ? 'active' : 'inactive'} /> },
-];
+function buildRouteColumns({ onEdit, onToggleStatus, togglingRouteId, onDelete, toggleErrors, onDismissToggleError }) {
+  return [
+    { id: 'routeId', header: 'Route ID', accessorKey: 'routeId' },
+    { id: 'routeName', header: 'Route Name', accessorKey: 'routeName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
+    { id: 'source', header: 'From', accessorKey: 'source' },
+    { id: 'destination', header: 'To', accessorKey: 'destination' },
+    { id: 'serviceType', header: 'Service', accessorKey: 'serviceType', cell: (i) => <Badge variant="secondary">{i.getValue()}</Badge> },
+    { id: 'qrEnabled', header: 'QR', accessorKey: 'qrEnabled', cell: (i) => (i.getValue() ? <Badge>On</Badge> : <Badge variant="outline">Off</Badge>) },
+    { id: 'status', header: 'Status', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() !== false ? 'active' : 'inactive'} /> },
+    {
+      id: 'actions',
+      header: '',
+      accessorKey: 'routeId',
+      enableSorting: false,
+      cell: (info) => {
+        const route = info.row.original;
+        const isInactive = route.isActive === false;
+        const toggling = togglingRouteId === route.routeId;
+        const toggleError = toggleErrors[route.routeId];
+        return (
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => onEdit(route)}>
+                Edit
+              </Button>
+              <Button size="sm" variant="secondary" disabled={toggling} onClick={() => onToggleStatus(route)}>
+                {isInactive ? 'Activate' : 'Deactivate'}
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => onDelete(route)}>
+                Delete
+              </Button>
+            </div>
+            {toggleError && (
+              <div className="flex items-center gap-1.5 text-xs text-status-danger">
+                <span>{toggleError}</span>
+                <button
+                  type="button"
+                  onClick={() => onDismissToggleError(route.routeId)}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label="Dismiss error"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+}
 
 export function RoutesPage() {
   const routesQ = useSystemRoutes();
   const createM = useCreateSystemRoute();
+  const updateM = useUpdateSystemRoute();
+  const toggleM = useToggleSystemRouteStatus();
+  const deleteM = useDeleteSystemRoute();
   // getManagers doesn't support a serviceType filter server-side, so fetch the
   // full page (well under the backend's 100 cap — one manager per province) and
   // filter PUBLIC managers by province client-side.
@@ -124,6 +198,16 @@ export function RoutesPage() {
   const [formError, setFormError] = useState(null);
   const [invalidStopIds, setInvalidStopIds] = useState([]);
   const [selectedProvince, setSelectedProvince] = useState(null);
+
+  const [editTarget, setEditTarget] = useState(null);
+  const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
+  const [editFormError, setEditFormError] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+  // routeId -> failure message, so a failed status toggle leaves a specific,
+  // persistent explanation near the row instead of just a fleeting toast
+  // (same pattern as ManagersPage, issue #43).
+  const [toggleErrors, setToggleErrors] = useState({});
 
   const routes = routesQ.data?.data || [];
   const managers = managersQ.data?.data || [];
@@ -205,6 +289,80 @@ export function RoutesPage() {
       setFormError(err?.message || 'Failed to create route');
     }
   };
+
+  const openEdit = (route) => {
+    setEditTarget(route);
+    setEditForm(routeToEditForm(route));
+    setEditFormError(null);
+  };
+
+  const handleEditSave = async () => {
+    if (!editTarget) return;
+    const err = validateEditForm(editForm);
+    if (err) {
+      setEditFormError(err);
+      return;
+    }
+    setEditFormError(null);
+    try {
+      await updateM.mutateAsync({
+        routeId: editTarget.routeId,
+        payload: {
+          routeName: editForm.routeName.trim(),
+          source: editForm.source.trim(),
+          destination: editForm.destination.trim(),
+          distance: Number(editForm.distance),
+          fare: Number(editForm.fare),
+          serviceType: editForm.serviceType,
+        },
+      });
+      toast('Route updated successfully');
+      setEditTarget(null);
+    } catch (err) {
+      setEditFormError(err);
+    }
+  };
+
+  const clearToggleError = (routeId) =>
+    setToggleErrors((prev) => {
+      if (!(routeId in prev)) return prev;
+      const next = { ...prev };
+      delete next[routeId];
+      return next;
+    });
+
+  const handleToggleStatus = async (route) => {
+    clearToggleError(route.routeId);
+    try {
+      await toggleM.mutateAsync({ routeId: route.routeId });
+      toast(`Route ${route.isActive === false ? 'activated' : 'deactivated'}`);
+    } catch (err) {
+      setToggleErrors((prev) => ({ ...prev, [route.routeId]: err?.message || 'Unknown error' }));
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteError(null);
+    try {
+      await deleteM.mutateAsync({ routeId: deleteTarget.routeId });
+      toast('Route deleted');
+      setDeleteTarget(null);
+    } catch (err) {
+      // Keep the dialog open on failure so the error is visible inline, same
+      // pattern ManagersPage uses for its own delete confirmation.
+      setDeleteError(err);
+    }
+  };
+
+  const routeColumns = useMemo(() => buildRouteColumns({
+    onEdit: openEdit,
+    onToggleStatus: handleToggleStatus,
+    togglingRouteId: toggleM.isPending ? toggleM.variables?.routeId : null,
+    onDelete: (route) => { setDeleteError(null); setDeleteTarget(route); },
+    toggleErrors,
+    onDismissToggleError: clearToggleError,
+  }), [toggleM.isPending, toggleM.variables, toggleErrors]);
 
   return (
     <div className="space-y-6">
@@ -435,6 +593,88 @@ export function RoutesPage() {
           </CardContent>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => { if (!open && !deleteM.isPending) { setDeleteTarget(null); setDeleteError(null); } }}
+        title={`Delete ${deleteTarget?.routeName || 'this route'}?`}
+        description="This permanently deletes the route and cannot be undone. Any vehicle still assigned to it is unassigned."
+        confirmLabel="Delete Route"
+        destructive
+        pending={deleteM.isPending}
+        onConfirm={handleConfirmDelete}
+        error={deleteError}
+      />
+
+      <FormDialog
+        open={Boolean(editTarget)}
+        onOpenChange={(open) => { if (!open && !updateM.isPending) { setEditTarget(null); setEditFormError(null); } }}
+        title={`Edit ${editTarget?.routeName || 'Route'}`}
+        submitLabel="Save Changes"
+        onSubmit={handleEditSave}
+        pending={updateM.isPending}
+        error={editFormError}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2 space-y-1.5">
+            <Label htmlFor="edit-route-name">Route Name</Label>
+            <Input
+              id="edit-route-name"
+              value={editForm.routeName}
+              onChange={(e) => setEditForm((p) => ({ ...p, routeName: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-route-source">Source</Label>
+            <Input
+              id="edit-route-source"
+              value={editForm.source}
+              onChange={(e) => setEditForm((p) => ({ ...p, source: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-route-dest">Destination</Label>
+            <Input
+              id="edit-route-dest"
+              value={editForm.destination}
+              onChange={(e) => setEditForm((p) => ({ ...p, destination: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-route-dist">Distance (km)</Label>
+            <Input
+              id="edit-route-dist"
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={editForm.distance}
+              onChange={(e) => setEditForm((p) => ({ ...p, distance: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-route-fare">Fare (LKR)</Label>
+            <Input
+              id="edit-route-fare"
+              type="number"
+              min="1"
+              step="1"
+              value={editForm.fare}
+              onChange={(e) => setEditForm((p) => ({ ...p, fare: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-route-service">Service Type</Label>
+            <Select value={editForm.serviceType} onValueChange={(v) => setEditForm((p) => ({ ...p, serviceType: v }))}>
+              <SelectTrigger id="edit-route-service">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SERVICE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </FormDialog>
     </div>
   );
 }

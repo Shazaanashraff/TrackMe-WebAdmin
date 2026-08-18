@@ -19,6 +19,20 @@ export async function loginAsManager(page: Page) {
   }, MANAGER_AUTH);
 }
 
+export const SUPER_ADMIN_AUTH = {
+  token: 'e2e-fake-super-admin-token',
+  accessToken: 'e2e-fake-super-admin-token',
+  user: { _id: 'sa-1', name: 'E2E Admin', email: 'admin@trackme.com', role: 'super-admin' },
+  rememberMe: true,
+};
+
+/** Same idea as loginAsManager, seeded with a super-admin session instead. */
+export async function loginAsSuperAdmin(page: Page) {
+  await page.addInitScript((auth) => {
+    window.localStorage.setItem('admin-auth', JSON.stringify(auth));
+  }, SUPER_ADMIN_AUTH);
+}
+
 const json = (data: unknown, status = 200) => ({
   status,
   contentType: 'application/json',
@@ -86,6 +100,74 @@ export async function mockSuperAdminDashboardBackend(page: Page) {
   await page.route('**/api/super-admin/vehicle-requests*', (route) =>
     route.fulfill(json({ success: true, data: [] }))
   );
+}
+
+export interface MockSystemRoute {
+  routeId: string;
+  routeName: string;
+  source: string;
+  destination: string;
+  distance: number;
+  fare: number;
+  serviceType: string;
+  province?: string;
+  qrEnabled?: boolean;
+  isActive?: boolean;
+}
+
+/**
+ * Mocks the endpoints RoutesPage (super-admin) touches: GET/PUT/PATCH/DELETE
+ * /api/routes(/:routeId[/toggle]) with in-memory state, plus the manager list
+ * it fetches for the province-manager sidebar. No live backend/DB needed.
+ */
+export async function mockSuperAdminRoutesBackend(
+  page: Page,
+  opts: { routes?: MockSystemRoute[]; managers?: unknown[] } = {}
+) {
+  const routes: MockSystemRoute[] = opts.routes ? [...opts.routes] : [];
+  const managers = opts.managers ?? [];
+
+  await page.route('**/api/super-admin/managers*', (route) =>
+    route.fulfill(json({ success: true, data: managers }))
+  );
+
+  await page.route('**/api/routes', (route) => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON() as MockSystemRoute;
+      const created = { ...body, isActive: true };
+      routes.push(created);
+      route.fulfill(json({ success: true, data: created }, 201));
+      return;
+    }
+    route.fulfill(json({ success: true, data: routes }));
+  });
+
+  await page.route(/\/api\/routes\/([^/]+)\/toggle$/, (route) => {
+    const routeId = decodeURIComponent(route.request().url().match(/\/api\/routes\/([^/]+)\/toggle$/)?.[1] ?? '');
+    const target = routes.find((r) => r.routeId === routeId);
+    if (target) target.isActive = target.isActive === false;
+    route.fulfill(json({ success: true, data: target }));
+  });
+
+  await page.route(/\/api\/routes\/([^/]+)$/, (route) => {
+    const routeId = decodeURIComponent(route.request().url().match(/\/api\/routes\/([^/]+)$/)?.[1] ?? '');
+    const target = routes.find((r) => r.routeId === routeId);
+    if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() as Partial<MockSystemRoute>;
+      if (target) Object.assign(target, body);
+      route.fulfill(json({ success: true, data: target }));
+      return;
+    }
+    if (route.request().method() === 'DELETE') {
+      const idx = routes.findIndex((r) => r.routeId === routeId);
+      if (idx !== -1) routes.splice(idx, 1);
+      route.fulfill(json({ success: true, message: 'Route deleted successfully' }));
+      return;
+    }
+    route.fulfill(json({ success: true, data: target }));
+  });
+
+  return { routes };
 }
 
 export interface MockRoute {

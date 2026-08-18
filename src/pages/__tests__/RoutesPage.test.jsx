@@ -7,16 +7,22 @@ import { RoutesPage } from '../RoutesPage';
 vi.mock('@/hooks/use-system-routes', () => ({
   useSystemRoutes: vi.fn(),
   useCreateSystemRoute: vi.fn(),
+  useUpdateSystemRoute: vi.fn(),
+  useToggleSystemRouteStatus: vi.fn(),
+  useDeleteSystemRoute: vi.fn(),
 }));
 vi.mock('@/hooks/use-managers', () => ({
   useManagers: vi.fn(),
 }));
 vi.mock('sonner', () => ({ toast: vi.fn() }));
 
-import { useSystemRoutes, useCreateSystemRoute } from '@/hooks/use-system-routes';
+import {
+  useSystemRoutes, useCreateSystemRoute, useUpdateSystemRoute,
+  useToggleSystemRouteStatus, useDeleteSystemRoute,
+} from '@/hooks/use-system-routes';
 import { useManagers } from '@/hooks/use-managers';
 
-const ROUTE_W = { _id: 'r1', routeId: 'RT-001', routeName: 'Colombo–Kandy', source: 'Colombo', destination: 'Kandy', serviceType: 'PUBLIC', stopsCount: 3, isActive: true, province: 'Western' };
+const ROUTE_W = { _id: 'r1', routeId: 'RT-001', routeName: 'Colombo–Kandy', source: 'Colombo', destination: 'Kandy', distance: 115, fare: 350, serviceType: 'PUBLIC', stopsCount: 3, isActive: true, province: 'Western' };
 const ROUTE_C = { _id: 'r2', routeId: 'RT-002', routeName: 'Galle–Matara', source: 'Galle', destination: 'Matara', serviceType: 'PUBLIC', stopsCount: 0, isActive: true, province: 'Central' };
 const ROUTE_NONE = { _id: 'r3', routeId: 'RT-003', routeName: 'Orphan Route', source: 'A', destination: 'B', serviceType: 'PUBLIC', stopsCount: 0, isActive: false, province: '' };
 
@@ -31,9 +37,15 @@ function makeMutation(overrides = {}) {
   };
 }
 
-function defaultHooks({ routes = [ROUTE_W, ROUTE_C], loading = false, error = null, createMut, managers = [MANAGER_W, MANAGER_C] } = {}) {
+function defaultHooks({
+  routes = [ROUTE_W, ROUTE_C], loading = false, error = null, createMut, managers = [MANAGER_W, MANAGER_C],
+  updateMut, toggleMut, deleteMut,
+} = {}) {
   useSystemRoutes.mockReturnValue({ data: { data: routes }, isLoading: loading, error, refetch: vi.fn() });
   useCreateSystemRoute.mockReturnValue(createMut || makeMutation());
+  useUpdateSystemRoute.mockReturnValue(updateMut || makeMutation());
+  useToggleSystemRouteStatus.mockReturnValue(toggleMut || makeMutation());
+  useDeleteSystemRoute.mockReturnValue(deleteMut || makeMutation());
   useManagers.mockReturnValue({ data: { data: managers }, isLoading: false, error: null });
 }
 
@@ -334,5 +346,97 @@ describe('RoutesPage', () => {
     expect(screen.getByLabelText(/stop 2 name/i)).toHaveValue('Bad');
     expect(screen.getByLabelText(/stop 1 name/i)).toHaveAttribute('aria-invalid', 'false');
     expect(screen.getByLabelText(/stop 2 name/i)).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  // issue #39: RoutesPage had no Edit, Deactivate/Activate, or Delete action.
+  describe('row actions (issue #39)', () => {
+    async function drillIntoWestern(opts) {
+      const { user } = setup(opts);
+      await user.click(screen.getByText('Western Province').closest('button'));
+      await screen.findByText('Colombo–Kandy');
+      return { user };
+    }
+
+    it('opens the edit dialog pre-filled with the route\'s current values', async () => {
+      const { user } = await drillIntoWestern();
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+
+      await screen.findByRole('heading', { name: /edit colombo–kandy/i });
+      const dialog = within(screen.getByRole('dialog'));
+      expect(dialog.getByLabelText(/route name/i)).toHaveValue('Colombo–Kandy');
+      expect(dialog.getByLabelText(/source/i)).toHaveValue('Colombo');
+      expect(dialog.getByLabelText(/destination/i)).toHaveValue('Kandy');
+    });
+
+    it('calls updateSystemRoute with the edited fields on save', async () => {
+      const updateMut = makeMutation();
+      const { user } = await drillIntoWestern({ updateMut });
+
+      await user.click(screen.getByRole('button', { name: /^edit$/i }));
+      await screen.findByRole('heading', { name: /edit colombo–kandy/i });
+      const dialog = within(screen.getByRole('dialog'));
+
+      const destInput = dialog.getByLabelText(/destination/i);
+      await user.clear(destInput);
+      await user.type(destInput, 'Nuwara Eliya');
+      await user.click(dialog.getByRole('button', { name: /save changes/i }));
+
+      await waitFor(() => {
+        expect(updateMut.mutateAsync).toHaveBeenCalledWith({
+          routeId: 'RT-001',
+          payload: expect.objectContaining({ destination: 'Nuwara Eliya' }),
+        });
+      });
+    });
+
+    it('calls toggleSystemRouteStatus when Deactivate is clicked', async () => {
+      const toggleMut = makeMutation();
+      const { user } = await drillIntoWestern({ toggleMut });
+
+      await user.click(screen.getByRole('button', { name: /deactivate/i }));
+
+      await waitFor(() => {
+        expect(toggleMut.mutateAsync).toHaveBeenCalledWith({ routeId: 'RT-001' });
+      });
+    });
+
+    it('shows Activate for an already-inactive route', async () => {
+      const inactiveRoute = { ...ROUTE_W, isActive: false };
+      await drillIntoWestern({ routes: [inactiveRoute, ROUTE_C] });
+      expect(screen.getByRole('button', { name: /^activate$/i })).toBeInTheDocument();
+    });
+
+    it('shows a persistent row error when a status toggle fails', async () => {
+      const toggleMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(new Error('Route not found')) });
+      const { user } = await drillIntoWestern({ toggleMut });
+
+      await user.click(screen.getByRole('button', { name: /deactivate/i }));
+      expect(await screen.findByText('Route not found')).toBeInTheDocument();
+    });
+
+    it('confirms before deleting, then calls deleteSystemRoute', async () => {
+      const deleteMut = makeMutation();
+      const { user } = await drillIntoWestern({ deleteMut });
+
+      await user.click(screen.getByRole('button', { name: /^delete$/i }));
+      expect(await screen.findByText(/delete colombo–kandy/i)).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /delete route/i }));
+
+      await waitFor(() => {
+        expect(deleteMut.mutateAsync).toHaveBeenCalledWith({ routeId: 'RT-001' });
+      });
+    });
+
+    it('does not delete without confirming', async () => {
+      const deleteMut = makeMutation();
+      const { user } = await drillIntoWestern({ deleteMut });
+
+      await user.click(screen.getByRole('button', { name: /^delete$/i }));
+      await screen.findByText(/delete colombo–kandy/i);
+      await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+      expect(deleteMut.mutateAsync).not.toHaveBeenCalled();
+    });
   });
 });
