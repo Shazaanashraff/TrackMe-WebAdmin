@@ -47,7 +47,7 @@ Verified against the backend 2026-08-12.
 
 | Kind | Endpoint | Client fn | Shape / notes |
 |---|---|---|---|
-| REST | `GET /api/manager/enrollment-requests?status=PENDING` | `getEnrollmentRequests` | `{data: Request[]}`. `Request.passenger = {name, email?, isManagedProfile, relation?, account?: {name, email, phoneNumber}}` — see backend `managerEnrollmentsController.js#requestSummary`. |
+| REST | `GET /api/manager/enrollment-requests?status=PENDING` | `getEnrollmentRequests` | `{data: Request[]}`. `Request.passenger = {_id, name, riderCode, avatarUrl, contactPhone, email?, isManagedProfile, relation?, organizationValues: {…}, account?: {name, email, phoneNumber}}` — see backend `managerEnrollmentsController.js#resolvePassengers`. `_id` is the **rider profile's** id, not an account's. |
 | REST | `GET /api/manager/enrollment-requests/count` | `getEnrollmentRequestCount` | `{data: {count}}` — pending count for the nav badge, disabled (`enabled: false`) for super-admins to avoid a guaranteed 403. |
 | REST | `POST /api/manager/enrollment-requests/:id/approve` | `approveEnrollmentRequest` | Enrols the passenger with the driver; moves the request out of the pending list. |
 | REST | `POST /api/manager/enrollment-requests/:id/reject` | `rejectEnrollmentRequest` | Leaves the passenger unenrolled; they may redeem the key again later. |
@@ -67,6 +67,12 @@ Verified against the backend 2026-08-12.
   `account` column's `cell()` in `ManagerRequestsPage.jsx`.
 - **The nav badge count is fetched on every manager screen**, not just this page — a manager sees
   it's non-zero before ever opening Requests.
+- **`riderCode` and `organizationValues` were rendered here before the backend sent them.** The
+  page's Passenger and Organization details columns read both, and the backend resolved the
+  passenger from the enrolment's deprecated `userId` — which the rider-profile enrolment path
+  writes as null, so every request the current passenger app makes arrived as `passenger: null`
+  and both columns sat empty. Fixed backend-side on 2026-08-19 by resolving from `studentId`; this
+  page needed no change.
 
 ## 6. Known gotchas / regressions
 

@@ -22,6 +22,25 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-19 — Record that the enrollment queue's passenger payload is now populated
+
+- **Branch:** main
+- **Modules touched:** enrollment requests — [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:** Docs only. The backend was resolving a queued request's passenger from the
+  enrollment's deprecated `userId`, which the rider-profile enrollment path writes as null, so
+  every request the current passenger app makes arrived as `passenger: null` and the Passenger and
+  Organization details columns sat empty. Fixed backend-side; this page already read `riderCode`
+  and `organizationValues` and needed no change. The contract table now lists the real passenger
+  shape, including that `passenger._id` is a rider profile id.
+- **Why:** Keep the contract table honest about what this page actually receives.
+- **Contract impact:** `GET /api/manager/enrollment-requests` — same shape, correctly populated,
+  plus `riderCode`, `contactPhone` and `organizationValues`. Backend doc:
+  `TrackMe-backend/docs/modules/ADMIN.md`.
+- **Tests:** none — docs only.
+- **Docs updated:** `docs/modules/ENROLLMENT_REQUESTS.md` (§4 contract, §5 note).
+- **Follow-ups / known issues:** `ManagerRequestsPage.test.jsx` fixtures still omit `riderCode`
+  and `organizationValues`, so neither column is locked by a test.
+
 ## 2026-08-14 — Show location state in the drivers directory, and link it to the map
 - **Branch:** main
 - **Modules touched:** tracking — [`docs/modules/TRACKING.md`](modules/TRACKING.md) (new §5a, key
