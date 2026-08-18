@@ -68,6 +68,45 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-18 — RoutesPage gains Edit, Deactivate/Activate, and Delete (issue #39)
+- **Branch:** issue/39-routes-page-edit-delete
+- **Modules touched:** [`docs/modules/ROUTES.md`](modules/ROUTES.md) (still `PLANNED` — added a
+  correction to its endpoint-path note, full write-up remains a separate task)
+- **What changed:**
+  - `RoutesPage.jsx` (super-admin only) had create + read-only browsing but no way to fix or
+    remove a route once created, despite the backend fully supporting
+    `PUT /:routeId`, `PATCH /:routeId/toggle`, and `DELETE /:routeId`. Added an actions column
+    (Edit / Deactivate-Activate / Delete) to the province drill-down table, reusing the exact
+    `FormDialog` / `ConfirmDialog` / row-scoped-toggle-error pattern already established by
+    `ManagersPage.jsx` (including issue #43's persistent, dismissible per-row error on a failed
+    toggle).
+  - `src/api.js`: added `updateSystemRoute`, `toggleSystemRouteStatus`, `deleteSystemRoute`.
+  - `src/hooks/use-system-routes.js`: added `useUpdateSystemRoute`, `useToggleSystemRouteStatus`,
+    `useDeleteSystemRoute` (all invalidate `qk.systemRoutes.all()`; delete also invalidates
+    `qk.vehicles.all()` since a deleted route unassigns any vehicle still pointed at it).
+  - Edit is scoped to the scalar fields (name, source, destination, distance, fare, service type)
+    — stops are left as originally created, matching the issue's acceptance criteria; stop-editing
+    would be a separate, larger UI (reordering, add/remove) and wasn't asked for here.
+- **Why:** a super-admin had no way to fix a typo'd fare or remove a bad route from this page —
+  the only path was hitting the API directly.
+- **Contract impact:** none — no backend change, this page now calls three endpoints it already
+  had `requireManagerOrAbove` access to (super-admin always passes `isRouteOwner`).
+- **Tests:** extended `src/pages/__tests__/RoutesPage.test.jsx` (7 new cases: edit dialog
+  pre-fill, save payload, toggle call, Activate-label-when-inactive, persistent toggle-error,
+  delete-confirm flow, cancel-doesn't-delete) and added `e2e/routes.spec.ts` (4 Playwright cases
+  against a mocked backend — edit, toggle round-trip, toggle-failure error, delete) plus
+  `loginAsSuperAdmin` / `mockSuperAdminRoutesBackend` helpers in `e2e/helpers.ts`. `npm test`
+  (653/653) and the new/changed e2e specs green; `custom-routes.spec.ts` (3 tests) and one
+  `auth.spec.ts` session-expiry test fail pre-existing on `main` — unrelated to this change,
+  see PR description.
+- **Docs updated:** docs/TESTING_GUIDE.md — new row; docs/modules/ROUTES.md — corrected a stale
+  note claiming the catalogue lived under `/api/bus/` (it's `/api/routes/`, confirmed against
+  `backend/src/routes/routeRoutes.js`).
+- **Follow-ups / known issues:** docs/modules/ROUTES.md is still an unwritten `PLANNED` doc —
+  out of scope for this issue, flagging for a dedicated pass.
+
+---
+
 ## 2026-08-17 — Confirm before discarding the add-vehicle dialog (issue #8)
 - **Branch:** claude/tender-fermi-sjt7qr
 - **Modules touched:** [`docs/modules/BUSES.md`](modules/BUSES.md)

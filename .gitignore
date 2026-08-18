@@ -26,6 +26,9 @@ dist-ssr
 # Playwright CLI session artifacts (screenshots, console logs, page snapshots)
 .playwright-cli/
 
+# Playwright test run artifacts (screenshots/traces from a local `npm run test:e2e`)
+test-results/
+
 # Local environment. VITE_* values are inlined into the built bundle, so a real
 # key here is public once deployed — but it must still never enter git history.
 # .env.example is the tracked template.

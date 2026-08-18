@@ -221,6 +221,22 @@ export const adminApi = {
       body: JSON.stringify(payload)
     }),
 
+  updateSystemRoute: (routeId, payload) =>
+    request(`/api/routes/${routeId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    }),
+
+  toggleSystemRouteStatus: (routeId) =>
+    request(`/api/routes/${routeId}/toggle`, {
+      method: 'PATCH'
+    }),
+
+  deleteSystemRoute: (routeId) =>
+    request(`/api/routes/${routeId}`, {
+      method: 'DELETE'
+    }),
+
   getOperationsOverview: () => request('/api/super-admin/operations'),
 
   getOperationManagerDetail: (managerId) => request(`/api/super-admin/operations/${managerId}`),
