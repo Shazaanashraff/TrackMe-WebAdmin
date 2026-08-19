@@ -337,9 +337,10 @@ export function ManagersPage() {
       >
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="mgr-name">Manager Name</Label>
+            <Label htmlFor="mgr-name" required>Manager Name</Label>
             <Input
               id="mgr-name"
+              aria-required="true"
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
               placeholder="Enter full name"
@@ -347,10 +348,11 @@ export function ManagersPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="mgr-email">Email</Label>
+            <Label htmlFor="mgr-email" required>Email</Label>
             <Input
               id="mgr-email"
               type="email"
+              aria-required="true"
               value={form.email}
               onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
               placeholder="manager@company.com"
@@ -392,9 +394,10 @@ export function ManagersPage() {
           ) : (
             <>
               <div className="space-y-1.5">
-                <Label htmlFor="mgr-password">Password</Label>
+                <Label htmlFor="mgr-password" required>Password</Label>
                 <PasswordInput
                   id="mgr-password"
+                  aria-required="true"
                   value={form.password}
                   onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
                   placeholder="Set the manager's password"
@@ -402,9 +405,10 @@ export function ManagersPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="mgr-confirm-password">Confirm Password</Label>
+                <Label htmlFor="mgr-confirm-password" required>Confirm Password</Label>
                 <PasswordInput
                   id="mgr-confirm-password"
+                  aria-required="true"
                   value={form.confirmPassword}
                   onChange={(e) => setForm((p) => ({ ...p, confirmPassword: e.target.value }))}
                   placeholder="Re-enter the password"

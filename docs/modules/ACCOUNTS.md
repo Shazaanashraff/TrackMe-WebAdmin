@@ -101,7 +101,7 @@ model in [`AUTH.md`](../../../backend/docs/modules/AUTH.md).
 
 | Layer | File | What it locks |
 |---|---|---|
-| Unit | `src/pages/__tests__/ManagersPage.test.jsx` | manager directory CRUD, button migration (issue #49-ui), persistent row-scoped status-toggle error + inline delete-failure error (issue #43). |
+| Unit | `src/pages/__tests__/ManagersPage.test.jsx` | manager directory CRUD, button migration (issue #49-ui), persistent row-scoped status-toggle error + inline delete-failure error (issue #43), required-field asterisk + `aria-required` on Name/Email/(create-mode) Password/Confirm — not on the edit dialog's optional password-reset fields (issue #11). |
 | Unit | `src/pages/__tests__/ManagerAccountsPage.test.jsx` | driver directory, create-driver validation, enrollment-key rotate/revert/reveal, per-row reveal pending independence (issue #68), disable-driver confirmation (issue #50). |
 | Unit | `src/components/shared/__tests__/confirm-dialog.test.jsx` | shared confirm/reject-with-reason modal behavior reused by disable-driver here. |
 

@@ -309,6 +309,40 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
 });
 
 // ----------------------------------------------------------------
+// Required-field indicators (issue #11)
+// ----------------------------------------------------------------
+describe('ManagerVehiclesPage required-field indicators', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('marks Vehicle ID and Number Plate as required in the create dialog, not Vehicle Name', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    const dialog = await screen.findByRole('dialog');
+
+    expect(screen.getByLabelText(/vehicle id/i)).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByLabelText(/number plate/i)).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByLabelText(/vehicle name/i)).not.toHaveAttribute('aria-required');
+
+    // Existing substring label queries must still resolve to exactly one field —
+    // the asterisk lives in a sibling span, not folded into the <label> text, so
+    // matching stays unambiguous. Scoped to the dialog: the table underneath has
+    // its own "Vehicle ID" column-sort button still in the DOM.
+    expect(within(dialog).getByText('Vehicle ID').textContent).toBe('Vehicle ID');
+    const marker = within(dialog).getByText('Vehicle ID').nextSibling;
+    expect(marker).toHaveTextContent('*');
+  });
+
+  it('marks Number Plate as required in the edit dialog', async () => {
+    const { user } = setup({ vehicles: VEHICLES });
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+    await screen.findByRole('dialog');
+
+    expect(screen.getByLabelText(/number plate/i)).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByLabelText(/vehicle name/i)).not.toHaveAttribute('aria-required');
+  });
+});
+
+// ----------------------------------------------------------------
 // Booking-enabled removal (preserved from original test)
 // ----------------------------------------------------------------
 describe('ManagerVehiclesPage booking-enabled removal', () => {

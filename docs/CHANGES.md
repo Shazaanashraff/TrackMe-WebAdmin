@@ -22,6 +22,40 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-19 — Required-field indicators on the Manager and Vehicle forms (issue #11)
+- **Branch:** claude/tender-fermi-vfb7kh
+- **Modules touched:** docs/modules/ACCOUNTS.md, docs/modules/BUSES.md (no behavior/contract change — UI-only)
+- **What changed:**
+  - `Label` (`src/components/ui/label.jsx`) gained an optional `required` prop that renders a
+    visual `*` marker. The marker renders as a sibling of the `<label>` element rather than nested
+    inside it, so `label.textContent` — what `getByLabelText` matches against — stays exactly the
+    original field name; this kept every pre-existing anchored query (e.g. `/^password$/i`,
+    `/^email$/i`) passing unchanged.
+  - Added `aria-required="true"` directly on each actually-mandatory input, which is the real
+    signal assistive tech uses — the `*` is `aria-hidden` and purely decorative.
+  - Marked fields: `ManagersPage` — Name, Email always; Password/Confirm Password only in create
+    mode (the edit dialog's reset fields are genuinely optional, so left unmarked).
+    `ManagerVehiclesPage` — Vehicle ID and Number Plate in the create wizard's step 0, Number
+    Plate in the edit dialog (the only fields `validateStep`/`handleSaveEdit` actually block
+    submission on). Driver Name/Password are conditionally required (only together) and Vehicle
+    Name is explicitly optional, so neither got a marker.
+- **Why:** issue #11 — these forms only revealed a required field was missing after a failed
+  submit attempt.
+- **Contract impact:** none.
+- **Tests:** `src/components/ui/__tests__/primitives.test.jsx` (2 new `Label` cases: no marker by
+  default, marker renders as a sibling without changing the `<label>`'s own text);
+  `src/pages/__tests__/ManagersPage.test.jsx` (2 new cases: required fields marked when creating,
+  edit-dialog password-reset fields correctly left unmarked); `src/pages/__tests__/
+  ManagerVehiclesPage.test.jsx` (2 new cases: create-dialog and edit-dialog marking). Full suite
+  green (`npm test`, 661 tests), `npm run lint` clean (0 errors, pre-existing warnings only,
+  none in the changed files' logic), `npm run build` succeeds.
+- **Docs updated:** `docs/TESTING_GUIDE.md` — two new rows (Managers, Buses and Requests).
+- **Migration:** none.
+- **Follow-ups / known issues:** issue #75 (manager account self-service settings page) will need
+  the same `required` prop once that placeholder is built — noted there.
+
+---
+
 ## 2026-08-18 — Operations manager-detail stat cards adapt to tablet widths (issue #22)
 - **Branch:** issue/22-operations-tablet-grid
 - **Modules touched:** [`docs/modules/OPERATIONS.md`](modules/OPERATIONS.md)

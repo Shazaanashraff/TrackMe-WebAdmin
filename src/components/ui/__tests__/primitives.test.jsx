@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
 
 describe('ui primitives — token-driven, MUI-free', () => {
   it('Button renders variants via semantic token classes', () => {
@@ -71,5 +72,24 @@ describe('ui primitives — token-driven, MUI-free', () => {
     const alert = screen.getByRole('alert');
     expect(alert.className).toContain('text-status-warning');
     expect(screen.getByText('GPS stale')).toBeInTheDocument();
+  });
+
+  it('Label renders plain text with no required marker by default', () => {
+    render(<Label htmlFor="x">Vehicle Name</Label>);
+    expect(screen.getByText('Vehicle Name')).toBeInTheDocument();
+    expect(screen.queryByText('*')).not.toBeInTheDocument();
+  });
+
+  it('Label required renders a visual asterisk as a sibling, without changing the <label> text', () => {
+    const { container } = render(<Label htmlFor="y" required>Vehicle ID</Label>);
+    // The label element's own text must stay exactly "Vehicle ID" — testing-library's
+    // getByLabelText matches on label.textContent, so folding "*" into the <label>
+    // itself would break exact/anchored queries like /^vehicle id$/i at call sites.
+    const label = container.querySelector('label');
+    expect(label.textContent).toBe('Vehicle ID');
+
+    const marker = container.querySelector('[aria-hidden="true"]');
+    expect(marker).not.toBeNull();
+    expect(marker.textContent).toContain('*');
   });
 });
