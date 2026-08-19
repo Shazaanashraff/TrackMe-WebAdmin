@@ -21,6 +21,24 @@ describe('LoginPage', () => {
     expect(screen.getByRole('img', { name: /route network map of sri lanka/i })).toBeInTheDocument();
   });
 
+  it('renders a second, decorative route map for the mobile background layer (issue #79)', () => {
+    const { container } = render(<LoginPage onLogin={vi.fn()} loading={false} error="" />);
+
+    // The visible desktop panel's map (accessible, found by getByRole above) plus this
+    // decorative mobile-background copy — both present regardless of viewport since
+    // MUI's responsive `display` is CSS-only and jsdom doesn't evaluate breakpoints.
+    const maps = container.querySelectorAll('svg[aria-label*="route network map" i]');
+    expect(maps).toHaveLength(2);
+
+    // Exactly one is reachable by role — the desktop panel's real map. The mobile
+    // background copy must sit inside an aria-hidden, non-interactive wrapper so it
+    // never intercepts clicks meant for the form in front of it.
+    expect(screen.getAllByRole('img', { name: /route network map of sri lanka/i })).toHaveLength(1);
+    const decorativeWrapper = maps[1].closest('[aria-hidden="true"]');
+    expect(decorativeWrapper).not.toBeNull();
+    expect(decorativeWrapper).toHaveStyle({ pointerEvents: 'none' });
+  });
+
   it('calls onForgotPassword and renders a server error when provided', async () => {
     const user = userEvent.setup();
     const onForgotPassword = vi.fn();

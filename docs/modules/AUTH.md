@@ -116,6 +116,7 @@ Backend side: [`AUTH.md`](../../../backend/docs/modules/AUTH.md) — four-collec
 | Unit | `src/__tests__/App.test.jsx` | role-gated routing, login submission incl. distinct wrong-password vs deactivated-account messages (issue #70), session hydration/silent-refresh, logout. |
 | Unit | `src/__tests__/api.test.js` | `request()`'s error surfacing, token-refresh retry gating, single-flight refresh, proactive refresh. |
 | Unit | `src/pages/__tests__/ForgotPasswordVerifyPage.test.jsx`, `ForgotPasswordResetPage.test.jsx`, `ForgotPasswordRequestPage.test.jsx`, `ActivateAccountPage.test.jsx` | the OTP reset flow and first-login activation, including refresh-survival via `sessionStorage`. |
+| Unit | `src/pages/__tests__/LoginPage.test.jsx` | mobile decorative background map — a second, `aria-hidden`/`pointer-events: none` copy of `SriLankaRouteMap` renders behind the form on mobile viewports (issue #79); the desktop side panel's map stays the only one reachable by role, so `getByRole('img', ...)` queries against it are unaffected. |
 
 ## 8. Change protocol
 
