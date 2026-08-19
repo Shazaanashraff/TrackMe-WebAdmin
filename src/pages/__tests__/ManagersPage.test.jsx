@@ -206,6 +206,31 @@ describe('ManagersPage', () => {
     expect(createMut.mutateAsync).not.toHaveBeenCalled();
   });
 
+  it('marks Name, Email, Password, and Confirm Password as required when creating', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: /add manager/i }));
+    await screen.findByRole('heading', { name: /add manager/i });
+
+    expect(screen.getByLabelText(/manager name/i)).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByLabelText(/^email$/i)).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByLabelText(/^password$/i)).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByLabelText(/confirm password/i)).toHaveAttribute('aria-required', 'true');
+    const marker = screen.getByText('Manager Name').nextSibling;
+    expect(marker).toHaveTextContent('*');
+  });
+
+  it('does not mark the edit dialog password fields as required (they are optional resets)', async () => {
+    const { user } = setup();
+    const editBtns = screen.getAllByRole('button', { name: /edit/i });
+    await user.click(editBtns[0]);
+    await screen.findByRole('dialog');
+
+    expect(screen.getByLabelText(/manager name/i)).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByLabelText(/^email$/i)).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByLabelText(/^new password$/i)).not.toHaveAttribute('aria-required');
+    expect(screen.getByLabelText(/confirm new password/i)).not.toHaveAttribute('aria-required');
+  });
+
   it('opens edit dialog pre-filled with manager data', async () => {
     const { user } = setup();
     const editBtns = screen.getAllByRole('button', { name: /edit/i });

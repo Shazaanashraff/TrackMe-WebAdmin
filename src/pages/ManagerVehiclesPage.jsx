@@ -381,8 +381,8 @@ export function ManagerVehiclesPage() {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="cb-vehicleid">Vehicle ID</Label>
-                  <Input id="cb-vehicleid" value={createForm.vehicleId} onChange={setCreate('vehicleId')} placeholder="VEHICLE-001" />
+                  <Label htmlFor="cb-vehicleid" required>Vehicle ID</Label>
+                  <Input id="cb-vehicleid" aria-required="true" value={createForm.vehicleId} onChange={setCreate('vehicleId')} placeholder="VEHICLE-001" />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-vehiclename">Vehicle Name (optional)</Label>
@@ -395,9 +395,10 @@ export function ManagerVehiclesPage() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="cb-plate">Number Plate</Label>
+                <Label htmlFor="cb-plate" required>Number Plate</Label>
                 <Input
                   id="cb-plate"
+                  aria-required="true"
                   value={createForm.numberPlate}
                   onChange={(e) => setCreateForm((p) => ({ ...p, numberPlate: cleanPlateInput(e.target.value) }))}
                   onBlur={(e) => setCreateForm((p) => ({ ...p, numberPlate: tidyPlate(e.target.value) }))}
@@ -640,9 +641,10 @@ export function ManagerVehiclesPage() {
               <Input id="eb-name" value={editForm.vehicleName || ''} onChange={(e) => setEditForm((p) => ({ ...p, vehicleName: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="eb-plate">Number Plate</Label>
+              <Label htmlFor="eb-plate" required>Number Plate</Label>
               <Input
                 id="eb-plate"
+                aria-required="true"
                 value={editForm.numberPlate || ''}
                 onChange={(e) => setEditForm((p) => ({ ...p, numberPlate: cleanPlateInput(e.target.value) }))}
                 onBlur={(e) => setEditForm((p) => ({ ...p, numberPlate: tidyPlate(e.target.value) }))}
