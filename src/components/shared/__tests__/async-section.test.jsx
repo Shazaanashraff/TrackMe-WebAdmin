@@ -54,6 +54,49 @@ describe('AsyncSection', () => {
     expect(onRetry).toHaveBeenCalledOnce();
   });
 
+  it('keeps showing children with a stale-data banner when a background refetch fails after data already loaded (issue #21)', () => {
+    render(
+      <AsyncSection isLoading={false} error={new Error('Fetch failed')} data={[{ id: 1 }]} onRetry={() => {}}>
+        <p>Vehicle list here</p>
+      </AsyncSection>,
+    );
+    expect(screen.getByText(/couldn.t refresh/i)).toBeInTheDocument();
+    expect(screen.getByText('Vehicle list here')).toBeInTheDocument();
+    expect(screen.queryByText('Failed to load')).not.toBeInTheDocument();
+  });
+
+  it('keeps showing children on refetch failure for non-array (object) data too', () => {
+    render(
+      <AsyncSection isLoading={false} error={new Error('Fetch failed')} data={{ total: 5 }} onRetry={() => {}}>
+        <p>Snapshot here</p>
+      </AsyncSection>,
+    );
+    expect(screen.getByText(/couldn.t refresh/i)).toBeInTheDocument();
+    expect(screen.getByText('Snapshot here')).toBeInTheDocument();
+  });
+
+  it('still renders the full ErrorState when the error happens with no prior data at all', () => {
+    render(
+      <AsyncSection isLoading={false} error={new Error('Fetch failed')} data={null} onRetry={() => {}}>
+        <p>never</p>
+      </AsyncSection>,
+    );
+    expect(screen.getByText('Failed to load')).toBeInTheDocument();
+    expect(screen.queryByText('never')).not.toBeInTheDocument();
+  });
+
+  it('wires onRetry through the stale-data banner Retry link', async () => {
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+    render(
+      <AsyncSection isLoading={false} error={new Error('err')} data={[{ id: 1 }]} onRetry={onRetry}>
+        <p>Vehicle list here</p>
+      </AsyncSection>,
+    );
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
   it('renders EmptyState when data is an empty array', () => {
     render(
       <AsyncSection isLoading={false} data={[]} emptyTitle="No vehicles yet">

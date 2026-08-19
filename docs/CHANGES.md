@@ -22,6 +22,40 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-19 — AsyncSection keeps stale data on a background-refetch failure (issue #21)
+- **Branch:** claude/tender-fermi-vfb7kh
+- **Modules touched:** none of `docs/modules/` — a shared component (`AsyncSection`), not any one page, no contract change
+- **What changed:**
+  - `AsyncSection` (`src/components/shared/async-section.jsx`) previously replaced its `children`
+    with the full `ErrorState` on *any* error — including a background refetch failing after a
+    successful initial load, which silently discarded data the page had already shown (e.g. the
+    Dashboard's Active Routes table, or Operations' manager detail panel), forcing the user to
+    lose visibility into data they already had for no reason.
+  - Now: if `data` is already present (non-empty array, or a non-null object) when `error` is
+    set, `AsyncSection` keeps rendering `children` behind a warning `Alert` — "Couldn't refresh —
+    showing last known data." with a Retry link — instead of replacing them. An error with no
+    prior data at all (first load fails) still shows the full `ErrorState`, unchanged.
+  - `AsyncSection` is shared by `DashboardPage`, `RoutesPage`, `OperationsPage`, and
+    `ManagerDashboardPage` — this one component fix applies the same pattern to all four
+    consistently, which is what issue #21 actually asked for ("settle on one consistent
+    pattern... applied consistently").
+- **Why:** issue #21. Note: the issue's other example — `DashboardPage`'s KPI `StatCard`s showing
+  "stale data and an error at the same time" — turned out to already be fixed by issue #51 (a
+  StatCard already replaces its value with a "—" + "Failed to load" line on any error, never a
+  stale number); left that half of DashboardPage untouched since there was nothing left to fix
+  there, and scoped this change to the genuinely-still-present `AsyncSection` regression.
+- **Contract impact:** none.
+- **Tests:** `src/components/shared/__tests__/async-section.test.jsx` — 4 new cases (banner shown
+  + children kept for array data, same for object data, full `ErrorState` still shown with no
+  prior data, Retry link wired through). Full suite green (`npm test`, 665 tests, including the
+  existing `DashboardPage`/`RoutesPage`/`OperationsPage`/`ManagerDashboardPage` suites with no
+  regressions). `npm run lint` clean (0 errors). `npm run build` succeeds.
+- **Docs updated:** `docs/TESTING_GUIDE.md` — new row under Dashboard.
+- **Migration:** none.
+- **Follow-ups / known issues:** none.
+
+---
+
 ## 2026-08-19 — Required-field indicators on the Manager and Vehicle forms (issue #11)
 - **Branch:** claude/tender-fermi-vfb7kh
 - **Modules touched:** docs/modules/ACCOUNTS.md, docs/modules/BUSES.md (no behavior/contract change — UI-only)
