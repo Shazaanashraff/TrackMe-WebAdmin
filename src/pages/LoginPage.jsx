@@ -87,6 +87,8 @@ export function LoginPage({
 
         <Box
           sx={{
+            position: 'relative',
+            overflow: 'hidden',
             backgroundColor: PAGE_BG,
             p: { xs: 3, md: 6 },
             display: 'flex',
@@ -94,7 +96,23 @@ export function LoginPage({
             justifyContent: 'center'
           }}
         >
-          <Box sx={{ width: '100%', maxWidth: 380, mx: 'auto', transform: { md: 'translateX(-28px)' } }}>
+          {/* Mobile only: the desktop side panel (above) has no room at this width, so the
+              map instead sits as a faint decorative layer behind the form (issue #79) —
+              not interactive, and faded enough that form text stays fully legible over it. */}
+          <Box
+            sx={{
+              display: { xs: 'block', md: 'none' },
+              position: 'absolute',
+              inset: 0,
+              opacity: 0.12,
+              pointerEvents: 'none'
+            }}
+            aria-hidden="true"
+          >
+            <SriLankaRouteMap />
+          </Box>
+
+          <Box sx={{ position: 'relative', width: '100%', maxWidth: 380, mx: 'auto', transform: { md: 'translateX(-28px)' } }}>
             <Typography sx={{ color: TEXT, fontSize: { xs: '1.5rem', md: '1.75rem' }, fontWeight: 700, mb: 3 }}>
               {roleTitle}
             </Typography>

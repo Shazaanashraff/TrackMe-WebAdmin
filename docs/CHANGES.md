@@ -22,6 +22,37 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-19 — Sri Lanka route map as a translucent mobile background on sign-in (issue #79)
+- **Branch:** claude/tender-fermi-vfb7kh
+- **Modules touched:** docs/modules/AUTH.md
+- **What changed:**
+  - `LoginPage.jsx`'s desktop layout shows `SriLankaRouteMap` as a full side panel
+    (`display: { xs: 'none', md: 'block' }`); mobile got nothing, just the plain solid
+    background, losing the page's visual identity at small widths.
+  - Added a second `SriLankaRouteMap` instance, `xs`-only, absolutely positioned behind the
+    form at `opacity: 0.12`, wrapped in an `aria-hidden="true"` + `pointerEvents: 'none'`
+    container so it's excluded from the accessibility tree and never intercepts clicks meant
+    for the form — matching the acceptance criteria's "decorative background, not a competing
+    UI element" requirement. The form's own container got `position: relative` (`zIndex` via
+    stacking order — the form box is a later sibling) so it sits above the map layer.
+    No change to the existing desktop split-panel layout.
+- **Why:** issue #79 (low priority, purely visual).
+- **Contract impact:** none.
+- **Tests:** `src/pages/__tests__/LoginPage.test.jsx` — 1 new case: two map SVGs are present in
+  the DOM (jsdom doesn't evaluate the `xs`/`md` CSS breakpoints, so both responsive copies
+  always render — same reason the pre-existing map assertion has always had to rely on
+  `getByRole`, not counting elements), exactly one is reachable via `getByRole('img', ...)`,
+  and the second sits inside an `aria-hidden`, `pointer-events: none` wrapper. Full suite green
+  (`npm test`, 666 tests). `npm run lint` clean (0 errors). `npm run build` succeeds. No manual
+  mobile-viewport check — no browser/display environment in this session (the issue explicitly
+  marks that as "nice-to-have, not required").
+- **Docs updated:** `docs/TESTING_GUIDE.md` (Auth and Session row), `docs/modules/AUTH.md`
+  (Tests table).
+- **Migration:** none.
+- **Follow-ups / known issues:** none.
+
+---
+
 ## 2026-08-19 — AsyncSection keeps stale data on a background-refetch failure (issue #21)
 - **Branch:** claude/tender-fermi-vfb7kh
 - **Modules touched:** none of `docs/modules/` — a shared component (`AsyncSection`), not any one page, no contract change
