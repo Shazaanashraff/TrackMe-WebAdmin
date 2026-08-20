@@ -17,6 +17,14 @@ const formatWhen = (value) => {
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
 };
 
+// The backend labels and orders these against the organization's own enrolment
+// form. Older payloads only carry the raw `key: value` map, so that is still
+// read as a fallback rather than leaving the column empty.
+const organizationDetails = (passenger) => {
+  if (Array.isArray(passenger?.organizationDetails)) return passenger.organizationDetails;
+  return Object.entries(passenger?.organizationValues || {}).map(([key, value]) => ({ key, label: key, value }));
+};
+
 const passengerLabel = (passenger) => {
   const name = passenger?.name || 'this student';
   if (passenger?.account?.email) {
@@ -63,6 +71,7 @@ export function ManagerRequestsPage() {
       header: 'Student / employee',
       accessorKey: 'passenger',
       enableSorting: false,
+      meta: { cellClassName: 'align-top' },
       cell: (i) => {
         const passenger = i.getValue();
         return (
@@ -74,37 +83,43 @@ export function ManagerRequestsPage() {
       },
     },
     {
-      id: 'account',
-      header: 'Account',
+      // A phone number is what a manager acts on: the email adds a column's
+      // width and nothing they would use to reach the account holder.
+      id: 'contact',
+      header: 'Contact',
       accessorKey: 'passenger',
       enableSorting: false,
+      meta: { cellClassName: 'align-top' },
       cell: (i) => {
         const passenger = i.getValue();
-        const email = passenger?.email || passenger?.account?.email;
-        const phone = passenger?.account?.phoneNumber;
-        if (!email && !phone) return <span className="text-muted-foreground">None</span>;
-        return (
-          <div>
-            {email && <div>{email}</div>}
-            {phone && <div className="text-xs text-muted-foreground">{phone}</div>}
-          </div>
-        );
+        const phone = passenger?.contactPhone || passenger?.account?.phoneNumber;
+        return phone ? <span>{phone}</span> : <span className="text-muted-foreground">None</span>;
       },
     },
     {
-      id: 'organizationDetails',
-      header: 'Organization details',
-      accessorKey: 'passenger',
+      id: 'organization',
+      header: 'Organization',
       enableSorting: false,
-      cell: (i) => {
-        const values = Object.entries(i.getValue()?.organizationValues || {});
-        return values.length ? (
-          <div className="space-y-0.5 text-xs">
-            {values.map(([key, value]) => (
-              <div key={key}><span className="text-muted-foreground">{key}: </span>{value}</div>
-            ))}
+      meta: { cellClassName: 'align-top' },
+      cell: ({ row }) => {
+        const request = row.original;
+        const name = request?.organization?.name;
+        const details = organizationDetails(request?.passenger);
+        if (!name && !details.length) return <span className="text-muted-foreground">None</span>;
+        return (
+          <div>
+            {name
+              ? <div className="font-medium">{name}</div>
+              : <div className="text-muted-foreground">Organization unknown</div>}
+            {details.length ? (
+              <div className="mt-0.5 space-y-0.5 text-xs text-muted-foreground">
+                {details.map((detail) => (
+                  <div key={detail.key}>{detail.label}: <span className="text-foreground">{detail.value}</span></div>
+                ))}
+              </div>
+            ) : null}
           </div>
-        ) : <span className="text-muted-foreground">None</span>;
+        );
       },
     },
     {
@@ -112,6 +127,7 @@ export function ManagerRequestsPage() {
       header: 'Driver',
       accessorKey: 'driver',
       enableSorting: false,
+      meta: { cellClassName: 'align-top' },
       cell: (i) => i.getValue()?.name || <span className="text-muted-foreground">Unknown</span>,
     },
     {
@@ -119,6 +135,7 @@ export function ManagerRequestsPage() {
       header: 'Driver ID',
       accessorKey: 'driver',
       enableSorting: false,
+      meta: { cellClassName: 'align-top' },
       cell: (i) => (i.getValue()?.driverCode
         ? <span className="font-mono text-xs">{i.getValue().driverCode}</span>
         : <span className="text-muted-foreground">None</span>),
@@ -127,6 +144,7 @@ export function ManagerRequestsPage() {
       id: 'requestedAt',
       header: 'Requested',
       accessorKey: 'requestedAt',
+      meta: { cellClassName: 'align-top' },
       cell: (i) => formatWhen(i.getValue()),
     },
     {

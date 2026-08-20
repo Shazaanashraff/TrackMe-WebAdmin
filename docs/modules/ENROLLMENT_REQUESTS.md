@@ -24,7 +24,7 @@ passenger can be a **managed profile** (a child, an employee) with no email/phon
 
 | File | Responsibility |
 |---|---|
-| `src/pages/ManagerRequestsPage.jsx` | The page. `DataTable` of pending requests; Passenger/Account/Driver/Driver ID/Requested columns; Approve/Decline buttons open a shared `ConfirmDialog`. `passengerLabel()` disambiguates a managed profile in the dialog title. |
+| `src/pages/ManagerRequestsPage.jsx` | The page. `DataTable` of pending requests; Passenger/Contact/Organization/Driver/Driver ID/Requested columns; Approve/Decline buttons open a shared `ConfirmDialog`. `passengerLabel()` disambiguates a managed profile in the dialog title. |
 | `src/hooks/use-enrollment-requests.js` | `useEnrollmentRequests(status)`, `useEnrollmentRequestCount()` (nav badge, disabled for super-admins), `useApproveEnrollmentRequest`/`useRejectEnrollmentRequest` — a decision invalidates both the list and the count together. |
 | `src/api.js` | `getEnrollmentRequests`, `getEnrollmentRequestCount`, `approveEnrollmentRequest`, `rejectEnrollmentRequest` — all through the one `adminApi` HTTP layer. |
 | `src/lib/queryKeys.js` | `qk.enrollmentRequests.{list(status), count(), all()}`. |
@@ -47,7 +47,7 @@ Verified against the backend 2026-08-12.
 
 | Kind | Endpoint | Client fn | Shape / notes |
 |---|---|---|---|
-| REST | `GET /api/manager/enrollment-requests?status=PENDING` | `getEnrollmentRequests` | `{data: Request[]}`. `Request.passenger = {_id, name, riderCode, avatarUrl, contactPhone, email?, isManagedProfile, relation?, organizationValues: {…}, account?: {name, email, phoneNumber}}` — see backend `managerEnrollmentsController.js#resolvePassengers`. `_id` is the **rider profile's** id, not an account's. |
+| REST | `GET /api/manager/enrollment-requests?status=PENDING` | `getEnrollmentRequests` | `{data: Request[]}`. `Request.organization = {_id, name, serviceType}` (null only when nothing resolves one). `Request.passenger = {_id, name, riderCode, avatarUrl, contactPhone, email?, isManagedProfile, relation?, organizationValues: {…}, organizationDetails: [{key, label, value}], account?: {name, email, phoneNumber}}` — see backend `managerEnrollmentsController.js#resolvePassengers`. `_id` is the **rider profile's** id, not an account's. |
 | REST | `GET /api/manager/enrollment-requests/count` | `getEnrollmentRequestCount` | `{data: {count}}` — pending count for the nav badge, disabled (`enabled: false`) for super-admins to avoid a guaranteed 403. |
 | REST | `POST /api/manager/enrollment-requests/:id/approve` | `approveEnrollmentRequest` | Enrols the passenger with the driver; moves the request out of the pending list. |
 | REST | `POST /api/manager/enrollment-requests/:id/reject` | `rejectEnrollmentRequest` | Leaves the passenger unenrolled; they may redeem the key again later. |
@@ -60,6 +60,20 @@ Verified against the backend 2026-08-12.
 
 - **Approval is server-side.** This page renders what the backend says is pending for *this
   manager's* drivers — there is no client-side scoping to bypass or misconfigure.
+- **The table shows a phone, not an email.** The Contact column reads `passenger.contactPhone`
+  and falls back to the owning account's `phoneNumber`; the email was dropped because a manager
+  chasing a request calls rather than writes. `passengerLabel()` still names the account's email in
+  the confirm dialog, which is where disambiguating two same-named riders actually matters.
+- **The row is top-aligned, not centred.** Two of the columns render a second line (rider code,
+  form answers) and the rest are one line; with `DataTable`'s default `align-middle` each cell
+  centred on its own height, so the first lines staggered. Those columns pass
+  `meta: { cellClassName: 'align-top' }`; the actions column keeps the default so the buttons stay
+  centred against the whole row.
+- **The Organization column names the organization, then its answers.** The answers are stored
+  keyed by field key, so rendering `organizationValues` alone read as `grade: 4` with no sign of
+  whose form it was. The backend now sends `organization.name` plus `organizationDetails`
+  (labelled and ordered by that organization's enrolment form); the raw map is still read as a
+  fallback for a payload from an older backend.
 - **A managed profile has no email/phone of its own.** `passenger.email` is only ever present for a
   primary (self-registered) rider; a managed profile's `passenger.account.{email,phoneNumber}` is
   the owning account holder's, resolved backend-side via the profile's shared `identityId`. The
@@ -67,6 +81,12 @@ Verified against the backend 2026-08-12.
   `account` column's `cell()` in `ManagerRequestsPage.jsx`.
 - **The nav badge count is fetched on every manager screen**, not just this page — a manager sees
   it's non-zero before ever opening Requests.
+- **The badge count is polled, and the queue writes to it.** `AppShell` never unmounts, so a count
+  fetched once at sign-in would sit at its start value for the whole session and a request arriving
+  later would only appear after a reload. `useEnrollmentRequestCount` therefore refetches every
+  `ENROLLMENT_COUNT_POLL_MS` (30s) and on window focus, and `useEnrollmentRequests('PENDING')`
+  writes the length of the queue it just loaded into the count cache so this page and the badge
+  cannot disagree while both are on screen.
 - **`riderCode` and `organizationValues` were rendered here before the backend sent them.** The
   page's Passenger and Organization details columns read both, and the backend resolved the
   passenger from the enrolment's deprecated `userId` — which the rider-profile enrolment path

@@ -22,6 +22,50 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-20 — Requests table drops the email and names the organization
+
+- **Branch:** feature/enrollment-queue-contract-doc
+- **Modules touched:** enrollment requests, [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:**
+  - The Account column is now Contact: the passenger's phone (falling back to the owning
+    account's), with the email dropped.
+  - "Organization details" is now Organization: the organization's name, then its form answers
+    labelled the way that organization asked for them (`Grade: 4`, not `grade: 4`), read from the
+    new `organizationDetails` payload with the raw `organizationValues` map as a fallback.
+- **Why:** the column showed `grade: 4` and never said which organization asked, and the email
+  took a column's width for something a manager does not act on.
+- **Contract impact:** consumes the new `organization` and `passenger.organizationDetails` fields
+  on `GET /api/manager/enrollment-requests` (backend change in the same session).
+- **Tests:** `src/pages/__tests__/ManagerRequestsPage.test.jsx` (contact, organization, and
+  fallback cases; the stale "Managed profile · relation" expectation, which the page has not
+  rendered for some time, was replaced with the rider-code identity it does render).
+  - Both multi-line columns (and the rest of the data columns) now pass
+    `meta: { cellClassName: 'align-top' }`, supported by a small addition to `DataTable`, so the
+    row reads as one line instead of staggering where a cell has a second line.
+- **Docs updated:** [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md),
+  two TESTING_GUIDE rows.
+- **Follow-ups / known issues:** none
+
+## 2026-08-20 — Requests nav badge keeps up with requests that arrive mid-session
+
+- **Branch:** feature/enrollment-queue-contract-doc
+- **Modules touched:** enrollment requests, [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:**
+  - `useEnrollmentRequestCount` polls every 30s (`ENROLLMENT_COUNT_POLL_MS`) and refetches on
+    window focus, instead of holding the value it fetched when the shell first mounted.
+  - `useEnrollmentRequests('PENDING')` writes the length of the queue it loaded into the count
+    cache, so the Requests page and the nav badge always agree.
+- **Why:** a pending request was listed on the Requests page while the "Requests" nav link showed
+  no badge. The shell that renders the badge never unmounts, so the count only refreshed on a
+  reload or after a decision invalidated it.
+- **Contract impact:** none. Same `GET /api/manager/enrollment-requests/count` endpoint.
+- **Tests:** `src/hooks/__tests__/use-enrollment-requests.test.jsx` (new).
+- **Docs updated:** [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md),
+  TESTING_GUIDE row.
+- **Follow-ups / known issues:** `src/pages/__tests__/ManagerRequestsPage.test.jsx` has one
+  pre-existing failure (it expects a "Managed profile · <relation>" tag the page no longer
+  renders); untouched by this change.
+
 ## 2026-08-19 — Record that the enrollment queue's passenger payload is now populated
 
 - **Branch:** main
