@@ -22,6 +22,36 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-20 — Remove docs/code orphaned by the Route Approvals / Private Routes removal (issue #23)
+- **Branch:** issue/23-remove-orphaned-tracking-docs
+- **Modules touched:** docs/README.md
+- **What changed:**
+  - `CLAUDE.md`: dropped "private-route keys, route approvals" from the app description and
+    removed the `PRIVATE_ROUTES.md`/`ROUTE_APPROVALS.md` rows from the "Where to look" table —
+    both pages (and their hooks) were deleted by `fee5555` and never reinstated. Live Tracking
+    *was* also removed by that commit but was rebuilt afterward (`7d28648`, `6c03ed4`), so its
+    doc/nav references are accurate and were left as-is.
+  - `docs/README.md`: dropped `PRIVATE_ROUTES`/`ROUTE_APPROVALS` from the module-doc stub list.
+  - Deleted `docs/modules/PRIVATE_ROUTES.md` and `docs/modules/ROUTE_APPROVALS.md` (stubs for
+    pages that no longer exist) and `scripts/check-docs.mjs`'s matching MODULES entries.
+  - Deleted `src/components/RouteComparisonPanel.jsx` + its test — confirmed orphaned (only
+    referenced by its own test file, no live page imports it).
+  - `e2e/custom-routes.spec.ts`: removed the two `describe` blocks that navigated to
+    `/manager/route-approvals`, a route that no longer exists in `App.jsx` — they were failing
+    on a dead route, not skipped/pending. Kept the still-valid "creates a custom-route driver"
+    case. Removed the now-unused `MockChangeRequest` import.
+  - `docs/TESTING_GUIDE.md`: removed the two traceability rows pointing at the deleted
+    `ManagerRouteApprovalsPage.test.jsx`.
+- **Why:** issue #23 — docs and orphaned code still referenced the removed Route Approvals /
+  Private Routes manager pages.
+- **Contract impact:** none — docs/dead-code cleanup only, no runtime behavior change.
+- **Tests:** `e2e/custom-routes.spec.ts` trimmed (see above); no new test files.
+- **Docs updated:** `CLAUDE.md`, `docs/README.md`, `docs/TESTING_GUIDE.md`, deleted
+  `docs/modules/PRIVATE_ROUTES.md` + `docs/modules/ROUTE_APPROVALS.md`.
+- **Follow-ups / known issues:** the remaining "creates a custom-route driver" case in
+  `custom-routes.spec.ts` times out waiting for the "Add bus request" button in this sandbox —
+  confirmed pre-existing on `main` (unrelated to this change, not investigated further here).
+
 ## 2026-08-19 — Sri Lanka route map as a translucent mobile background on sign-in (issue #79)
 - **Branch:** claude/tender-fermi-vfb7kh
 - **Modules touched:** docs/modules/AUTH.md
