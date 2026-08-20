@@ -18,7 +18,6 @@ The rest are all currently **stubs** — each names its source files and must be
 next change touching it:
 [AUTH](modules/AUTH.md) · [DASHBOARD](modules/DASHBOARD.md) · [ACCOUNTS](modules/ACCOUNTS.md) ·
 [BUSES](modules/BUSES.md) · [ROUTES](modules/ROUTES.md) ·
-[PRIVATE_ROUTES](modules/PRIVATE_ROUTES.md) · [ROUTE_APPROVALS](modules/ROUTE_APPROVALS.md) ·
 [OPERATIONS](modules/OPERATIONS.md) · [SETTINGS](modules/SETTINGS.md)
 
 ## Guides

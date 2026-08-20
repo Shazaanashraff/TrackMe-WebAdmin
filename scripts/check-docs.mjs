@@ -51,12 +51,6 @@ const MODULES = [
   { doc: 'docs/modules/ROUTES.md', label: 'routes', match: [
     /RoutesPage/, /^src\/hooks\/use-system-routes/,
   ]},
-  { doc: 'docs/modules/PRIVATE_ROUTES.md', label: 'private-routes', match: [
-    /ManagerPrivateRoutesPage/, /^src\/hooks\/use-private-routes/,
-  ]},
-  { doc: 'docs/modules/ROUTE_APPROVALS.md', label: 'route-approvals', match: [
-    /ManagerRouteApprovalsPage/, /^src\/hooks\/use-route-approvals/, /RouteComparison/,
-  ]},
   { doc: 'docs/modules/TRACKING.md', label: 'tracking', match: [
     /ManagerTrackingPage/, /^src\/hooks\/use-tracking/, /^src\/lib\/(polyline|map-tokens)\./,
   ]},

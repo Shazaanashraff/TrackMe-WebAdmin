@@ -1,7 +1,7 @@
 # web-admin — TrackMe Admin Portal
 
-React 18 + Vite portal for **managers** and **super-admins**: fleet, drivers, routes, private-route
-keys, route approvals, live tracking, and operations.
+React 18 + Vite portal for **managers** and **super-admins**: fleet, drivers, routes, live
+tracking, and operations.
 
 **This file is a router, not a manual.** It gives you the shape of the app and points you at the
 one doc you need. Deep detail lives in [`docs/`](docs/README.md) — do not duplicate it here.
@@ -42,8 +42,6 @@ git config core.hooksPath .githooks
 | Passenger enrollment approval queue (private drivers) | [`docs/modules/ENROLLMENT_REQUESTS.md`](docs/modules/ENROLLMENT_REQUESTS.md) |
 | Buses & drivers | [`docs/modules/BUSES.md`](docs/modules/BUSES.md) |
 | Routes catalogue | [`docs/modules/ROUTES.md`](docs/modules/ROUTES.md) |
-| **Private routes**: room keys, hide, join approvals | [`docs/modules/PRIVATE_ROUTES.md`](docs/modules/PRIVATE_ROUTES.md) |
-| Driver-submitted custom route approvals | [`docs/modules/ROUTE_APPROVALS.md`](docs/modules/ROUTE_APPROVALS.md) |
 | Live tracking map | [`docs/modules/TRACKING.md`](docs/modules/TRACKING.md) |
 | Operations page | [`docs/modules/OPERATIONS.md`](docs/modules/OPERATIONS.md) |
 | Settings | [`docs/modules/SETTINGS.md`](docs/modules/SETTINGS.md) |
