@@ -98,6 +98,8 @@ function validateStep(form, step, vehicles = []) {
 }
 
 export function ManagerVehiclesPage() {
+  // Loads the manager's full fleet, not a page of it — a deliberate, documented
+  // tradeoff (issue #10), not an oversight. See docs/modules/BUSES.md §6.
   const vehiclesQ = useManagerVehicles();
   const routesQ = useManagerAssignableRoutes();
   const requestsQ = useManagerRequests();
