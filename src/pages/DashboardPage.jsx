@@ -184,24 +184,14 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      {/* Analytics placeholder — time-series data not available from current API */}
+      {/* Analytics placeholder — time-series data not available from current API. Kept
+          compact (issue #15): a full-height empty card for a feature that doesn't exist
+          yet dominated the dashboard's visible space. */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            Analytics
-          </CardTitle>
-          <CardDescription>Detailed time-series charts</CardDescription>
-        </CardHeader>
-        <CardContent className="py-10">
-          <div className="flex flex-col items-center gap-3 text-center text-muted-foreground">
-            <BarChart3 className="h-10 w-10 opacity-20" />
-            <p className="text-sm font-medium text-foreground">Not enough data yet</p>
-            <p className="text-xs max-w-xs">
-              Time-series analytics require historical data series from the backend. These charts
-              will populate automatically once the endpoint is available.
-            </p>
-          </div>
+        <CardContent className="py-3 flex items-center gap-2.5">
+          <BarChart3 className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="text-sm font-medium text-foreground">Analytics</span>
+          <span className="text-xs text-muted-foreground">Not enough data yet</span>
         </CardContent>
       </Card>
     </div>

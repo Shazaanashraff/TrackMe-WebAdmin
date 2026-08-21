@@ -22,6 +22,31 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-21 — Shrink the dashboard analytics placeholders (issue #15)
+- **Branch:** claude/tender-fermi-paswzw
+- **Modules touched:** [`docs/modules/DASHBOARD.md`](modules/DASHBOARD.md) (new)
+- **What changed:**
+  - `DashboardPage.jsx`'s "Analytics" card and `ManagerDashboardPage.jsx`'s "Booking Trend" card
+    both used to be a full-height (`py-10`/`py-12`) centered empty-state block with a large icon
+    and 1-2 paragraphs of copy — a lot of visible dashboard space for a feature (time-series
+    charts) that doesn't exist yet. Both are now a single compact row: a label plus "Not enough
+    data yet", no icon-heavy empty state.
+  - Kept the exact "Not enough data yet" text (existing tests already asserted it) — only the
+    surrounding markup shrank.
+- **Why:** issue #15. Its acceptance criteria explicitly allowed either building a real chart or
+  shrinking/removing the placeholder; shrinking was chosen since a real chart needs time-series
+  data the backend doesn't return yet (documented in `DASHBOARD.md` §5).
+- **Contract impact:** none — pure frontend layout change.
+- **Tests:** extended `src/pages/__tests__/DashboardPage.test.jsx` and
+  `src/pages/__tests__/ManagerDashboardPage.test.jsx` with a case asserting the placeholder has no
+  `py-10`/`py-12` full-height-card ancestor. `npm test` (664/664), `npm run lint` (0 errors).
+- **Docs updated:** `docs/modules/DASHBOARD.md` filled in from the template (was a stub);
+  `docs/TESTING_GUIDE.md` Dashboard section.
+- **Follow-ups / known issues:** if either dashboard endpoint ever returns real time-series data,
+  replace the placeholder with a real chart in the same change (see `DASHBOARD.md` §8).
+
+---
+
 ## 2026-08-21 — Document the vehicles-table full-fleet-load tradeoff (issue #10)
 - **Branch:** claude/tender-fermi-paswzw
 - **Modules touched:** [`docs/modules/BUSES.md`](modules/BUSES.md)
