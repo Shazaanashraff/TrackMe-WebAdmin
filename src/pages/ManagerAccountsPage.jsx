@@ -480,6 +480,47 @@ export function ManagerAccountsPage() {
       },
     },
     {
+      // How many people ride with this driver, and the way in to see who. A
+      // rider who redeems a non-private driver's key enrols without any
+      // approval step, so this column is the only place they are ever counted.
+      id: 'riders',
+      header: 'Riders',
+      accessorKey: '_id',
+      enableSorting: false,
+      cell: (info) => {
+        const driver = info.row.original;
+        const active = driver.riders?.active || 0;
+        const pending = driver.riders?.pending || 0;
+
+        // Nobody enrolled is not a destination: the roster would open empty, so
+        // the cell says so rather than offering a click that shows nothing.
+        if (!active && !pending) return <span className="text-muted-foreground">None</span>;
+
+        return (
+          <div className="flex items-center gap-2">
+            {active > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1.5 px-2 tabular-nums"
+                aria-label={`See the ${active} rider${active === 1 ? '' : 's'} enrolled with ${driver.name}`}
+                title={`See who rides with ${driver.name}`}
+                onClick={() => navigate(
+                  `/manager/requests?status=ACTIVE&driver=${encodeURIComponent(driver._id)}`,
+                )}
+              >
+                <Users className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                {active}
+              </Button>
+            )}
+            {pending > 0 && (
+              <Badge variant="outline" className="tabular-nums">{pending} pending</Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       // Whether this driver is broadcasting right now, and a way straight to
       // the map when they are. Kept apart from the Status column, which is
       // about the account rather than the journey.

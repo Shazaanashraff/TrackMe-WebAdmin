@@ -2,10 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/api';
 import { qk } from '@/lib/queryKeys';
 
-export function useEnrollmentRequests(status = 'PENDING') {
+export function useEnrollmentRequests(status = 'PENDING', driverId = '') {
   return useQuery({
-    queryKey: qk.enrollmentRequests.list(status),
-    queryFn: () => adminApi.getEnrollmentRequests(status),
+    queryKey: qk.enrollmentRequests.list(status, driverId),
+    queryFn: () => adminApi.getEnrollmentRequests(status, driverId),
   });
 }
 
@@ -39,4 +39,18 @@ export function useApproveEnrollmentRequest() {
 
 export function useRejectEnrollmentRequest() {
   return useDecideEnrollmentRequest((id) => adminApi.rejectEnrollmentRequest(id));
+}
+
+// Removing a rider changes the roster and the rider count shown against that
+// driver on the Drivers page, so both go stale together. Without the second
+// invalidation the count would keep the removed rider until a manual refresh.
+export function useRemoveEnrollment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => adminApi.removeEnrollment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.enrollmentRequests.all() });
+      queryClient.invalidateQueries({ queryKey: qk.drivers.all() });
+    },
+  });
 }

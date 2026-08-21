@@ -8,6 +8,7 @@ vi.mock('@/hooks/use-enrollment-requests', () => ({
   useEnrollmentRequests: vi.fn(),
   useApproveEnrollmentRequest: vi.fn(),
   useRejectEnrollmentRequest: vi.fn(),
+  useRemoveEnrollment: vi.fn(),
 }));
 
 vi.mock('sonner', () => ({ toast: vi.fn() }));
@@ -16,6 +17,7 @@ import {
   useEnrollmentRequests,
   useApproveEnrollmentRequest,
   useRejectEnrollmentRequest,
+  useRemoveEnrollment,
 } from '@/hooks/use-enrollment-requests';
 
 const REQUESTS = [
@@ -31,6 +33,19 @@ const REQUESTS = [
     status: 'PENDING',
     requestedAt: '2026-08-07T10:00:00.000Z',
     passenger: { _id: 'u2', name: 'Sithara Jay', email: '' },
+    driver: { _id: 'd1', name: 'Kamal Perera', driverCode: 'DRV-4K7P-9XQ2' },
+  },
+];
+
+// Already riding. A rider of a NON-private driver lands here without ever having
+// been pending, which is the whole reason the Enrolled tab exists.
+const ENROLLED = [
+  {
+    _id: 'enr-1',
+    status: 'ACTIVE',
+    requestedAt: '2026-08-05T08:00:00.000Z',
+    decidedAt: '2026-08-06T08:00:00.000Z',
+    passenger: { _id: 'u9', name: 'Tharindu Silva', email: 'tharindu@t.com', riderCode: 'RID-77' },
     driver: { _id: 'd1', name: 'Kamal Perera', driverCode: 'DRV-4K7P-9XQ2' },
   },
 ];
@@ -56,21 +71,30 @@ function makeMutation(overrides = {}) {
   return { mutate: vi.fn(), isPending: false, ...overrides };
 }
 
-function setup({ requests = REQUESTS, approveMut, rejectMut, isLoading = false } = {}) {
+function setup({
+  requests = REQUESTS,
+  approveMut,
+  rejectMut,
+  removeMut,
+  isLoading = false,
+  route = '/manager/requests',
+} = {}) {
   useEnrollmentRequests.mockReturnValue({
     data: { data: requests }, isLoading, error: null, refetch: vi.fn(),
   });
   const approve = approveMut || makeMutation();
   const reject = rejectMut || makeMutation();
+  const remove = removeMut || makeMutation();
   useApproveEnrollmentRequest.mockReturnValue(approve);
   useRejectEnrollmentRequest.mockReturnValue(reject);
+  useRemoveEnrollment.mockReturnValue(remove);
 
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[route]}>
       <ManagerRequestsPage />
     </MemoryRouter>
   );
-  return { approve, reject };
+  return { approve, reject, remove };
 }
 
 beforeEach(() => {
@@ -145,6 +169,64 @@ describe('ManagerRequestsPage', () => {
 
       await user.click(screen.getByRole('button', { name: /approve/i }));
       expect(screen.getByText(/Approve Amaya Perera \(account: shazaan@t\.com\)\?/)).toBeInTheDocument();
+    });
+  });
+
+  describe('the enrolled roster', () => {
+    it('defaults to the pending queue', () => {
+      setup();
+      expect(useEnrollmentRequests).toHaveBeenCalledWith('PENDING', '');
+    });
+
+    it('asks for the enrolled riders when the URL says so', () => {
+      setup({ requests: ENROLLED, route: '/manager/requests?status=ACTIVE' });
+      expect(useEnrollmentRequests).toHaveBeenCalledWith('ACTIVE', '');
+      expect(screen.getByText('Tharindu Silva')).toBeInTheDocument();
+    });
+
+    it('switches to the enrolled riders when the tab is clicked', async () => {
+      const user = userEvent.setup();
+      setup();
+
+      await user.click(screen.getByRole('tab', { name: 'Enrolled' }));
+      expect(useEnrollmentRequests).toHaveBeenLastCalledWith('ACTIVE', '');
+    });
+
+    it('narrows to one driver from the URL, and offers a way back out', () => {
+      setup({ requests: ENROLLED, route: '/manager/requests?status=ACTIVE&driver=d1' });
+      expect(useEnrollmentRequests).toHaveBeenCalledWith('ACTIVE', 'd1');
+      expect(screen.getByText(/Showing one driver: Kamal Perera\./)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /show all drivers/i })).toBeInTheDocument();
+    });
+
+    it('offers no approve or decline on someone already enrolled', () => {
+      setup({ requests: ENROLLED, route: '/manager/requests?status=ACTIVE' });
+      expect(screen.queryByRole('button', { name: /approve/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /decline/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /remove/i })).toBeInTheDocument();
+    });
+
+    it('removes a rider only after the removal is confirmed', async () => {
+      const user = userEvent.setup();
+      const { remove } = setup({ requests: ENROLLED, route: '/manager/requests?status=ACTIVE' });
+
+      await user.click(screen.getByRole('button', { name: /remove/i }));
+      expect(remove.mutate).not.toHaveBeenCalled();
+      expect(screen.getByText(/Remove Tharindu Silva\?/)).toBeInTheDocument();
+
+      const dialog = screen.getByRole('alertdialog');
+      await user.click(within(dialog).getByRole('button', { name: /^remove$/i }));
+      expect(remove.mutate).toHaveBeenCalledWith('enr-1', expect.anything());
+    });
+
+    it('says nobody is enrolled rather than reusing the pending empty state', () => {
+      setup({ requests: [], route: '/manager/requests?status=ACTIVE' });
+      expect(screen.getByText('Nobody is enrolled yet')).toBeInTheDocument();
+    });
+
+    it('falls back to a sane tab when the URL asks for a status that does not exist', () => {
+      setup({ route: '/manager/requests?status=NONSENSE' });
+      expect(useEnrollmentRequests).toHaveBeenCalledWith('PENDING', '');
     });
   });
 });

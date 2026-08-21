@@ -719,3 +719,47 @@ describe('ManagerAccountsPage: viewing a driver password', () => {
     expect(screen.queryByTestId('driver-password-value')).not.toBeInTheDocument();
   });
 });
+
+// How many people ride with each driver, and the way through to who they are.
+// A rider of a non-private driver enrols with no approval step, so this column
+// is the only place in the portal that ever counts them.
+describe('ManagerAccountsPage: riders column', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  const withRiders = (riders) => ({ ...DRIVERS[0], riders });
+
+  const ridersButton = (name = 'Kamal Perera', count = 3) =>
+    screen.queryByRole('button', {
+      name: `See the ${count} rider${count === 1 ? '' : 's'} enrolled with ${name}`,
+    });
+
+  it('counts the enrolled riders and opens that driver\'s roster', async () => {
+    const { user } = setup({ drivers: [withRiders({ active: 3, pending: 0 })] });
+
+    await user.click(ridersButton());
+
+    expect(navigate).toHaveBeenCalledWith('/manager/requests?status=ACTIVE&driver=driver-1');
+  });
+
+  it('shows waiting requests alongside the enrolled count', () => {
+    setup({ drivers: [withRiders({ active: 3, pending: 2 })] });
+    expect(screen.getByText('2 pending')).toBeInTheDocument();
+  });
+
+  it('says None, and offers no link, when nobody has enrolled', () => {
+    setup({ drivers: [withRiders({ active: 0, pending: 0 })] });
+
+    expect(ridersButton('Kamal Perera', 0)).not.toBeInTheDocument();
+    expect(screen.getAllByText('None').length).toBeGreaterThan(0);
+  });
+
+  it('treats a driver with no riders field as having none', () => {
+    setup({ drivers: [DRIVERS[0]] });
+    expect(screen.getAllByText('None').length).toBeGreaterThan(0);
+  });
+
+  it('names one rider in the singular', () => {
+    setup({ drivers: [withRiders({ active: 1, pending: 0 })] });
+    expect(ridersButton('Kamal Perera', 1)).toBeInTheDocument();
+  });
+});

@@ -22,6 +22,40 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-21 — A manager can see, and remove, who is enrolled with each driver
+
+- **Branch:** feature/manager-enrolled-riders
+- **Modules touched:** [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md),
+  [`docs/modules/BUSES.md`](modules/BUSES.md) (the Drivers directory)
+- **What changed:**
+  - `ManagerRequestsPage` is now tabbed **Pending / Enrolled / Declined**, with the tab and an
+    optional driver filter both held in the URL (`?status=`, `?driver=`). Enrolled rows carry a
+    destructive **Remove**; the date column becomes Enrolled/Declined from `decidedAt`.
+  - The Drivers directory gains a **Riders** column: the active count links straight to that
+    driver's roster, a pending count sits beside it, and zero renders as "None" with no link.
+  - Nav and breadcrumb relabelled "Requests" to "Enrollments"; the path is unchanged. The badge
+    still counts PENDING only.
+  - `useRemoveEnrollment` invalidates `qk.drivers` as well as the enrollment queries, so the
+    Riders count drops without a manual refresh.
+- **Why:** approving a request made the rider vanish from the portal, and a rider who redeems a
+  public driver's key is written straight to ACTIVE and was never visible at all, so a manager
+  could not see who rides with their drivers.
+- **Contract impact:** consumes the backend's new `driverId` query, `riders: { active, pending }`
+  on `GET /api/manager/drivers`, and `DELETE /api/manager/enrollment-requests/:id`. Backend docs
+  updated in its repo (`docs/modules/ADMIN.md`, CHANGES entry the same day).
+- **Tests:** `ManagerRequestsPage.test.jsx` extended to 16 cases (tabs, URL contract, filter,
+  removal, per-tab empty states); 5 cases added to `ManagerAccountsPage.test.jsx` for the Riders
+  column; `AppShell.test.jsx` nav-label expectations updated. Suite is 631 passing, 0 failing,
+  which also clears the one pre-existing failure (the "Managed profile · relation" tag the page
+  had stopped rendering, restored while rewriting that column).
+- **Docs updated:** ENROLLMENT_REQUESTS module doc (purpose, key files, hooks/api/query keys),
+  two new TESTING_GUIDE rows.
+- **Follow-ups / known issues:** the Organization details column still prints raw field keys
+  (`grade:`) even though the backend also returns labelled `organizationDetails`. Left alone as
+  out of scope.
+
+---
+
 ## 2026-08-14 — Show location state in the drivers directory, and link it to the map
 - **Branch:** main
 - **Modules touched:** tracking — [`docs/modules/TRACKING.md`](modules/TRACKING.md) (new §5a, key

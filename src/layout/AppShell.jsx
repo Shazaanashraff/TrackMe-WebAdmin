@@ -33,7 +33,7 @@ export const MANAGER_NAV = [
   { label: 'Vehicles', path: '/manager/vehicles', icon: VehicleIcon },
   { label: 'Live tracking', path: '/manager/tracking', icon: MapPin },
   { label: 'Drivers', path: '/manager/accounts', icon: UserCog },
-  { label: 'Requests', path: '/manager/requests', icon: Inbox },
+  { label: 'Enrollments', path: '/manager/requests', icon: Inbox },
   { label: 'Enrollment form', path: '/manager/enrollment-form', icon: ClipboardList },
   { label: 'Settings', path: '/manager/settings', icon: Settings },
 ];
