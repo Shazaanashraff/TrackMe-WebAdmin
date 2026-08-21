@@ -92,16 +92,13 @@ export function ManagerDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Analytics placeholder: no time-series data available yet */}
+      {/* Analytics placeholder: no time-series data available yet. Kept compact
+          (issue #15): a full-height empty card for a feature that doesn't exist yet
+          dominated the dashboard's visible space. */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Booking Trend</CardTitle>
-          <CardDescription>Monthly performance overview</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-            Not enough data yet
-          </div>
+        <CardContent className="py-3 flex items-center gap-2.5">
+          <span className="text-sm font-medium text-foreground">Booking Trend</span>
+          <span className="text-xs text-muted-foreground">Not enough data yet</span>
         </CardContent>
       </Card>
     </div>

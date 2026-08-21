@@ -85,6 +85,17 @@ describe('ManagerDashboardPage', () => {
     expect(screen.getByText('Not enough data yet')).toBeInTheDocument();
   });
 
+  it('keeps the booking-trend placeholder compact, not a full-height empty card (issue #15)', () => {
+    setup();
+    const placeholder = screen.getByText('Not enough data yet');
+    // The old placeholder centered "Not enough data yet" in a py-12 block; issue #15 asked
+    // for this to stop dominating the page. A slim single-row treatment has no "py-12"
+    // ancestor between the text and its Card.
+    const card = placeholder.closest('.py-3');
+    expect(card).toBeInTheDocument();
+    expect(placeholder.closest('.py-12')).toBeNull();
+  });
+
   it('shows pending request count in stat card', () => {
     setup();
     expect(screen.getAllByText('2').length).toBeGreaterThan(0);
