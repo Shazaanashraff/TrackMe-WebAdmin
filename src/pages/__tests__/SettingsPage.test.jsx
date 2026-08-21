@@ -1,10 +1,22 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { SettingsPage } from '../SettingsPage';
 
-function setup() {
-  render(<MemoryRouter><SettingsPage /></MemoryRouter>);
+vi.mock('@/hooks/use-profile', () => ({ useUpdateOwnProfile: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) }));
+
+const USER = { name: 'Admin User', email: 'admin@trackme.com', role: 'super-admin' };
+
+function setup(user = USER) {
+  render(
+    <MemoryRouter>
+      <Routes>
+        <Route element={<Outlet context={{ user, onUserUpdate: vi.fn() }} />}>
+          <Route path="/" element={<SettingsPage />} />
+        </Route>
+      </Routes>
+    </MemoryRouter>
+  );
 }
 
 describe('SettingsPage', () => {
@@ -13,28 +25,21 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: /settings/i })).toBeInTheDocument();
   });
 
-  it('shows the under-development notice', () => {
+  it('renders the account settings panel with the current user', () => {
     setup();
-    expect(screen.getByText(/settings configuration is under development/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^name$/i)).toHaveValue('Admin User');
+    expect(screen.getByLabelText(/^email$/i)).toHaveValue('admin@trackme.com');
+    expect(screen.getByRole('button', { name: /change password/i })).toBeInTheDocument();
   });
 
-  it('renders the three planned feature sections', () => {
+  it('labels the not-yet-implemented items as coming soon, not "under development"', () => {
     setup();
-    expect(screen.getByText('Access & Security')).toBeInTheDocument();
-    expect(screen.getByText('Operations Alerts')).toBeInTheDocument();
-    expect(screen.getByText('Governance')).toBeInTheDocument();
-  });
-
-  it('shows suggestion items within each section', () => {
-    setup();
-    expect(screen.getByText(/enforce password rotation/i)).toBeInTheDocument();
-    expect(screen.getByText(/trigger alerts when any vehicle rating/i)).toBeInTheDocument();
-    expect(screen.getByText(/enable audit logging/i)).toBeInTheDocument();
+    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
+    expect(screen.queryByText(/settings configuration is under development/i)).toBeNull();
   });
 
   it('does not show any fabricated metric numbers', () => {
     setup();
-    // The old page had hardcoded "3", "2", "9" stat cards — these must not appear as standalone stats
     expect(screen.queryByText('Security Policies')).toBeNull();
     expect(screen.queryByText('Active Alerts')).toBeNull();
     expect(screen.queryByText('Recommended Actions')).toBeNull();

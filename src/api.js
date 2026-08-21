@@ -192,6 +192,16 @@ export const adminApi = {
       retryAfterRefresh: false
     }),
 
+  // Generic across every role (protect only) — backend resolves the model from
+  // req.user.role. Only `name` is writable here; there is no self-service
+  // email-change endpoint yet, and password changes go through the
+  // forgot-password flow above rather than a dedicated authenticated route.
+  updateOwnProfile: (name) =>
+    request('/api/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify({ name })
+    }),
+
   // Consumes the invite/reset link emailed to a manager (buildSetupLink on the
   // backend). Both are public — no auth token exists yet at this point.
   validateAccountSetup: (token) =>

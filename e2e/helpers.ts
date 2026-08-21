@@ -53,6 +53,7 @@ export async function mockAuthBackend(
     requestOtpResponse?: { status?: number; body: unknown };
     verifyOtpResponse?: { status?: number; body: unknown };
     resetPasswordResponse?: { status?: number; body: unknown };
+    updateProfileResponse?: { status?: number; body: unknown };
   } = {}
 ) {
   await page.route('**/api/auth/login', (route) => {
@@ -78,6 +79,16 @@ export async function mockAuthBackend(
   await page.route('**/api/auth/forgot-password/reset', (route) => {
     const { status = 200, body = { success: true } } = opts.resetPasswordResponse ?? {};
     route.fulfill(json(body, status));
+  });
+
+  await page.route('**/api/auth/profile', async (route) => {
+    if (opts.updateProfileResponse) {
+      const { status = 200, body } = opts.updateProfileResponse;
+      route.fulfill(json(body, status));
+      return;
+    }
+    const requestBody = route.request().postDataJSON() as { name?: string };
+    route.fulfill(json({ success: true, data: { name: requestBody?.name } }));
   });
 }
 
