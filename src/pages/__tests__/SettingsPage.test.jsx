@@ -1,7 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { SettingsPage } from '../SettingsPage';
+
+vi.mock('../../api', () => ({
+  adminApi: {
+    changePassword: vi.fn(),
+  },
+}));
 
 function setup() {
   render(<MemoryRouter><SettingsPage /></MemoryRouter>);
@@ -13,30 +19,19 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: /settings/i })).toBeInTheDocument();
   });
 
-  it('shows the under-development notice', () => {
+  it('renders a real change-password form, not a placeholder', () => {
     setup();
-    expect(screen.getByText(/settings configuration is under development/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /change password/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^current password$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^new password$/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /update password/i })).toBeInTheDocument();
   });
 
-  it('renders the three planned feature sections', () => {
+  it('does not show the old "under development" placeholder copy', () => {
     setup();
-    expect(screen.getByText('Access & Security')).toBeInTheDocument();
-    expect(screen.getByText('Operations Alerts')).toBeInTheDocument();
-    expect(screen.getByText('Governance')).toBeInTheDocument();
-  });
-
-  it('shows suggestion items within each section', () => {
-    setup();
-    expect(screen.getByText(/enforce password rotation/i)).toBeInTheDocument();
-    expect(screen.getByText(/trigger alerts when any vehicle rating/i)).toBeInTheDocument();
-    expect(screen.getByText(/enable audit logging/i)).toBeInTheDocument();
-  });
-
-  it('does not show any fabricated metric numbers', () => {
-    setup();
-    // The old page had hardcoded "3", "2", "9" stat cards — these must not appear as standalone stats
-    expect(screen.queryByText('Security Policies')).toBeNull();
-    expect(screen.queryByText('Active Alerts')).toBeNull();
-    expect(screen.queryByText('Recommended Actions')).toBeNull();
+    expect(screen.queryByText(/under development/i)).toBeNull();
+    expect(screen.queryByText('Access & Security')).toBeNull();
+    expect(screen.queryByText('Operations Alerts')).toBeNull();
+    expect(screen.queryByText('Governance')).toBeNull();
   });
 });

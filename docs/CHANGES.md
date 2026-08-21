@@ -22,6 +22,41 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-21 — Real Settings page: self-service password change (issue #6, cross-repo: TrackMe-backend)
+- **Branch:** issue/6-webadmin-settings-change-password (webadmin half)
+- **Modules touched:** [`docs/modules/SETTINGS.md`](modules/SETTINGS.md) (filled in from stub)
+- **What changed:**
+  - `SettingsPage.jsx` (super-admin) and `ManagerSettingsPage.jsx` (manager) no longer render the
+    static `PLANNED_SECTIONS` "under development" placeholder cards — both now render a new
+    shared `ChangePasswordCard` (current/new/confirm password, reveal toggle via the existing
+    `PasswordInput`, inline mismatch + server-error handling).
+  - `src/api.js`: added `adminApi.changePassword(currentPassword, newPassword)` →
+    `PUT /api/auth/change-password`.
+- **Why:** `TrackMe-WebAdmin#6` — both Settings pages were a permanent dead end (a static "planned
+  features" list behind an "under development" alert, no real functionality). The issue's own
+  acceptance criteria suggested a password-change shortcut as the minimum real surface. Also
+  moves `TrackMe-WebAdmin#75` partway (password self-service now exists; name/email editing and
+  the e2e for that piece are still open).
+- **Contract impact:** consumes a brand-new backend endpoint, `PUT /api/auth/change-password`
+  (self-service, distinct from the existing admin-resets-someone-else's-password endpoints) —
+  added in `TrackMe-backend` in the same cross-repo change; see that repo's `docs/modules/AUTH.md`.
+- **Tests:**
+  - `src/components/shared/__tests__/change-password-card.test.jsx` (new) — 5 cases.
+  - `src/pages/__tests__/SettingsPage.test.jsx`, `src/pages/__tests__/ManagerSettingsPage.test.jsx`
+    (rewritten) — confirm the real form renders, placeholder copy is gone.
+  - `e2e/settings.spec.ts` (new) — 4 cases, both roles, run against the real UI with the backend
+    mocked via `page.route()`.
+  - `npm test` — 60 suites / 659 tests green. `npm run lint` — 0 errors (pre-existing warnings
+    only, none in touched files). `npx playwright test e2e/settings.spec.ts` — 4/4 green (this
+    session's environment has Chromium available, unlike prior sessions' notes on this repo).
+- **Docs updated:** `docs/modules/SETTINGS.md` (filled in from the `PLANNED (doc)` stub),
+  `docs/TESTING_GUIDE.md` new "Settings" section.
+- **Follow-ups / known issues:** `TrackMe-WebAdmin#75` still needs name/email self-service and
+  its own e2e case before closing; notification-preferences/organization settings mentioned in
+  the old placeholder copy remain unimplemented (not fabricated back in — see `SETTINGS.md` §6).
+
+---
+
 ## 2026-08-20 — Remove docs/code orphaned by the Route Approvals / Private Routes removal (issue #23)
 - **Branch:** issue/23-remove-orphaned-tracking-docs
 - **Modules touched:** docs/README.md

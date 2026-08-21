@@ -108,6 +108,13 @@
 | ManagerBusesPage route-assignment toggle | RTL (Vitest) | src/pages/__tests__/ManagerBusesPage.test.jsx | submits routeMode CUSTOM with no routeId, EXISTING with routeId, custom mode skips route requirement | create-bus wizard or routeMode contract changes |
 | Full custom-route flow (mocked backend) | e2e (Playwright) | e2e/custom-routes.spec.ts | create CUSTOM driver request with routeMode CUSTOM and no routeId | end-to-end custom-route UX changes |
 
+## Settings
+| Item (fn / flow) | Test type | Test file | Cases covered | Update when |
+|---|---|---|---|---|
+| ChangePasswordCard (issue #6) | RTL (Vitest) | src/components/shared/__tests__/change-password-card.test.jsx | masked current/new/confirm fields; submits `{currentPassword, newPassword}` via `adminApi.changePassword`; success shows a confirmation and clears the form; client-side new/confirm mismatch blocks submission with no request sent; a server error (e.g. wrong current password) shows inline without clearing the form | the change-password form or its validation changes |
+| SettingsPage / ManagerSettingsPage (issue #6) | RTL (Vitest) | src/pages/__tests__/SettingsPage.test.jsx, src/pages/__tests__/ManagerSettingsPage.test.jsx | each renders the real change-password form, not the old "under development" placeholder | either Settings page's content changes |
+| Settings — change password (issue #6) | e2e (Playwright) | e2e/settings.spec.ts | a super-admin and a manager each change their password through the real UI; a wrong-current-password server error surfaces inline without clearing the form; mismatched new/confirm is blocked client-side with no network request | the settings page, `PUT /api/auth/change-password` contract, or the password form changes |
+
 ## Developer Mode
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
 |---|---|---|---|---|

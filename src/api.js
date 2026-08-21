@@ -208,6 +208,15 @@ export const adminApi = {
       retryAfterRefresh: false
     }),
 
+  // Self-service — requires the caller's current password. Distinct from
+  // resetManagerPassword/resetManagerVehicleAccountPassword below, which are an
+  // admin resetting *someone else's* password without knowing the old one.
+  changePassword: (currentPassword, newPassword) =>
+    request('/api/auth/change-password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword })
+    }),
+
   getSuperAdminDashboard: () => request('/api/super-admin/dashboard'),
 
   getSystemRoutes: (params = {}) => {

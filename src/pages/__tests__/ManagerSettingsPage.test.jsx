@@ -1,7 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ManagerSettingsPage } from '../ManagerSettingsPage';
+
+vi.mock('../../api', () => ({
+  adminApi: {
+    changePassword: vi.fn(),
+  },
+}));
 
 function setup() {
   render(<MemoryRouter><ManagerSettingsPage /></MemoryRouter>);
@@ -13,20 +19,19 @@ describe('ManagerSettingsPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: /settings/i })).toBeInTheDocument();
   });
 
-  it('shows the under-development notice', () => {
+  it('renders a real change-password form, not a placeholder', () => {
     setup();
-    expect(screen.getByText(/under development/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /change password/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^current password$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^new password$/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /update password/i })).toBeInTheDocument();
   });
 
-  it('renders the three planned feature sections', () => {
+  it('does not show the old "under development" placeholder copy', () => {
     setup();
-    expect(screen.getByText('Profile')).toBeInTheDocument();
-    expect(screen.getByText('Notifications')).toBeInTheDocument();
-    expect(screen.getByText('Organization')).toBeInTheDocument();
-  });
-
-  it('does not show fabricated metric stats', () => {
-    setup();
-    expect(screen.queryByText('Manager Settings')).toBeNull();
+    expect(screen.queryByText(/under development/i)).toBeNull();
+    expect(screen.queryByText('Profile')).toBeNull();
+    expect(screen.queryByText('Notifications')).toBeNull();
+    expect(screen.queryByText('Organization')).toBeNull();
   });
 });
