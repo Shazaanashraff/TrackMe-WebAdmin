@@ -22,6 +22,41 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-21 — Real self-service settings for both roles (issue #6)
+- **Branch:** issue/6-settings-placeholder
+- **Modules touched:** [`docs/modules/SETTINGS.md`](modules/SETTINGS.md) (new)
+- **What changed:**
+  - `SettingsPage.jsx` (super-admin) and `ManagerSettingsPage.jsx` (manager) no longer render a
+    static "under development" placeholder card grid. Both now render a shared
+    `AccountSettingsPanel` (`src/components/shared/account-settings-panel.jsx`): edit + save your
+    own name, a read-only email field, and a "Change password" button that reuses the existing
+    forgot-password flow (there is no dedicated authenticated change-password endpoint).
+  - New `adminApi.updateOwnProfile(name)` → `PUT /api/auth/profile` (pre-existing backend route,
+    generic across every role — no backend change needed) and `src/hooks/use-profile.js`'s
+    `useUpdateOwnProfile()`.
+  - `AppShell.jsx` now passes `onUserUpdate` into `<Outlet context={{ user, onUserUpdate }} />`;
+    `App.jsx` gained `updateStoredUser()` so a saved name change is reflected in the stored session
+    (and thus the topbar) immediately, without a re-login.
+  - Remaining not-yet-built items (notification thresholds, operations alerts, org preferences,
+    email change) are now labeled "Coming soon" instead of the old `PLANNED_SECTIONS` cards, which
+    read like real settings.
+- **Why:** issue #6 — both Settings pages were dead ends with zero real functionality.
+- **Contract impact:** none. `PUT /api/auth/profile` already existed and was already generic
+  across roles; this is a new frontend consumer of an existing endpoint, not a backend change.
+- **Tests:** added `src/components/shared/__tests__/account-settings-panel.test.jsx`,
+  `e2e/settings.spec.ts`; rewrote `src/pages/__tests__/SettingsPage.test.jsx` and
+  `src/pages/__tests__/ManagerSettingsPage.test.jsx` for the real UI. `npm test` (662/662),
+  `npm run lint` (0 errors, pre-existing warnings only), `npm run test:e2e` (new spec green; the
+  two unrelated pre-existing failures — `auth.spec.ts`'s session-expiry URL match and
+  `custom-routes.spec.ts`'s timeout — reproduce identically on `main` before this change).
+- **Docs updated:** `docs/modules/SETTINGS.md` filled in from the template (was a stub);
+  `docs/TESTING_GUIDE.md` new "Settings" section.
+- **Follow-ups / known issues:** email self-service and the role-specific preference sections are
+  still not implemented — see `docs/modules/SETTINGS.md` §1/§5. Issue #75 (manager account-details
+  nav) depends on this landing first.
+
+---
+
 ## 2026-08-20 — Remove docs/code orphaned by the Route Approvals / Private Routes removal (issue #23)
 - **Branch:** issue/23-remove-orphaned-tracking-docs
 - **Modules touched:** docs/README.md

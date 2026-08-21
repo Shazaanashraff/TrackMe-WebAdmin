@@ -1,66 +1,36 @@
+import { useOutletContext } from 'react-router-dom';
 import { PageHeader } from '@/components/shared/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent } from '@/components/ui/card';
+import { AccountSettingsPanel } from '@/components/shared/account-settings-panel';
 
 const PLANNED_SECTIONS = [
-  {
-    title: 'Access & Security',
-    items: [
-      'Enforce password rotation every 90 days for managers.',
-      'Configure optional MFA for privileged admin accounts.',
-      'Set automatic session expiry with activity-based renewal.',
-    ],
-  },
-  {
-    title: 'Operations Alerts',
-    items: [
-      'Trigger alerts when any vehicle rating drops below 3.5.',
-      'Notify super admin when manager cancellation rate exceeds threshold.',
-      'Raise maintenance escalations for vehicles inactive > 48 hours.',
-    ],
-  },
-  {
-    title: 'Governance',
-    items: [
-      'Enable audit logging for manager CRUD and status changes.',
-      'Publish monthly manager performance snapshots automatically.',
-      'Define data retention for booking and review histories.',
-    ],
-  },
+  'Enforce password rotation and optional MFA for privileged admin accounts.',
+  'Operations alerts (vehicle rating drops, cancellation-rate thresholds, maintenance escalations).',
+  'Audit logging governance and data retention policy.',
 ];
 
 export function SettingsPage() {
+  const { user, onUserUpdate } = useOutletContext();
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Settings"
-        description="Configure security and operational guardrails for your admin workspace."
+        description="Manage your account and review upcoming workspace guardrails."
       />
 
-      <Alert>
-        <AlertDescription>
-          Settings configuration is under development. The items below reflect planned capabilities for this platform.
-        </AlertDescription>
-      </Alert>
+      <AccountSettingsPanel user={user} onUserUpdate={onUserUpdate} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {PLANNED_SECTIONS.map((section) => (
-          <Card key={section.title}>
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold">{section.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-0">
-              {section.items.map((item, i) => (
-                <div key={item}>
-                  {i > 0 && <Separator className="my-3" />}
-                  <p className="text-sm text-muted-foreground leading-relaxed">{item}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Card>
+        <CardContent className="pt-5">
+          <h3 className="text-sm font-semibold mb-2">Coming soon</h3>
+          <ul className="space-y-1">
+            {PLANNED_SECTIONS.map((item) => (
+              <li key={item} className="text-xs text-muted-foreground">• {item}</li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   );
 }

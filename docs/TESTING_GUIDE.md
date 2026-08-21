@@ -108,6 +108,14 @@
 | ManagerBusesPage route-assignment toggle | RTL (Vitest) | src/pages/__tests__/ManagerBusesPage.test.jsx | submits routeMode CUSTOM with no routeId, EXISTING with routeId, custom mode skips route requirement | create-bus wizard or routeMode contract changes |
 | Full custom-route flow (mocked backend) | e2e (Playwright) | e2e/custom-routes.spec.ts | create CUSTOM driver request with routeMode CUSTOM and no routeId | end-to-end custom-route UX changes |
 
+## Settings
+| Item (fn / flow) | Test type | Test file | Cases covered | Update when |
+|---|---|---|---|---|
+| adminApi.updateOwnProfile() | (covered indirectly) | src/components/shared/__tests__/account-settings-panel.test.jsx | `PUT /api/auth/profile` call from the Save action | the request payload/shape changes |
+| AccountSettingsPanel (issue #6) | RTL (Vitest) | src/components/shared/__tests__/account-settings-panel.test.jsx | shared by SettingsPage (super-admin) and ManagerSettingsPage (manager); shows current name/read-only email; Save disabled while unchanged; empty-name rejected client-side without calling the mutation; a successful save calls `onUserUpdate` (so the topbar/stored session picks up the new name) and toasts; a server error renders inline; "Change password" navigates to `/forgot-password` with the account email in `location.state` (reuses the existing forgot-password OTP flow — there is no dedicated authenticated change-password endpoint) | the panel's fields, the profile-update contract, or the password-change entry point changes |
+| SettingsPage / ManagerSettingsPage (issue #6) | RTL (Vitest) | src/pages/__tests__/SettingsPage.test.jsx, src/pages/__tests__/ManagerSettingsPage.test.jsx | both pages read `user`/`onUserUpdate` from `useOutletContext()` (set by `AppShell`'s `<Outlet context={{ user, onUserUpdate }} />`) and render `AccountSettingsPanel`; the former "under development" copy is gone; not-yet-built items are labeled "Coming soon" instead of implying real functionality | either page's layout or its still-unbuilt sections change |
+| Full settings flow, both roles (issue #6) | e2e (Playwright) | e2e/settings.spec.ts | a manager and a super-admin each edit and save their own name, see the "Profile updated" toast, and (manager) reach `/forgot-password` via "Change password" — `/api/auth/profile` mocked in `e2e/helpers.ts`'s `mockAuthBackend` | the settings page markup or the profile-update contract changes |
+
 ## Developer Mode
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
 |---|---|---|---|---|

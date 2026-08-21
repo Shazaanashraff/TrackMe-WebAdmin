@@ -31,7 +31,9 @@ import { StyleGuidePage } from './pages/StyleGuidePage';
 import { DeveloperPage } from './pages/DeveloperPage';
 import { EnrollmentFormPage } from './pages/EnrollmentFormPage';
 
-function ProtectedShell({ auth, onLogout, triggerRefresh }) {
+function ProtectedShell({
+  auth, onLogout, triggerRefresh, onUserUpdate,
+}) {
   const authToken = auth?.token || auth?.accessToken;
   const userRole = auth?.user?.role;
   const isSuperAdmin = userRole === 'super-admin';
@@ -44,7 +46,9 @@ function ProtectedShell({ auth, onLogout, triggerRefresh }) {
     return <Navigate to="/login" replace />;
   }
 
-  const shell = <AppShell user={auth.user} onLogout={onLogout} onRefresh={triggerRefresh} />;
+  const shell = (
+    <AppShell user={auth.user} onLogout={onLogout} onRefresh={triggerRefresh} onUserUpdate={onUserUpdate} />
+  );
 
   if (isSuperAdmin) {
     return (
@@ -206,6 +210,16 @@ export default function App() {
     toast('Logged out successfully');
   };
 
+  // Lets a settings page reflect a saved profile change (e.g. a new name)
+  // immediately — in the topbar and on reload — without a full re-login.
+  const updateStoredUser = (patch) => {
+    setAuth((prev) => {
+      if (!prev) return prev;
+      const merged = { ...prev, user: { ...prev.user, ...patch } };
+      return writeStoredAuth(merged, prev.rememberMe);
+    });
+  };
+
   const triggerRefresh = () => {
     refreshQueries();
     toast('Data refreshed');
@@ -232,6 +246,7 @@ export default function App() {
                   auth={auth}
                   onLogout={handleLogout}
                   triggerRefresh={triggerRefresh}
+                  onUserUpdate={updateStoredUser}
                 />
               </ErrorBoundary>
             }

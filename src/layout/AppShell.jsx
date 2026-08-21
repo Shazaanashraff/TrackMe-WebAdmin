@@ -140,7 +140,9 @@ function SidebarNav({ navItems, location, collapsed, onLogout, onNavigate, badge
   );
 }
 
-export function AppShell({ user, onLogout, onRefresh }) {
+export function AppShell({
+  user, onLogout, onRefresh, onUserUpdate,
+}) {
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(SIDEBAR_KEY) === 'true';
@@ -249,7 +251,7 @@ export function AppShell({ user, onLogout, onRefresh }) {
 
           <main className="flex-1 overflow-y-auto">
             <div className="max-w-screen-2xl mx-auto px-6 py-6">
-              <Outlet context={{ user }} />
+              <Outlet context={{ user, onUserUpdate }} />
             </div>
           </main>
         </div>
