@@ -285,12 +285,19 @@ export function ManagerTrackingPage() {
   }, [searchParams, selectedVehicleId, setSearchParams]);
 
   const selected = fleet.find((record) => record.vehicleId === selectedVehicleId) || null;
+  // Only vehicles that are actually broadcasting get plotted. A day-old
+  // last-known position is not worth a billable Google "Dynamic Maps" load, so
+  // an all-offline fleet falls through to the idle panel instead of a map.
   const plotted = useMemo(
-    () => fleet.map((record) => ({ record, point: toPoint(record.location) })).filter(({ point }) => point),
+    () => fleet
+      .filter((record) => trackingState(record) !== 'offline')
+      .map((record) => ({ record, point: toPoint(record.location) }))
+      .filter(({ point }) => point),
     [fleet],
   );
   const fleetPoints = useMemo(() => plotted.map(({ point }) => point), [plotted]);
-  const selectedPoint = toPoint(selected?.location);
+  // Never centre on a vehicle that has no marker on the map.
+  const selectedPoint = plotted.find(({ record }) => record.vehicleId === selectedVehicleId)?.point || null;
   const liveCount = fleet.filter((record) => trackingState(record) === 'live').length;
   const pageDescription = tracking.isLoading
     ? 'Loading current fleet positions…'

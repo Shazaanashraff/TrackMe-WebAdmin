@@ -162,6 +162,35 @@ describe('ManagerTrackingPage', () => {
     expect(screen.queryByTestId('google-api-provider')).not.toBeInTheDocument();
   });
 
+  // An offline vehicle keeps its last known position forever, and plotting it
+  // would bill a map load every time the page opens with nobody driving.
+  it('does not mount a map for an offline vehicle holding a stale position', () => {
+    mockTracking({
+      fleet: [{
+        ...FLEET[1],
+        location: { lat: 6.93104, lng: 79.90562, receivedAt: new Date(Date.now() - 86_400_000).toISOString() },
+      }],
+    });
+    renderPage();
+
+    expect(screen.getByTestId('fleet-map-idle')).toBeInTheDocument();
+    expect(screen.queryByTestId('fleet-map')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('google-api-provider')).not.toBeInTheDocument();
+  });
+
+  // A live driver who has gone quiet is still on a journey: the map stays up.
+  it('keeps the map mounted for a stale but still-live vehicle', async () => {
+    mockTracking({
+      fleet: [{
+        ...FLEET[0],
+        location: { ...FLEET[0].location, receivedAt: new Date(Date.now() - 120_000).toISOString() },
+      }],
+    });
+    renderPage();
+
+    expect(await screen.findByTestId('fleet-map')).toBeInTheDocument();
+  });
+
   it('mounts the map as soon as one vehicle has a position', async () => {
     renderPage();
 

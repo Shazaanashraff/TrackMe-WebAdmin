@@ -79,10 +79,17 @@ The full event and authorization contract is in
   so explicitly.
 - **Stale:** `live:true` with `receivedAt` older than 90 seconds renders a stale warning and amber
   state until the backend sweeper marks it offline or a fresh fix arrives.
-- **Offline:** last known marker may remain visible, but it is labelled offline; `Vehicle.isActive`
-  is never used as a liveness signal.
+- **Offline:** the vehicle is **not plotted**, and a fleet with no live or stale vehicle shows the
+  idle panel instead of a map. Its last known position is still readable in the side panel
+  (coordinates plus a relative "last position" time), which is where an offline vehicle belongs:
+  drawing it would mount a `Map` and bill a Google map load on every page open with nobody driving.
+  `Vehicle.isActive` is never used as a liveness signal.
 
 GPS `speed` is the native location value in metres/second and is converted to km/h for display.
+
+Mounting `<Map>` is what costs money, not the positions — those come from the TrackMe API. The map
+is therefore mounted only when `plotted` is non-empty, i.e. at least one vehicle is live or stale.
+Polling and socket updates re-render the mounted map without adding loads.
 
 ## 5a. Entry points
 
@@ -130,7 +137,7 @@ is about the account.
 | API | `src/__tests__/api.test.js` | manager fleet live endpoint path. |
 | Unit | `src/lib/__tests__/tracking-socket.test.js` | active API-mode URL, auth, event names and payloads. |
 | Unit | `src/hooks/__tests__/use-tracking.test.jsx` | REST/socket freshness merge and live/stale/offline classification. |
-| RTL | `src/pages/__tests__/ManagerTrackingPage.test.jsx` | Google map/markers, missing-key guidance, telemetry, selection, first-fix state, socket fallback, loading/error/empty states, and the `?vehicle=` deep link. |
+| RTL | `src/pages/__tests__/ManagerTrackingPage.test.jsx` | Google map/markers, missing-key guidance, telemetry, selection, first-fix state, socket fallback, loading/error/empty states, the `?vehicle=` deep link, and that no map is mounted unless a vehicle is live or stale. |
 | RTL | `src/pages/__tests__/ManagerAccountsPage.test.jsx` | the drivers directory Location column: live, stale, offline, missing from the snapshot, no vehicle, and the link it builds. |
 | RTL | `src/__tests__/App.test.jsx`, `src/layout/__tests__/AppShell.test.jsx` | manager route and navigation entry. |
 
