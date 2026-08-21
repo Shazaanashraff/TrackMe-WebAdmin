@@ -22,6 +22,27 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-21 — Document the vehicles-table full-fleet-load tradeoff (issue #10)
+- **Branch:** claude/tender-fermi-paswzw
+- **Modules touched:** [`docs/modules/BUSES.md`](modules/BUSES.md)
+- **What changed:** Added a §6 gotcha to `BUSES.md` and a short code comment in
+  `ManagerVehiclesPage.jsx` documenting that the vehicles table loads a manager's full fleet
+  client-side (`GET /api/manager/vehicles` has no `page`/`limit` support) as a deliberate,
+  currently-fine tradeoff, not an oversight — `DataTable`'s own row rendering is already paginated,
+  so this is a memory/initial-fetch cost scoped to one manager's fleet, not a DOM-bloat issue.
+- **Why:** issue #10. Its own acceptance criteria explicitly allows "document the tradeoff and
+  revisit when fleet sizes grow" as a valid resolution when current scale doesn't warrant real
+  server-side pagination yet — true today. Real pagination would be a backend contract change
+  (new query params + a `pagination` response field) that no manager's fleet size currently needs.
+- **Contract impact:** none — docs/comment only, no behavior change.
+- **Tests:** none added — no behavior changed. `npm test` (662/662) and `npm run lint` (0 errors)
+  re-run as a baseline to confirm the comment-only edit introduced no regression.
+- **Docs updated:** `docs/modules/BUSES.md` §6.
+- **Follow-ups / known issues:** revisit with real server-side pagination if/when a manager's fleet
+  size makes the full-fetch cost actually felt.
+
+---
+
 ## 2026-08-21 — Real self-service settings for both roles (issue #6)
 - **Branch:** issue/6-settings-placeholder
 - **Modules touched:** [`docs/modules/SETTINGS.md`](modules/SETTINGS.md) (new)

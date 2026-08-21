@@ -86,6 +86,16 @@ Backend side: [`BUSES.md`](../../../backend/docs/modules/BUSES.md) (vehicle CRUD
   codes alone without checking `data.vehicle` vs. a pending-request payload.
 - `pendingDeleteVehicleIds` (the badge's backing set) is derived purely from `useManagerRequests()`
   data already being fetched for other purposes — don't add a second endpoint call for it.
+- **The vehicles table loads the manager's full fleet client-side, not just a page of it (issue
+  #10).** `GET /api/manager/vehicles` (`managerController.getManagerVehicles`) has no `page`/`limit`
+  support — it's an unbounded `Vehicle.find({ managerId })`. `DataTable`'s own row rendering is
+  already paginated (`getPaginationRowModel`, ~10 rows in the DOM at a time), so this doesn't cause
+  DOM bloat; the cost is purely the initial fetch/memory size, which scales with one manager's
+  fleet, not the whole system's. Deliberately not adding server-side pagination in this pass: doing
+  so is a backend contract change (new query params + a `pagination` response field, mirroring the
+  existing opt-in pattern in `getManagerRequests`), and no manager fleet has come close to a size
+  where this is felt yet. Revisit if/when fleet sizes grow enough for this to matter — the acceptance
+  criteria in issue #10 explicitly allows this as the resolution.
 
 ## 7. Tests covering this module
 
