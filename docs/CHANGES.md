@@ -22,6 +22,58 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-22 — Audit log "Load older activity" beyond the initial 60 (issue #12)
+- **Branch:** claude/tender-fermi-yvly35
+- **Modules touched:** [`docs/modules/OPERATIONS.md`](modules/OPERATIONS.md)
+- **What changed:**
+  - `OperationsPage.jsx`'s audit log used to hard-cap at `limit: 60` with no way to reach older
+    entries — the `DataTable`'s own pager only paginates within whatever was already fetched.
+  - Added a "Load older activity" button below the table: each click raises the fetch `limit` by
+    60 (a real re-query via `useAuditLogs`, not a client-side re-slice) up to the backend's
+    existing hard cap of 200 (`superAdminController.js`'s `getAuditLogs` already clamps `limit` to
+    `Math.min(200, ...)` — no backend change needed for this). Once a full 200-row page comes
+    back, the button is replaced with a note that older history isn't reachable from this view.
+    Switching the manager filter resets the limit back to 60.
+  - Added `aria-label="Filter audit log by manager"` to the audit manager-filter `SelectTrigger` (it
+    had no accessible name before — needed to test the filter-resets-the-limit behavior, and a
+    real a11y gap regardless).
+- **Why:** issue #12. This is a documented stopgap, not true pagination — the backend has no
+  skip/cursor param, and its `startDate`/`endDate` filters are day-granularity
+  (`endOfDay.setHours(23,59,59,999)`), too coarse to use as a same-day cursor without risking
+  dropped/duplicate rows. A real fix needs a backend cursor param; out of scope for this repo
+  alone, flagged in `docs/modules/OPERATIONS.md` §5 rather than attempted here.
+- **Contract impact:** none — uses the `limit` param the backend already accepts and clamps.
+- **Tests:** extended `src/pages/__tests__/OperationsPage.test.jsx` (button appears on a full
+  page, doesn't on a short page, click re-queries with a higher limit, caps at 200 with a note,
+  resets to 60 on manager-filter change). `npm test` (669/669) and `npm run lint` (0 errors, only
+  pre-existing warnings) both green; `npm run test:e2e` run locally (13/15 — the 2 failures are
+  pre-existing, unrelated to Operations/audit log).
+- **Docs updated:** `docs/modules/OPERATIONS.md` §5, `docs/TESTING_GUIDE.md` new row.
+- **Follow-ups / known issues:** backend cursor/skip param for the audit log is still needed for
+  true unbounded pagination (tracked in `docs/modules/OPERATIONS.md` §5, not filed as a new issue
+  here — the same issue #12 covers it).
+
+---
+
+## 2026-08-22 — Verified the Manager/Super-Admin role boundary holds (issue #25)
+- **Branch:** claude/tender-fermi-yvly35
+- **Modules touched:** none in this repo (verification only, no code change here)
+- **What changed:** nothing in `web-admin` — this issue asked whether the Manager/Super-Admin
+  role boundary actually holds, and a prior session (2026-08-20) already did the real verification
+  and landed the regression test in the backend, since only the backend can prove server-side
+  enforcement (web-admin's own e2e suite mocks every response, so it can't). See
+  `shazaanashraff/trackme-backend#116` (merged): both `superAdminRoutes.js` and `managerRoutes.js`
+  gate with `requireRoles(...)` via `router.use()` — a Manager gets 403 on every super-admin-only
+  route tried and vice versa. **Boundary holds — no gap found.**
+- **Why:** closing out issue #25 with that finding, since it was left open pending a maintainer's
+  confirmation.
+- **Contract impact:** none.
+- **Tests:** none added here; see `trackme-backend#116`'s `authz-ownership.test.js`.
+- **Docs updated:** none needed — no behavior changed.
+- **Follow-ups / known issues:** none.
+
+---
+
 ## 2026-08-21 — Shrink the dashboard analytics placeholders (issue #15)
 - **Branch:** claude/tender-fermi-paswzw
 - **Modules touched:** [`docs/modules/DASHBOARD.md`](modules/DASHBOARD.md) (new)
