@@ -82,6 +82,18 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
   key. Approving/rejecting a request on this page refreshes both surfaces with a single refetch,
   no manual cross-page invalidation needed (issue #61) — keep the params identical between the two
   call sites, or this silently splits back into two cache entries.
+- **The audit log's "Load older activity" button raises the fetch `limit`, it does not offset-paginate.**
+  `useAuditLogs({ limit, managerId })` starts at 60 entries; each click bumps `limit` by 60 (a
+  genuine new request, not a client-side re-slice of already-fetched rows) up to 200 — the hard
+  cap `superAdminController.js`'s `getAuditLogs` clamps to server-side
+  (`TrackMe-backend/docs/modules/ADMIN.md`). Once `limit` is 200 and the server returns exactly
+  200 rows, the button is replaced with a note that older history isn't reachable from this view.
+  **This is a stopgap, not real pagination** (issue #12): the backend has no skip/cursor param, and
+  its `startDate`/`endDate` filters are day-granularity (`endOfDay.setHours(23,59,59,999)`), too
+  coarse to use as a same-day pagination cursor without risking dropped or duplicate rows. Reaching
+  further back needs a backend change (e.g. a `before`/cursor param) — out of scope for this repo
+  alone; flagging here rather than inventing a client-side "page 2" that can't actually reach older
+  entries. Switching the manager filter resets `limit` back to 60.
 - **A review decision has no undo or reopen path anywhere — not in this UI, not in the backend.**
   Neither `superAdminController.js` nor `superAdminRoutes.js` expose any endpoint to revert or
   re-review a `ManagerVehicleRequest` once its status leaves `PENDING`. Rather than inventing a

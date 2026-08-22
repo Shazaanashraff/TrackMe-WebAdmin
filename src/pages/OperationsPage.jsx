@@ -28,6 +28,14 @@ import {
 } from '@/hooks/use-operations';
 import { SERVICE_TYPES } from '@/lib/serviceTypes';
 
+// The backend's getAuditLogs clamps `limit` to 200 server-side
+// (superAdminController.js) and has no skip/cursor param yet — so "load more"
+// here means re-requesting with a larger limit, not a true offset page. See
+// docs/modules/OPERATIONS.md §5 for the tracked backend follow-up (issue #12).
+const AUDIT_INITIAL_LIMIT = 60;
+const AUDIT_LIMIT_STEP = 60;
+const AUDIT_LIMIT_MAX = 200;
+
 export function OperationsPage() {
   const [searchParams] = useSearchParams();
   const [selectedManagerId, setSelectedManagerId] = useState(searchParams.get('managerId') || '');
@@ -36,6 +44,7 @@ export function OperationsPage() {
   const [editServiceType, setEditServiceType] = useState('PUBLIC');
   const [requestStatus, setRequestStatus] = useState('PENDING');
   const [auditManagerId, setAuditManagerId] = useState('');
+  const [auditLimit, setAuditLimit] = useState(AUDIT_INITIAL_LIMIT);
   const [vehicleDialogError, setVehicleDialogError] = useState(null);
 
   // The Managers page's "View" action navigates here with ?managerId=X. Re-sync
@@ -50,7 +59,7 @@ export function OperationsPage() {
   const overviewQ = useOperationsOverview();
   const detailQ = useOperationManagerDetail(selectedManagerId);
   const requestsQ = usePendingVehicleRequests({ status: requestStatus });
-  const auditQ = useAuditLogs({ limit: 60, managerId: auditManagerId });
+  const auditQ = useAuditLogs({ limit: auditLimit, managerId: auditManagerId });
   const reviewM = useReviewVehicleRequest();
   const updateVehicleM = useUpdateVehicle();
 
@@ -184,6 +193,21 @@ export function OperationsPage() {
 
   const managerFilterOptions = useMemo(() => overview.map((o) => ({ id: o.managerId, name: o.managerName })), [overview]);
 
+  // A full page came back, so the server may hold more beyond what's fetched.
+  // Switching the manager filter starts a fresh 60 rather than carrying over
+  // whatever limit "Load older activity" had reached for a different filter.
+  const canLoadMoreAudit = auditLogs.length === auditLimit && auditLimit < AUDIT_LIMIT_MAX;
+  const atAuditLimitCap = auditLimit >= AUDIT_LIMIT_MAX && auditLogs.length === AUDIT_LIMIT_MAX;
+
+  const handleAuditManagerChange = (v) => {
+    setAuditManagerId(v === '_all' ? '' : v);
+    setAuditLimit(AUDIT_INITIAL_LIMIT);
+  };
+
+  const handleLoadMoreAudit = () => {
+    setAuditLimit((l) => Math.min(AUDIT_LIMIT_MAX, l + AUDIT_LIMIT_STEP));
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -300,8 +324,8 @@ export function OperationsPage() {
             <CardDescription>Recent operation-level actions</CardDescription>
           </div>
           {managerFilterOptions.length > 0 && (
-            <Select value={auditManagerId || '_all'} onValueChange={(v) => setAuditManagerId(v === '_all' ? '' : v)}>
-              <SelectTrigger className="w-40 h-8 text-xs">
+            <Select value={auditManagerId || '_all'} onValueChange={handleAuditManagerChange}>
+              <SelectTrigger className="w-40 h-8 text-xs" aria-label="Filter audit log by manager">
                 <SelectValue placeholder="All managers" />
               </SelectTrigger>
               <SelectContent>
@@ -322,6 +346,21 @@ export function OperationsPage() {
             onRetry={auditQ.refetch}
             emptyTitle="No audit records"
           />
+          {!auditQ.isLoading && !auditQ.error && auditLogs.length > 0 && (
+            canLoadMoreAudit ? (
+              <div className="flex justify-center pt-3">
+                <Button variant="outline" size="sm" onClick={handleLoadMoreAudit} disabled={auditQ.isFetching}>
+                  {auditQ.isFetching ? 'Loading…' : 'Load older activity'}
+                </Button>
+              </div>
+            ) : atAuditLimitCap ? (
+              <p className="text-xs text-muted-foreground text-center pt-3">
+                Showing the most recent {AUDIT_LIMIT_MAX} entries — the most this view can
+                currently retrieve. Reaching further back needs server-side cursor pagination
+                (tracked as a backend follow-up, see docs/modules/OPERATIONS.md).
+              </p>
+            ) : null
+          )}
         </CardContent>
       </Card>
 

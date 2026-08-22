@@ -110,6 +110,7 @@ function defaultHooks({
   useAuditLogs.mockReturnValue({
     data: { data: audit },
     isLoading: false,
+    isFetching: false,
     error: null,
     refetch: vi.fn(),
   });
@@ -400,6 +401,81 @@ describe('OperationsPage', () => {
     expect(screen.getByText('VEHICLE_UPDATED')).toBeInTheDocument();
     expect(screen.getByText('Vehicle')).toBeInTheDocument();
     expect(screen.getByText('admin@co.com')).toBeInTheDocument();
+  });
+
+  // Issue #12: the audit log used to hard-cap at 60 entries with no way to
+  // reach older ones. useAuditLogs's `limit` is now a re-fetchable value, not
+  // a fixed constant — a full page (data.length === limit) is the server's
+  // way of saying "there may be more", so that's what gates the button.
+  function auditRows(count, overrides = {}) {
+    return Array.from({ length: count }, (_, i) => ({ ...AUDIT_A, _id: `a${i}`, ...overrides }));
+  }
+
+  it('shows a "Load older activity" button when a full page of 60 audit rows comes back', () => {
+    setup({ audit: auditRows(60) });
+    expect(screen.getByRole('button', { name: /load older activity/i })).toBeInTheDocument();
+  });
+
+  it('does not show "Load older activity" when fewer rows than the limit come back (no more to load)', () => {
+    setup({ audit: auditRows(12) });
+    expect(screen.queryByRole('button', { name: /load older activity/i })).toBeNull();
+  });
+
+  it('clicking "Load older activity" re-queries useAuditLogs with a higher limit (server-side, not a client re-slice)', async () => {
+    const { user } = setup({ audit: auditRows(60) });
+    expect(useAuditLogs).toHaveBeenLastCalledWith({ limit: 60, managerId: '' });
+
+    await user.click(screen.getByRole('button', { name: /load older activity/i }));
+
+    expect(useAuditLogs).toHaveBeenLastCalledWith({ limit: 120, managerId: '' });
+  });
+
+  it('reaches the 200-row cap after enough clicks and shows the "most it can retrieve" note instead of a button', async () => {
+    useOperationsOverview.mockReturnValue({ data: { data: [MGR_A, MGR_B] }, isLoading: false, error: null, refetch: vi.fn() });
+    useOperationManagerDetail.mockReturnValue({ data: undefined, isLoading: false, error: null, refetch: vi.fn() });
+    usePendingVehicleRequests.mockReturnValue({ data: { data: [] }, isLoading: false, error: null, refetch: vi.fn() });
+    useReviewVehicleRequest.mockReturnValue(makeMutation());
+    useUpdateVehicle.mockReturnValue(makeMutation());
+
+    // 60 -> 120 -> 180 -> 200 (clamped): each click bumps the limit the
+    // component asks for; the mock always returns a full page for the
+    // *current* limit so canLoadMoreAudit keeps evaluating true until 200.
+    useAuditLogs.mockImplementation(({ limit }) => ({
+      data: { data: auditRows(Math.min(limit, 200)) },
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refetch: vi.fn(),
+    }));
+
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider>
+        <MemoryRouter initialEntries={['/operations']}>
+          <OperationsPage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    );
+
+    const clickLoadMore = async () => user.click(screen.getByRole('button', { name: /load older activity/i }));
+    await clickLoadMore(); // 60 -> 120
+    await clickLoadMore(); // 120 -> 180
+    await clickLoadMore(); // 180 -> 200 (clamped)
+
+    expect(useAuditLogs).toHaveBeenLastCalledWith({ limit: 200, managerId: '' });
+    expect(screen.queryByRole('button', { name: /load older activity/i })).toBeNull();
+    expect(screen.getByText(/most this view can currently retrieve/i)).toBeInTheDocument();
+  });
+
+  it('resets the audit limit back to 60 when the manager filter changes', async () => {
+    const { user } = setup({ audit: auditRows(60), overview: [MGR_A, MGR_B] });
+    await user.click(screen.getByRole('button', { name: /load older activity/i }));
+    expect(useAuditLogs).toHaveBeenLastCalledWith({ limit: 120, managerId: '' });
+
+    await user.click(screen.getByRole('combobox', { name: /filter audit log by manager/i }));
+    await user.click(await screen.findByRole('option', { name: 'Alice Smith' }));
+
+    expect(useAuditLogs).toHaveBeenLastCalledWith({ limit: 60, managerId: 'm1' });
   });
 
   it('opens vehicle edit FormDialog when Edit is clicked', async () => {
