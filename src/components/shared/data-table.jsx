@@ -132,7 +132,7 @@ export function DataTable({
       {/* Desktop table */}
       <div
         className={cn(
-          'rounded-xl border border-border overflow-hidden',
+          'rounded-xl border border-border overflow-x-auto',
           renderMobileCard && 'hidden md:block',
         )}
       >

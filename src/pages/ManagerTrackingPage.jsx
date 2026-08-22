@@ -296,15 +296,19 @@ export function ManagerTrackingPage() {
     [fleet],
   );
   const fleetPoints = useMemo(() => plotted.map(({ point }) => point), [plotted]);
+  const selectedPoint = useMemo(() => {
+    if (!selected || trackingState(selected) === 'offline') return null;
+    return toPoint(selected.location);
+  }, [selected]);
   // Never centre on a vehicle that has no marker on the map.
-  const selectedPoint = plotted.find(({ record }) => record.vehicleId === selectedVehicleId)?.point || null;
-  const liveCount = fleet.filter((record) => trackingState(record) === 'live').length;
+  const liveCount = plotted.length;
   const pageDescription = tracking.isLoading
     ? 'Loading current fleet positions…'
     : tracking.error
       ? 'Monitor current positions across your fleet.'
       : `${liveCount} of ${fleet.length} fleet vehicles broadcasting now.`;
   const googleMapsApiKey = getGoogleMapsApiKey();
+  const hasLiveUnplotted = fleet.some((record) => trackingState(record) === 'live' && !toPoint(record.location));
 
   return (
     <div className="space-y-6">
@@ -366,10 +370,13 @@ export function ManagerTrackingPage() {
                   className="flex h-full min-h-[420px] flex-col items-center justify-center gap-2 bg-surface-muted px-6 text-center"
                 >
                   <VehicleIcon aria-hidden className="size-8 text-muted-foreground" />
-                  <p className="font-semibold text-foreground">No vehicle is broadcasting</p>
+                  <p className="font-semibold text-foreground">
+                    {hasLiveUnplotted ? 'Waiting for coordinates…' : 'No vehicle is broadcasting'}
+                  </p>
                   <p className="max-w-sm text-sm text-muted-foreground">
-                    The map opens as soon as a driver starts a journey. Positions appear here in
-                    real time.
+                    {hasLiveUnplotted
+                      ? 'Vehicles are starting shifts. Positions will appear on the map as soon as GPS fixes arrive.'
+                      : 'The map opens as soon as a driver starts a journey. Positions appear here in real time.'}
                   </p>
                 </div>
               ) : googleMapsApiKey ? (

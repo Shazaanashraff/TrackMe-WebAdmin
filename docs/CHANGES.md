@@ -22,6 +22,35 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-23 — Audit remediation: tracking count, responsive tables, cache lifetime, bundle split
+
+- **Branch:** feature/audit-remediation
+- **Modules touched:** [`docs/modules/TRACKING.md`](modules/TRACKING.md)
+- **What changed:**
+  - Live tracking no longer contradicts itself. The header count is now `plotted.length`, the
+    same set the map draws, so "2 of 5 broadcasting" can never sit above an empty map. The idle
+    panel distinguishes "Waiting for coordinates…" (vehicles live, no GPS fix yet) from
+    "No vehicle is broadcasting". `selectedPoint` moved into a `useMemo` that keeps the original
+    invariant: a vehicle with no marker is never centred on.
+  - `DataTable`'s desktop container is `overflow-x-auto` instead of `overflow-hidden`, so a wide
+    table scrolls sideways rather than being clipped.
+  - Query cache `gcTime` raised to 24h with `networkMode: 'offlineFirst'`, killing the cold-start
+    spinner when moving between tabs. Documented in `src/lib/queryClient.js`: nothing is
+    persisted to disk, so this only governs in-memory retention.
+  - Vite splits `react`, `query` and `maps` vendor chunks.
+- **Why:** findings from the 2026-08-17 production-readiness and offline/caching audits, and the
+  2026-08-22 security assessment. Tracked in `AUDITDONE.md`.
+- **Contract impact:** none. No endpoint or socket payload changed.
+- **Tests:** none added; full suite re-run unchanged at 59 files / 631 passing.
+- **Docs updated:** this entry.
+- **Follow-ups / known issues:** `hasLiveUnplotted` recomputes per render rather than in a
+  `useMemo`; harmless at fleet sizes but inconsistent with its neighbours. Separately, the suite
+  is timing-flaky under CPU contention: four consecutive runs of identical source gave 0, 9, 5
+  and 0 failures, the failing ones while another repo's tests shared the machine. Worth pinning
+  down before it is trusted in CI.
+
+---
+
 ## 2026-08-21 — A manager can see, and remove, who is enrolled with each driver
 
 - **Branch:** feature/manager-enrolled-riders
