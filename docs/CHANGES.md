@@ -22,6 +22,62 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-23 — Add missing Playwright e2e specs: login, password-reset, cross-role onboarding (#28)
+
+- **Branch:** issue/28-playwright-e2e-specs
+- **Modules touched:** [`docs/modules/AUTH.md`](modules/AUTH.md), [`docs/modules/ACCOUNTS.md`](modules/ACCOUNTS.md), [`docs/modules/BUSES.md`](modules/BUSES.md)
+- **What changed:**
+  - Issue #28 was filed against an `e2e/` that had only `custom-routes.spec.ts`, but by the time
+    this session picked it up `e2e/auth.spec.ts` already existed (added incidentally by later
+    session work) and already covered acceptance criteria 1 and 2 almost verbatim — real
+    click-through login for both roles, and the full 3-screen forgot-password journey — just under
+    the wrong filenames and completely undocumented in `TESTING_GUIDE.md`/`docs/modules/AUTH.md`.
+    Rather than duplicate that coverage, split `auth.spec.ts` into the two files the issue actually
+    asks for: `e2e/login.spec.ts` (the "Login" and "Session expiry" cases) and
+    `e2e/password-reset.spec.ts` (the "Forgot password — full journey" cases), content otherwise
+    unchanged, and deleted `auth.spec.ts`.
+  - Fixed one trivial pre-existing bug in the moved "Session expiry" test while touching it: it
+    asserted `toHaveURL(/\/login$/)`, but `api.js`'s `handleUnauthorized` redirects to
+    `/login?reason=session_expired` — a query string the regex's `$` anchor never allowed. This
+    was the test's own wrong expectation (confirmed by re-running it against unmodified `main`:
+    same failure), not app behavior; widened to `/\/login(\?|$)/`.
+  - Added `e2e/cross-role-onboarding.spec.ts` (new): a super-admin fills the real Add Manager
+    dialog, signs out, and the manager just created does a real click-through sign-in with those
+    exact credentials (not `loginAsManager`) and creates their first vehicle via the create
+    wizard's `routeMode: CUSTOM` path — the "set up a new customer" journey spanning both roles in
+    one flow, against a mocked backend throughout.
+  - `e2e/helpers.ts`: added `mockSuperAdminManagersBackend` (GET/POST `/api/super-admin/managers`
+    with in-memory state, following the same pattern as `mockSuperAdminRoutesBackend`) and
+    extended `mockManagerBackend` to also mock `GET /api/manager/vehicles` and
+    `POST /api/manager/vehicle-accounts` (first vehicle created outright; every one after that
+    would return a pending request, mirroring the backend's real branching) — endpoints it didn't
+    cover before since no existing spec exercised vehicle creation through the current
+    `ManagerVehiclesPage`/`/api/manager/vehicle-accounts` naming.
+- **Why:** issue #28 — login and the password-reset journey had no e2e coverage of the real UI
+  flow, and there was no test spanning both manager and super-admin roles in one journey.
+- **Contract impact:** none — test-only, no source-code behavior changes.
+- **Tests:** `npm run test:e2e` — 15/16 green (all 9 new/moved cases across the 3 target specs,
+  plus the unaffected `routes.spec.ts` and `settings.spec.ts` suites). The one failure,
+  `custom-routes.spec.ts`, is a **pre-existing, already-documented** failure unrelated to this
+  change: it navigates to a dead `/manager/buses` route and looks for an "Add bus request" button
+  that no longer exists (the page is `ManagerVehiclesPage` at `/manager/vehicles`, button "Add
+  Vehicle") — confirmed reproducing identically on `main` before this branch, and already flagged
+  in the 2026-08-19 and 2026-08-20 entries above as "not investigated further" by prior sessions.
+  Left as-is per that same precedent; genuinely out of scope for #28. `npm test` — 707/707 green.
+  `npm run lint` — 0 errors (pre-existing warnings only, none in touched files).
+- **Docs updated:** `docs/TESTING_GUIDE.md` (Auth and Session: 2 new rows; Managers: 1 new row for
+  the cross-role spec); `docs/modules/AUTH.md`, `docs/modules/ACCOUNTS.md`, `docs/modules/BUSES.md`
+  (Tests-covering-this-module rows).
+- **Follow-ups / known issues:** `custom-routes.spec.ts`'s dead-route/stale-selector failure (see
+  above) still needs a maintainer decision — is `/manager/buses` supposed to redirect, or is the
+  spec just stale? — same open question three prior sessions have punted on; still out of scope
+  here. `mockManagerBackend`'s `/api/manager/buses` and `/api/manager/bus-accounts` mocks are
+  similarly stale (the page and its create endpoint are `/manager/vehicles` /
+  `/api/manager/vehicle-accounts` now) — left in place untouched since removing them isn't needed
+  to close #28 and isn't this session's call to make.
+
+---
+
 ## 2026-08-23 — Close issue backlog: realistic error-response coverage + a real double-redirect fix (#26)
 
 - **Branch:** claude/tender-fermi-fqpwga

@@ -102,6 +102,7 @@ Backend side: [`BUSES.md`](../../../backend/docs/modules/BUSES.md) (vehicle CRUD
 | Layer | File | What it locks |
 |---|---|---|
 | Unit | `src/pages/__tests__/ManagerVehiclesPage.test.jsx` | create wizard (route modes, driver step, plate/ID validation), edit dialog (validated route dropdown), delete-request flow incl. failure-preserves-reason (issue #48) and the pending-deletion badge (issue #66), route/vehicle table columns (issue #67). |
+| e2e (Playwright) | `e2e/cross-role-onboarding.spec.ts` | a freshly-created manager's first vehicle, created via `routeMode: CUSTOM`, comes back outright (`data.vehicle`) rather than as a pending super-admin request — the create-first-vehicle-directly branch of `POST /api/manager/vehicle-accounts` (issue #28). |
 
 ## 8. Change protocol
 

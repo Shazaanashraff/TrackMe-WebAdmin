@@ -117,6 +117,8 @@ Backend side: [`AUTH.md`](../../../backend/docs/modules/AUTH.md) — four-collec
 | Unit | `src/__tests__/api.test.js` | `request()`'s error surfacing, token-refresh retry gating, single-flight refresh, proactive refresh. |
 | Unit | `src/pages/__tests__/ForgotPasswordVerifyPage.test.jsx`, `ForgotPasswordResetPage.test.jsx`, `ForgotPasswordRequestPage.test.jsx`, `ActivateAccountPage.test.jsx` | the OTP reset flow and first-login activation, including refresh-survival via `sessionStorage`. |
 | Unit | `src/pages/__tests__/LoginPage.test.jsx` | mobile decorative background map — a second, `aria-hidden`/`pointer-events: none` copy of `SriLankaRouteMap` renders behind the form on mobile viewports (issue #79); the desktop side panel's map stays the only one reachable by role, so `getByRole('img', ...)` queries against it are unaffected. |
+| e2e (Playwright) | `e2e/login.spec.ts` | the real login form, typed and submitted (not the `loginAsManager`/`loginAsSuperAdmin` shortcut), for both roles this portal serves, plus the invalid-credentials, unsupported-role, and session-expiry-redirect cases (issue #28). |
+| e2e (Playwright) | `e2e/password-reset.spec.ts` | the full 3-screen forgot-password journey as one continuous flow, plus an expired code and a mid-flow refresh (issue #28). |
 
 ## 8. Change protocol
 
