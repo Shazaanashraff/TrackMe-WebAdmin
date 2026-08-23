@@ -22,6 +22,102 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-23 — Audit remediation: tracking count, responsive tables, cache lifetime, bundle split
+
+- **Branch:** feature/audit-remediation
+- **Modules touched:** [`docs/modules/TRACKING.md`](modules/TRACKING.md)
+- **What changed:**
+  - Live tracking no longer contradicts itself. The header count is now `plotted.length`, the
+    same set the map draws, so "2 of 5 broadcasting" can never sit above an empty map. The idle
+    panel distinguishes "Waiting for coordinates…" (vehicles live, no GPS fix yet) from
+    "No vehicle is broadcasting". `selectedPoint` moved into a `useMemo` that keeps the original
+    invariant: a vehicle with no marker is never centred on.
+  - `DataTable`'s desktop container is `overflow-x-auto` instead of `overflow-hidden`, so a wide
+    table scrolls sideways rather than being clipped.
+  - Query cache `gcTime` raised to 24h with `networkMode: 'offlineFirst'`, killing the cold-start
+    spinner when moving between tabs. Documented in `src/lib/queryClient.js`: nothing is
+    persisted to disk, so this only governs in-memory retention.
+  - Vite splits `react`, `query` and `maps` vendor chunks.
+- **Why:** findings from the 2026-08-17 production-readiness and offline/caching audits, and the
+  2026-08-22 security assessment. Tracked in `AUDITDONE.md`.
+- **Contract impact:** none. No endpoint or socket payload changed.
+- **Tests:** none added; full suite re-run unchanged at 59 files / 631 passing.
+- **Docs updated:** this entry.
+- **Follow-ups / known issues:** `hasLiveUnplotted` recomputes per render rather than in a
+  `useMemo`; harmless at fleet sizes but inconsistent with its neighbours. Separately, the suite
+  is timing-flaky under CPU contention: four consecutive runs of identical source gave 0, 9, 5
+  and 0 failures, the failing ones while another repo's tests shared the machine. Worth pinning
+  down before it is trusted in CI.
+
+---
+
+## 2026-08-21 — A manager can see, and remove, who is enrolled with each driver
+
+- **Branch:** feature/manager-enrolled-riders
+- **Modules touched:** [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md),
+  [`docs/modules/BUSES.md`](modules/BUSES.md) (the Drivers directory)
+- **What changed:**
+  - `ManagerRequestsPage` is now tabbed **Pending / Enrolled / Declined**, with the tab and an
+    optional driver filter both held in the URL (`?status=`, `?driver=`). Enrolled rows carry a
+    destructive **Remove**; the date column becomes Enrolled/Declined from `decidedAt`.
+  - The Drivers directory gains a **Riders** column: the active count links straight to that
+    driver's roster, a pending count sits beside it, and zero renders as "None" with no link.
+  - Nav and breadcrumb relabelled "Requests" to "Enrollments"; the path is unchanged. The badge
+    still counts PENDING only.
+  - `useRemoveEnrollment` invalidates `qk.drivers` as well as the enrollment queries, so the
+    Riders count drops without a manual refresh.
+- **Why:** approving a request made the rider vanish from the portal, and a rider who redeems a
+  public driver's key is written straight to ACTIVE and was never visible at all, so a manager
+  could not see who rides with their drivers.
+- **Contract impact:** consumes the backend's new `driverId` query, `riders: { active, pending }`
+  on `GET /api/manager/drivers`, and `DELETE /api/manager/enrollment-requests/:id`. Backend docs
+  updated in its repo (`docs/modules/ADMIN.md`, CHANGES entry the same day).
+- **Tests:** `ManagerRequestsPage.test.jsx` extended to 16 cases (tabs, URL contract, filter,
+  removal, per-tab empty states); 5 cases added to `ManagerAccountsPage.test.jsx` for the Riders
+  column; `AppShell.test.jsx` nav-label expectations updated. Suite is 631 passing, 0 failing,
+  which also clears the one pre-existing failure (the "Managed profile · relation" tag the page
+  had stopped rendering, restored while rewriting that column).
+- **Docs updated:** ENROLLMENT_REQUESTS module doc (purpose, key files, hooks/api/query keys),
+  two new TESTING_GUIDE rows.
+- **Follow-ups / known issues:** the Organization details column still prints raw field keys
+  (`grade:`) even though the backend also returns labelled `organizationDetails`. Left alone as
+  out of scope.
+
+---
+
+## 2026-08-14 — Show location state in the drivers directory, and link it to the map
+- **Branch:** main
+- **Modules touched:** tracking — [`docs/modules/TRACKING.md`](modules/TRACKING.md) (new §5a, key
+  files and tests rows)
+- **What changed:**
+  - New **Location** column on `/manager/accounts`: live / stale / offline per driver, from the
+    fleet snapshot keyed back to the driver each record names. Live and stale rows are a button
+    into `/manager/tracking?vehicle=<vehicleId>`; offline rows and drivers with no vehicle state
+    that and link nowhere.
+  - Added `useManagerFleetLive()` — the fleet query with no socket, sharing
+    `qk.vehicles.managerLive()` with the tracking page so either page warms the other.
+  - `ManagerTrackingPage` now reads `?vehicle=`, keeps a deep-linked vehicle through the first
+    render (where the fleet snapshot has not arrived), and keeps the URL in step with the vehicle
+    actually being followed.
+  - **Fixed a crash on the tracking page** (found by following the new link in the browser):
+    `FleetMarkers` read `Marker` and `SymbolPath`, and `MapViewport` read `LatLngBounds`, off
+    `useMapsLibrary('maps')`. `Marker` is in the marker library and `SymbolPath`/`LatLngBounds` are
+    in core, so every plotted vehicle threw `Cannot read properties of undefined (reading
+    'CIRCLE')` and the app-level ErrorBoundary replaced the whole page. The unit test could not
+    catch it: its `useMapsLibrary` mock returned one object for every library name. The mock is
+    now split by library, and a marker's `icon.path` is asserted.
+- **Why:** a manager reading the drivers directory could see that an account was Active but not
+  whether that driver was broadcasting, and had to go to the tracking page and re-find the vehicle
+  by hand.
+- **Contract impact:** none — consumes the existing `GET /api/manager/vehicles/live`.
+- **Tests:** updated `src/pages/__tests__/ManagerAccountsPage.test.jsx` (five location-column
+  cases) and `src/pages/__tests__/ManagerTrackingPage.test.jsx` (router wrapper, deep link,
+  per-library maps mock, marker icon path). Verified in the browser against the running dev
+  server, not only in RTL.
+- **Docs updated:** `docs/modules/TRACKING.md`, two `docs/TESTING_GUIDE.md` rows.
+- **Follow-ups / known issues:** the column ages on the 30-second poll, so a driver going offline
+  can read live for up to that long. `ManagerRequestsPage.test.jsx` has one failure predating this
+  session ("Managed profile · Daughter").
 ## 2026-08-22 — Audit log "Load older activity" beyond the initial 60 (issue #12)
 - **Branch:** claude/tender-fermi-yvly35
 - **Modules touched:** [`docs/modules/OPERATIONS.md`](modules/OPERATIONS.md)

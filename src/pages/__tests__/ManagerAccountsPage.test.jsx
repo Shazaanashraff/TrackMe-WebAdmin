@@ -17,9 +17,23 @@ vi.mock('@/hooks/use-drivers', () => ({
   useRevertDriverEnrollmentKey: vi.fn(),
 }));
 
+// The directory reads the fleet snapshot for its Location column, but never
+// opens a socket: only the tracking page follows a vehicle.
+vi.mock('@/hooks/use-tracking', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useManagerFleetLive: vi.fn(),
+}));
+
+const navigate = vi.hoisted(() => vi.fn());
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useNavigate: () => navigate,
+}));
+
 vi.mock('sonner', () => ({ toast: vi.fn() }));
 
 import { toast } from 'sonner';
+import { useManagerFleetLive } from '@/hooks/use-tracking';
 
 import {
   useOrganizations,
@@ -69,9 +83,22 @@ function makeMutation(overrides = {}) {
   return { mutateAsync: vi.fn().mockResolvedValue({}), isPending: false, ...overrides };
 }
 
+// One record per fleet vehicle, exactly as GET /api/manager/vehicles/live
+// returns it: the driver is named on the record, which is how a row finds its
+// own position.
+const liveRecord = (overrides = {}) => ({
+  vehicleId: 'BUS-1',
+  live: true,
+  location: { lat: 6.9271, lng: 79.8612, receivedAt: new Date().toISOString() },
+  vehicle: { vehicleId: 'BUS-1', numberPlate: 'AB-1234' },
+  driver: { _id: 'driver-1', name: 'Kamal Perera' },
+  ...overrides,
+});
+
 function defaultHooks({
   drivers = DRIVERS,
   organizations = ORGANIZATIONS,
+  fleet = [],
   createMut,
   updateMut,
   viewPwMut,
@@ -83,6 +110,7 @@ function defaultHooks({
     data: { data: drivers }, isLoading: false, error: null, refetch: vi.fn(),
   });
   useOrganizations.mockReturnValue({ data: { data: organizations }, isLoading: false });
+  useManagerFleetLive.mockReturnValue({ data: { data: fleet }, isLoading: false, error: null });
   useCreateDriver.mockReturnValue(createMut || makeMutation());
   useUpdateDriver.mockReturnValue(updateMut || makeMutation());
   useDeleteDriver.mockReturnValue(makeMutation());
@@ -146,6 +174,59 @@ describe('ManagerAccountsPage: driver directory', () => {
     setup({ drivers: [{ ...DRIVERS[0], vehicle: null }] });
 
     expect(screen.getByText('Unassigned')).toBeInTheDocument();
+  });
+});
+
+describe('ManagerAccountsPage: location column', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  const trackButton = (name = 'Kamal Perera') =>
+    screen.queryByRole('button', { name: `Track ${name} on the live map` });
+
+  it('marks a broadcasting driver live and opens their vehicle on the map', async () => {
+    const { user } = setup({ drivers: [DRIVERS[0]], fleet: [liveRecord()] });
+
+    expect(screen.getByText('Live')).toBeInTheDocument();
+    await user.click(trackButton());
+
+    // The map is addressed by vehicle, since that is what the tracking page
+    // and the socket subscribe to.
+    expect(navigate).toHaveBeenCalledWith('/manager/tracking?vehicle=BUS-1');
+  });
+
+  // live:true with an old fix is the backend's sweeper lagging, not a
+  // position worth trusting silently — but it is still worth opening.
+  it('marks a driver stale when the last fix is older than the stale window', async () => {
+    const stale = new Date(Date.now() - 5 * 60_000).toISOString();
+    const { user } = setup({
+      drivers: [DRIVERS[0]],
+      fleet: [liveRecord({ location: { lat: 6.9, lng: 79.8, receivedAt: stale } })],
+    });
+
+    expect(screen.getByText('Stale')).toBeInTheDocument();
+    await user.click(trackButton());
+    expect(navigate).toHaveBeenCalledWith('/manager/tracking?vehicle=BUS-1');
+  });
+
+  it('offers no map link for a driver who is not broadcasting', () => {
+    setup({ drivers: [DRIVERS[0]], fleet: [liveRecord({ live: false, location: null })] });
+
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(trackButton()).not.toBeInTheDocument();
+  });
+
+  it('treats a driver missing from the fleet snapshot as offline', () => {
+    setup({ drivers: [DRIVERS[0]], fleet: [] });
+
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+    expect(trackButton()).not.toBeInTheDocument();
+  });
+
+  it('says there is nothing to track when the driver has no vehicle', () => {
+    setup({ drivers: [DRIVERS[1]], fleet: [] });
+
+    expect(screen.getByText('No vehicle')).toBeInTheDocument();
+    expect(trackButton('Sunil Silva')).not.toBeInTheDocument();
   });
 });
 
@@ -731,5 +812,49 @@ describe('ManagerAccountsPage: viewing a driver password', () => {
     await user.click(screen.getByRole('button', { name: /done/i }));
 
     expect(screen.queryByTestId('driver-password-value')).not.toBeInTheDocument();
+  });
+});
+
+// How many people ride with each driver, and the way through to who they are.
+// A rider of a non-private driver enrols with no approval step, so this column
+// is the only place in the portal that ever counts them.
+describe('ManagerAccountsPage: riders column', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  const withRiders = (riders) => ({ ...DRIVERS[0], riders });
+
+  const ridersButton = (name = 'Kamal Perera', count = 3) =>
+    screen.queryByRole('button', {
+      name: `See the ${count} rider${count === 1 ? '' : 's'} enrolled with ${name}`,
+    });
+
+  it('counts the enrolled riders and opens that driver\'s roster', async () => {
+    const { user } = setup({ drivers: [withRiders({ active: 3, pending: 0 })] });
+
+    await user.click(ridersButton());
+
+    expect(navigate).toHaveBeenCalledWith('/manager/requests?status=ACTIVE&driver=driver-1');
+  });
+
+  it('shows waiting requests alongside the enrolled count', () => {
+    setup({ drivers: [withRiders({ active: 3, pending: 2 })] });
+    expect(screen.getByText('2 pending')).toBeInTheDocument();
+  });
+
+  it('says None, and offers no link, when nobody has enrolled', () => {
+    setup({ drivers: [withRiders({ active: 0, pending: 0 })] });
+
+    expect(ridersButton('Kamal Perera', 0)).not.toBeInTheDocument();
+    expect(screen.getAllByText('None').length).toBeGreaterThan(0);
+  });
+
+  it('treats a driver with no riders field as having none', () => {
+    setup({ drivers: [DRIVERS[0]] });
+    expect(screen.getAllByText('None').length).toBeGreaterThan(0);
+  });
+
+  it('names one rider in the singular', () => {
+    setup({ drivers: [withRiders({ active: 1, pending: 0 })] });
+    expect(ridersButton('Kamal Perera', 1)).toBeInTheDocument();
   });
 });

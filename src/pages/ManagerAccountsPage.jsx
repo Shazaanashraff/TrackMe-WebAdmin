@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Plus, MoreHorizontal, Users, UserCheck, UserX, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, MoreHorizontal, Users, UserCheck, UserX, Lock, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
 import { DataTable } from '@/components/shared/data-table';
+import { LiveIndicator } from '@/components/shared/live-indicator';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { PasswordInput } from '@/components/shared/password-input';
@@ -39,6 +41,7 @@ import {
   useRotateDriverEnrollmentKey,
   useRevertDriverEnrollmentKey,
 } from '@/hooks/use-drivers';
+import { trackingState, useManagerFleetLive } from '@/hooks/use-tracking';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -147,7 +150,11 @@ function driverStatus(driver) {
 }
 
 export function ManagerAccountsPage() {
+  const navigate = useNavigate();
   const driversQ = useManagerDrivers();
+  // Position is per vehicle, but a manager reads this page by driver, so the
+  // snapshot is keyed back to the driver the backend reports on each record.
+  const fleetQ = useManagerFleetLive();
   // Declared before the mutations because the organization query keys off the
   // category the form is currently on.
   const [form, setForm] = useState(EMPTY_FORM);
@@ -193,6 +200,14 @@ export function ManagerAccountsPage() {
 
   const drivers = driversQ.data?.data || [];
   const organizations = organizationsQ.data?.data || [];
+
+  const liveByDriverId = useMemo(() => {
+    const byDriver = new Map();
+    (fleetQ.data?.data || []).forEach((record) => {
+      if (record.driver?._id) byDriver.set(String(record.driver._id), record);
+    });
+    return byDriver;
+  }, [fleetQ.data]);
 
   const setField = (field) => (event) =>
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -490,6 +505,90 @@ export function ManagerAccountsPage() {
       },
     },
     {
+      // How many people ride with this driver, and the way in to see who. A
+      // rider who redeems a non-private driver's key enrols without any
+      // approval step, so this column is the only place they are ever counted.
+      id: 'riders',
+      header: 'Riders',
+      accessorKey: '_id',
+      enableSorting: false,
+      cell: (info) => {
+        const driver = info.row.original;
+        const active = driver.riders?.active || 0;
+        const pending = driver.riders?.pending || 0;
+
+        // Nobody enrolled is not a destination: the roster would open empty, so
+        // the cell says so rather than offering a click that shows nothing.
+        if (!active && !pending) return <span className="text-muted-foreground">None</span>;
+
+        return (
+          <div className="flex items-center gap-2">
+            {active > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1.5 px-2 tabular-nums"
+                aria-label={`See the ${active} rider${active === 1 ? '' : 's'} enrolled with ${driver.name}`}
+                title={`See who rides with ${driver.name}`}
+                onClick={() => navigate(
+                  `/manager/requests?status=ACTIVE&driver=${encodeURIComponent(driver._id)}`,
+                )}
+              >
+                <Users className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                {active}
+              </Button>
+            )}
+            {pending > 0 && (
+              <Badge variant="outline" className="tabular-nums">{pending} pending</Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      // Whether this driver is broadcasting right now, and a way straight to
+      // the map when they are. Kept apart from the Status column, which is
+      // about the account rather than the journey.
+      id: 'location',
+      header: 'Location',
+      accessorKey: '_id',
+      enableSorting: false,
+      cell: (info) => {
+        const driver = info.row.original;
+        if (!driver.vehicle) {
+          return <span className="text-muted-foreground">No vehicle</span>;
+        }
+
+        const record = liveByDriverId.get(String(driver._id));
+        const state = record ? trackingState(record) : 'offline';
+        // Offline is not a destination: there is no position to open, so the
+        // cell states it rather than offering a click that shows nothing.
+        if (state === 'offline') {
+          return (
+            <span title={fleetQ.isLoading ? 'Loading current positions…' : 'Not sharing a location right now'}>
+              <LiveIndicator state="offline" />
+            </span>
+          );
+        }
+
+        return (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="gap-2 px-2"
+            aria-label={`Track ${driver.name} on the live map`}
+            title={`Track ${driver.name} on the live map`}
+            onClick={() => navigate(
+              `/manager/tracking?vehicle=${encodeURIComponent(record.vehicleId)}`,
+            )}
+          >
+            <LiveIndicator state={state} />
+            <MapPin className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+          </Button>
+        );
+      },
+    },
+    {
       id: 'enrollmentKey',
       header: 'Enrollment key',
       accessorKey: '_id',
@@ -605,7 +704,7 @@ export function ManagerAccountsPage() {
         );
       },
     },
-  ], [revealedKeys, revertable, revealingIds]);
+  ], [revealedKeys, revertable, revealingIds, liveByDriverId, fleetQ.isLoading, navigate]);
 
   return (
     <div className="space-y-6">

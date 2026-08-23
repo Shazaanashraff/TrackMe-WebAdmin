@@ -415,8 +415,11 @@ export const adminApi = {
     }),
 
   // Passengers who redeemed a private driver's key wait here for a decision.
-  getEnrollmentRequests: (status = 'PENDING') =>
-    request(`/api/manager/enrollment-requests?status=${encodeURIComponent(status)}`),
+  // `status=ACTIVE` turns the same endpoint into the enrolled roster, and
+  // `driverId` narrows it to one driver (404 if the caller does not own them).
+  getEnrollmentRequests: (status = 'PENDING', driverId = '') =>
+    request(`/api/manager/enrollment-requests?status=${encodeURIComponent(status)}`
+      + (driverId ? `&driverId=${encodeURIComponent(driverId)}` : '')),
 
   getEnrollmentRequestCount: () => request('/api/manager/enrollment-requests/count'),
 
@@ -428,6 +431,13 @@ export const adminApi = {
   rejectEnrollmentRequest: (id) =>
     request(`/api/manager/enrollment-requests/${id}/reject`, {
       method: 'POST'
+    }),
+
+  // Takes an already-enrolled rider back off their driver. ACTIVE only: a still
+  // queued request is declined instead, and the server 409s if asked otherwise.
+  removeEnrollment: (id) =>
+    request(`/api/manager/enrollment-requests/${id}`, {
+      method: 'DELETE'
     }),
 
   getManagerEnrollmentSchema: () => request('/api/manager/organization/enrollment-schema'),

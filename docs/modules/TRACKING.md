@@ -26,6 +26,7 @@ as a resilience fallback. The selected vehicle additionally receives low-latency
 |---|---|
 | `src/pages/ManagerTrackingPage.jsx` | Atlas map page, fleet selector/list, markers, telemetry, and loading/empty/error/offline states. |
 | `src/hooks/use-tracking.js` | Fleet query, socket lifecycle, current-position merge, stale-state classification. |
+| `src/pages/ManagerAccountsPage.jsx` | The drivers directory's Location column: the same live/stale/offline state per driver, and the link into this page. |
 | `src/lib/tracking-socket.js` | The Socket.IO adapter and vehicle-scoped event names. |
 | `src/api.js` | `adminApi.getManagerFleetLive()`. |
 | `src/lib/queryKeys.js` | `qk.vehicles.managerLive()`. |
@@ -81,10 +82,32 @@ The full event and authorization contract is in
   so explicitly.
 - **Stale:** `live:true` with `receivedAt` older than 90 seconds renders a stale warning and amber
   state until the backend sweeper marks it offline or a fresh fix arrives.
-- **Offline:** last known marker may remain visible, but it is labelled offline; `Vehicle.isActive`
-  is never used as a liveness signal.
+- **Offline:** the vehicle is **not plotted**, and a fleet with no live or stale vehicle shows the
+  idle panel instead of a map. Its last known position is still readable in the side panel
+  (coordinates plus a relative "last position" time), which is where an offline vehicle belongs:
+  drawing it would mount a `Map` and bill a Google map load on every page open with nobody driving.
+  `Vehicle.isActive` is never used as a liveness signal.
 
 GPS `speed` is the native location value in metres/second and is converted to km/h for display.
+
+Mounting `<Map>` is what costs money, not the positions — those come from the TrackMe API. The map
+is therefore mounted only when `plotted` is non-empty, i.e. at least one vehicle is live or stale.
+Polling and socket updates re-render the mounted map without adding loads.
+
+## 5a. Entry points
+
+The page opens on the first vehicle with a position, unless `?vehicle=<vehicleId>` names one — which
+is how the drivers directory hands over. A deep-linked vehicle survives the first render, where the
+fleet snapshot has not arrived yet, and the URL is then kept in step (`replace`) with whatever
+vehicle is actually being followed.
+
+The drivers directory (`/manager/accounts`) carries a **Location** column driven by
+`useManagerFleetLive()` — the same fleet query and the same `trackingState()` classification, with
+no socket: one badge per row does not need lower-latency updates, and a socket per row would exceed
+the backend's subscription limits. Live and stale rows link here by `vehicleId`; offline rows and
+drivers with no vehicle say so and link nowhere, because there is no position to open. That column
+is about the journey, and is deliberately separate from the neighbouring **Status** column, which
+is about the account.
 
 ## 6. Security and scoping
 
@@ -101,6 +124,11 @@ GPS `speed` is the native location value in metres/second and is converted to km
   breadcrumb/polyline or 15/30/60-minute selector.
 - Socket fan-out assumes one backend instance. Scaling the backend horizontally requires the
   Socket.IO Redis adapter first; REST polling stays cross-process correct.
+- **Maps symbols come from three different libraries.** `useMapsLibrary('maps')` gives `Map`;
+  `Marker` is in `'marker'`; `SymbolPath` and `LatLngBounds` are in `'core'`. Asking for the wrong
+  library still resolves to a real object, so the mistake only surfaces where the missing name is
+  used — for markers, the first vehicle with a position, which crashes the page. Test mocks for
+  `useMapsLibrary` must therefore be keyed by library name.
 - Google Maps needs network access and a browser-restricted Maps JavaScript API key, independent
   of the TrackMe API. If the key is missing, telemetry and fleet selection remain available while
   the map shows explicit configuration guidance.
@@ -112,7 +140,8 @@ GPS `speed` is the native location value in metres/second and is converted to km
 | API | `src/__tests__/api.test.js` | manager fleet live endpoint path. |
 | Unit | `src/lib/__tests__/tracking-socket.test.js` | active API-mode URL, auth, event names and payloads. |
 | Unit | `src/hooks/__tests__/use-tracking.test.jsx` | REST/socket freshness merge and live/stale/offline classification. |
-| RTL | `src/pages/__tests__/ManagerTrackingPage.test.jsx` | Google map/markers, missing-key guidance, telemetry, selection, first-fix state, socket fallback, and loading/error/empty states. |
+| RTL | `src/pages/__tests__/ManagerTrackingPage.test.jsx` | Google map/markers, missing-key guidance, telemetry, selection, first-fix state, socket fallback, loading/error/empty states, the `?vehicle=` deep link, and that no map is mounted unless a vehicle is live or stale. |
+| RTL | `src/pages/__tests__/ManagerAccountsPage.test.jsx` | the drivers directory Location column: live, stale, offline, missing from the snapshot, no vehicle, and the link it builds. |
 | RTL | `src/__tests__/App.test.jsx`, `src/layout/__tests__/AppShell.test.jsx` | manager route and navigation entry. |
 
 ## 9. Change protocol

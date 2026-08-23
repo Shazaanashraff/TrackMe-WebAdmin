@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { APIProvider, Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
 import { AlertTriangle, Bus as VehicleIcon, MapPin, WifiOff } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
@@ -28,27 +29,30 @@ function toPoint(location) {
 
 function MapViewport({ selectedPoint, fleetPoints }) {
   const map = useMap();
-  const maps = useMapsLibrary('maps');
+  // LatLngBounds is in the core library, not maps: asking for the wrong one
+  // hands back an object missing the constructor, which only fails at the
+  // point of use — see FleetMarkers below.
+  const core = useMapsLibrary('core');
   const selectedLat = selectedPoint?.lat;
   const selectedLng = selectedPoint?.lng;
   const boundsKey = fleetPoints.map((point) => `${point.lat},${point.lng}`).join('|');
 
   useEffect(() => {
-    if (!map || !maps) return;
+    if (!map || !core) return;
     if (Number.isFinite(selectedLat) && Number.isFinite(selectedLng)) {
       map.panTo({ lat: selectedLat, lng: selectedLng });
       map.setZoom(15);
       return;
     }
     if (fleetPoints.length > 1) {
-      const bounds = new maps.LatLngBounds();
+      const bounds = new core.LatLngBounds();
       fleetPoints.forEach((point) => bounds.extend(point));
       map.fitBounds(bounds, 40);
     } else if (fleetPoints.length === 1) {
       map.setCenter(fleetPoints[0]);
       map.setZoom(13);
     }
-  }, [boundsKey, fleetPoints, map, maps, selectedLat, selectedLng]);
+  }, [boundsKey, core, fleetPoints, map, selectedLat, selectedLng]);
 
   return null;
 }
@@ -68,25 +72,31 @@ function markerColors(state) {
 
 function FleetMarkers({ plotted, selectedVehicleId, onSelect }) {
   const map = useMap();
-  const maps = useMapsLibrary('maps');
+  // Marker comes from the marker library and SymbolPath from core. Both used
+  // to be read off the maps library, which loads fine and simply has neither,
+  // so every plotted vehicle threw on `SymbolPath.CIRCLE` and took the page
+  // down with it. The names are only resolved at use, so the wrong library is
+  // invisible until a marker is actually drawn.
+  const core = useMapsLibrary('core');
+  const markerLib = useMapsLibrary('marker');
   const plottedKey = plotted.map(({ record, point }) => (
     `${record.vehicleId}:${point.lat}:${point.lng}:${trackingState(record)}`
   )).join('|');
 
   useEffect(() => {
-    if (!map || !maps) return undefined;
+    if (!map || !core || !markerLib) return undefined;
 
     const markers = plotted.map(({ record, point }) => {
       const selected = record.vehicleId === selectedVehicleId;
       const state = trackingState(record);
       const colors = markerColors(state);
-      const marker = new maps.Marker({
+      const marker = new markerLib.Marker({
         map,
         position: point,
         title: record.vehicle?.vehicleName || record.vehicleId,
         zIndex: selected ? 2 : 1,
         icon: {
-          path: maps.SymbolPath.CIRCLE,
+          path: core.SymbolPath.CIRCLE,
           scale: selected ? 11 : 8,
           fillColor: colors.fillColor,
           fillOpacity: selected ? 0.95 : 0.72,
@@ -105,7 +115,7 @@ function FleetMarkers({ plotted, selectedVehicleId, onSelect }) {
         marker.setMap(null);
       });
     };
-  }, [map, maps, onSelect, plotted, plottedKey, selectedVehicleId]);
+  }, [core, map, markerLib, onSelect, plotted, plottedKey, selectedVehicleId]);
 
   return null;
 }
@@ -245,34 +255,60 @@ function SelectedVehicleDetails({ record }) {
 }
 
 export function ManagerTrackingPage() {
-  const [selectedVehicleId, setSelectedVehicleId] = useState('');
+  // ?vehicle= is how the drivers directory hands a specific vehicle over.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedVehicleId, setSelectedVehicleId] = useState(
+    () => searchParams.get('vehicle') || '',
+  );
   const tracking = useManagerFleetTracking(selectedVehicleId);
   const fleet = useMemo(() => tracking.fleet || [], [tracking.fleet]);
 
   useEffect(() => {
     if (!fleet.length) {
-      setSelectedVehicleId('');
+      // An empty fleet while the first snapshot is still in flight is not a
+      // reason to drop a vehicle that was deep-linked in.
+      if (!tracking.isLoading) setSelectedVehicleId('');
       return;
     }
     if (fleet.some((record) => record.vehicleId === selectedVehicleId)) return;
     const firstWithPosition = fleet.find((record) => toPoint(record.location));
     setSelectedVehicleId((firstWithPosition || fleet[0]).vehicleId);
-  }, [fleet, selectedVehicleId]);
+  }, [fleet, selectedVehicleId, tracking.isLoading]);
+
+  // Keep the URL on whichever vehicle is actually being followed, so a reload
+  // or a copied link reopens the same one rather than the deep-linked one.
+  useEffect(() => {
+    if (!selectedVehicleId || searchParams.get('vehicle') === selectedVehicleId) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('vehicle', selectedVehicleId);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, selectedVehicleId, setSearchParams]);
 
   const selected = fleet.find((record) => record.vehicleId === selectedVehicleId) || null;
+  // Only vehicles that are actually broadcasting get plotted. A day-old
+  // last-known position is not worth a billable Google "Dynamic Maps" load, so
+  // an all-offline fleet falls through to the idle panel instead of a map.
   const plotted = useMemo(
-    () => fleet.map((record) => ({ record, point: toPoint(record.location) })).filter(({ point }) => point),
+    () => fleet
+      .filter((record) => trackingState(record) !== 'offline')
+      .map((record) => ({ record, point: toPoint(record.location) }))
+      .filter(({ point }) => point),
     [fleet],
   );
   const fleetPoints = useMemo(() => plotted.map(({ point }) => point), [plotted]);
-  const selectedPoint = toPoint(selected?.location);
-  const liveCount = fleet.filter((record) => trackingState(record) === 'live').length;
+  const selectedPoint = useMemo(() => {
+    if (!selected || trackingState(selected) === 'offline') return null;
+    return toPoint(selected.location);
+  }, [selected]);
+  // Never centre on a vehicle that has no marker on the map.
+  const liveCount = plotted.length;
   const pageDescription = tracking.isLoading
     ? 'Loading current fleet positions…'
     : tracking.error
       ? 'Monitor current positions across your fleet.'
       : `${liveCount} of ${fleet.length} fleet vehicles broadcasting now.`;
   const googleMapsApiKey = getGoogleMapsApiKey();
+  const hasLiveUnplotted = fleet.some((record) => trackingState(record) === 'live' && !toPoint(record.location));
 
   return (
     <div className="space-y-6">
@@ -334,10 +370,13 @@ export function ManagerTrackingPage() {
                   className="flex h-full min-h-[420px] flex-col items-center justify-center gap-2 bg-surface-muted px-6 text-center"
                 >
                   <VehicleIcon aria-hidden className="size-8 text-muted-foreground" />
-                  <p className="font-semibold text-foreground">No vehicle is broadcasting</p>
+                  <p className="font-semibold text-foreground">
+                    {hasLiveUnplotted ? 'Waiting for coordinates…' : 'No vehicle is broadcasting'}
+                  </p>
                   <p className="max-w-sm text-sm text-muted-foreground">
-                    The map opens as soon as a driver starts a journey. Positions appear here in
-                    real time.
+                    {hasLiveUnplotted
+                      ? 'Vehicles are starting shifts. Positions will appear on the map as soon as GPS fixes arrive.'
+                      : 'The map opens as soon as a driver starts a journey. Positions appear here in real time.'}
                   </p>
                 </div>
               ) : googleMapsApiKey ? (

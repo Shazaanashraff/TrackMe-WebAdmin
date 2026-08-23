@@ -68,23 +68,23 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Vehicles' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Live tracking' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Drivers' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Requests' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Enrollments' })).toBeInTheDocument();
   });
 
-  it('counts pending enrollment requests on the Requests link', () => {
+  it('counts pending enrollment requests on the Enrollments link', () => {
     useEnrollmentRequestCount.mockReturnValue({ data: 3 });
     renderShell({ role: 'admin', path: '/manager/dashboard' });
 
     // The count is folded into the accessible name so it is not colour-only.
-    const link = screen.getByRole('link', { name: 'Requests (3 pending)' });
+    const link = screen.getByRole('link', { name: 'Enrollments (3 pending)' });
     expect(link).toHaveTextContent('3');
   });
 
-  it('leaves the Requests link unadorned when nothing is pending', () => {
+  it('leaves the Enrollments link unadorned when nothing is pending', () => {
     useEnrollmentRequestCount.mockReturnValue({ data: 0 });
     renderShell({ role: 'admin', path: '/manager/dashboard' });
 
-    expect(screen.getByRole('link', { name: 'Requests' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Enrollments' })).toBeInTheDocument();
   });
 
   it('does not ask for a manager count when a super-admin is signed in', () => {

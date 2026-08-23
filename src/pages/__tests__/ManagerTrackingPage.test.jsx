@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { ManagerTrackingPage } from '@/pages/ManagerTrackingPage';
 import { useManagerFleetTracking } from '@/hooks/use-tracking';
 import { getGoogleMapsApiKey } from '@/lib/googleMaps';
@@ -29,16 +30,26 @@ const googleMapsMock = vi.hoisted(() => {
   return { markerInstances, map, Marker, LatLngBounds };
 });
 
-vi.mock('@vis.gl/react-google-maps', () => ({
-  APIProvider: ({ children }) => <div data-testid="google-api-provider">{children}</div>,
-  Map: ({ children }) => <div data-testid="fleet-map">{children}</div>,
-  useMap: () => googleMapsMock.map,
-  useMapsLibrary: () => ({
-    Marker: googleMapsMock.Marker,
-    LatLngBounds: googleMapsMock.LatLngBounds,
-    SymbolPath: { CIRCLE: 'circle' },
-  }),
-}));
+// Split by library exactly as the Maps JS API splits it. A single object for
+// every library name would let the page ask for the wrong one and still pass
+// here, which is how `SymbolPath` off the maps library reached the browser and
+// crashed the page on its first plotted vehicle.
+vi.mock('@vis.gl/react-google-maps', () => {
+  const libraries = {
+    core: {
+      LatLngBounds: googleMapsMock.LatLngBounds,
+      SymbolPath: { CIRCLE: 'circle' },
+    },
+    marker: { Marker: googleMapsMock.Marker },
+    maps: { Map: class {} },
+  };
+  return {
+    APIProvider: ({ children }) => <div data-testid="google-api-provider">{children}</div>,
+    Map: ({ children }) => <div data-testid="fleet-map">{children}</div>,
+    useMap: () => googleMapsMock.map,
+    useMapsLibrary: (name) => libraries[name] ?? {},
+  };
+});
 
 vi.mock('@/lib/googleMaps', () => ({ getGoogleMapsApiKey: vi.fn() }));
 
@@ -77,12 +88,16 @@ function mockTracking(overrides = {}) {
   });
 }
 
-function renderPage() {
-  return render(
+function page() {
+  return (
     <TooltipProvider>
       <ManagerTrackingPage />
-    </TooltipProvider>,
+    </TooltipProvider>
   );
+}
+
+function renderPage(path = '/manager/tracking') {
+  return render(<MemoryRouter initialEntries={[path]}>{page()}</MemoryRouter>);
 }
 
 describe('ManagerTrackingPage', () => {
@@ -101,6 +116,9 @@ describe('ManagerTrackingPage', () => {
     expect(screen.getByTestId('fleet-map')).toBeInTheDocument();
     await waitFor(() => expect(googleMapsMock.markerInstances.length).toBeGreaterThan(0));
     expect(googleMapsMock.markerInstances.at(-1).options.position).toEqual({ lat: 7.2906, lng: 80.6337 });
+    // Drawn from the marker and core libraries. Reading either name off the
+    // maps library instead leaves it undefined and throws on the first plot.
+    expect(googleMapsMock.markerInstances.at(-1).options.icon.path).toBe('circle');
     await waitFor(() => expect(screen.getByText('36 km/h')).toBeInTheDocument());
     expect(screen.getByText('90° E')).toBeInTheDocument();
     expect(screen.getAllByText('Kamal Perera')).toHaveLength(2);
@@ -144,6 +162,35 @@ describe('ManagerTrackingPage', () => {
     expect(screen.queryByTestId('google-api-provider')).not.toBeInTheDocument();
   });
 
+  // An offline vehicle keeps its last known position forever, and plotting it
+  // would bill a map load every time the page opens with nobody driving.
+  it('does not mount a map for an offline vehicle holding a stale position', () => {
+    mockTracking({
+      fleet: [{
+        ...FLEET[1],
+        location: { lat: 6.93104, lng: 79.90562, receivedAt: new Date(Date.now() - 86_400_000).toISOString() },
+      }],
+    });
+    renderPage();
+
+    expect(screen.getByTestId('fleet-map-idle')).toBeInTheDocument();
+    expect(screen.queryByTestId('fleet-map')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('google-api-provider')).not.toBeInTheDocument();
+  });
+
+  // A live driver who has gone quiet is still on a journey: the map stays up.
+  it('keeps the map mounted for a stale but still-live vehicle', async () => {
+    mockTracking({
+      fleet: [{
+        ...FLEET[0],
+        location: { ...FLEET[0].location, receivedAt: new Date(Date.now() - 120_000).toISOString() },
+      }],
+    });
+    renderPage();
+
+    expect(await screen.findByTestId('fleet-map')).toBeInTheDocument();
+  });
+
   it('mounts the map as soon as one vehicle has a position', async () => {
     renderPage();
 
@@ -174,11 +221,29 @@ describe('ManagerTrackingPage', () => {
     const fleetError = new Error('Fleet failed');
     fleetError.status = 400;
     mockTracking({ fleet: [], isLoading: false, error: fleetError });
-    rerender(<TooltipProvider><ManagerTrackingPage /></TooltipProvider>);
+    rerender(<MemoryRouter>{page()}</MemoryRouter>);
     expect(screen.getByText('Fleet failed')).toBeInTheDocument();
 
     mockTracking({ fleet: [], isLoading: false, error: null });
-    rerender(<TooltipProvider><ManagerTrackingPage /></TooltipProvider>);
+    rerender(<MemoryRouter>{page()}</MemoryRouter>);
     expect(screen.getByText('No vehicles in your fleet')).toBeInTheDocument();
+  });
+
+  // The drivers directory links here with a vehicle already chosen, and that
+  // choice has to survive the first render, where the fleet is still empty.
+  it('follows the vehicle named in the URL instead of the first one plotted', async () => {
+    mockTracking({ fleet: [], isLoading: true });
+    const { rerender } = renderPage('/manager/tracking?vehicle=VH-002');
+    expect(useManagerFleetTracking).toHaveBeenLastCalledWith('VH-002');
+
+    mockTracking();
+    rerender(<MemoryRouter initialEntries={['/manager/tracking?vehicle=VH-002']}>{page()}</MemoryRouter>);
+
+    await waitFor(() => {
+      expect(useManagerFleetTracking).toHaveBeenLastCalledWith('VH-002');
+    });
+    // The details panel is on VH-002, which has no driver, rather than on
+    // VH-001, the only vehicle with a position to plot.
+    expect(screen.getByText('Unassigned')).toBeInTheDocument();
   });
 });

@@ -43,7 +43,10 @@ export const qk = {
   },
   enrollmentRequests: {
     all: () => ['enrollment-requests'],
-    list: (status = 'PENDING') => ['enrollment-requests', 'list', status],
+    // Keyed by driver as well as status, so one driver's roster and the full
+    // list are cached separately instead of overwriting each other.
+    list: (status = 'PENDING', driverId = '') =>
+      ['enrollment-requests', 'list', status, driverId || 'all'],
     count: () => ['enrollment-requests', 'count'],
   },
   enrollmentSchema: {

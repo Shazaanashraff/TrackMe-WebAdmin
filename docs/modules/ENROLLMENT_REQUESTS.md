@@ -13,22 +13,31 @@ disabled for them.
 
 Redeeming a public driver's enrollment key enrols a passenger immediately. Redeeming a **private**
 driver's key raises a request instead (`status: 'PENDING'`) — this page is where the manager
-approves or declines it. A pending count badges the "Requests" nav link app-wide (`AppShell`), not
+approves or declines it. A pending count badges the "Enrollments" nav link app-wide (`AppShell`), not
 just on this page, so a manager notices without opening it.
 
 Since [multi-rider profiles](../../../backend/docs/modules/PROFILES.md) shipped, a request's
 passenger can be a **managed profile** (a child, an employee) with no email/phone of its own — see
 §4/§6 for how this page surfaces the owning account instead.
 
+The page is also the **enrolled roster**, not only the queue. Approving a request used to make the
+rider disappear from the portal entirely, and a rider who redeemed a *public* driver's key was never
+visible in the first place, because they are written straight to `ACTIVE` and never queued. The
+manager therefore had no way to answer "who rides with this driver". The **Enrolled** tab is that
+answer, `?driver=` narrows it to one driver, and **Remove** is the manager-side counterpart to a
+rider leaving. The Drivers page reaches it through a Riders count per driver
+(`ManagerAccountsPage`), which comes from `riders: { active, pending }` on
+`GET /api/manager/drivers`.
+
 ## 2. Key files (one job each)
 
 | File | Responsibility |
 |---|---|
-| `src/pages/ManagerRequestsPage.jsx` | The page. `DataTable` of pending requests; Passenger/Account/Driver/Driver ID/Requested columns; Approve/Decline buttons open a shared `ConfirmDialog`. `passengerLabel()` disambiguates a managed profile in the dialog title. |
-| `src/hooks/use-enrollment-requests.js` | `useEnrollmentRequests(status)`, `useEnrollmentRequestCount()` (nav badge, disabled for super-admins), `useApproveEnrollmentRequest`/`useRejectEnrollmentRequest` — a decision invalidates both the list and the count together. |
-| `src/api.js` | `getEnrollmentRequests`, `getEnrollmentRequestCount`, `approveEnrollmentRequest`, `rejectEnrollmentRequest` — all through the one `adminApi` HTTP layer. |
-| `src/lib/queryKeys.js` | `qk.enrollmentRequests.{list(status), count(), all()}`. |
-| `src/layout/AppShell.jsx` | Reads `useEnrollmentRequestCount()` to badge the "Requests" nav link on every manager screen. |
+| `src/pages/ManagerRequestsPage.jsx` | The page, tabbed **Pending / Enrolled / Declined**. `DataTable` of the rows for the selected status; Passenger/Account/Organization/Driver/Driver ID columns, then Requested (Pending) or Enrolled/Declined from `decidedAt` (the rest). Pending rows offer Approve/Decline, Enrolled rows offer Remove; all three open the same shared `ConfirmDialog`. `passengerLabel()` disambiguates a managed profile in the dialog title. Tab and driver filter both live in the URL (`?status=`, `?driver=`). |
+| `src/hooks/use-enrollment-requests.js` | `useEnrollmentRequests(status, driverId)`, `useEnrollmentRequestCount()` (nav badge, disabled for super-admins), `useApproveEnrollmentRequest`/`useRejectEnrollmentRequest`/`useRemoveEnrollment` — a decision invalidates both the list and the count together, and a removal also invalidates `qk.drivers` so the Riders count on the Drivers page follows it down. |
+| `src/api.js` | `getEnrollmentRequests(status, driverId)`, `getEnrollmentRequestCount`, `approveEnrollmentRequest`, `rejectEnrollmentRequest`, `removeEnrollment` — all through the one `adminApi` HTTP layer. |
+| `src/lib/queryKeys.js` | `qk.enrollmentRequests.{list(status, driverId), count(), all()}` — keyed by driver too, so one driver's roster and the full list cache separately. |
+| `src/layout/AppShell.jsx` | Reads `useEnrollmentRequestCount()` to badge the "Enrollments" nav link on every manager screen. The badge still counts PENDING only. |
 
 ## 3. Data flow
 
