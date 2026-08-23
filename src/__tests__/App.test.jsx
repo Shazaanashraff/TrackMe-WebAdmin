@@ -159,6 +159,42 @@ describe('App — LoginShell', () => {
     expect(screen.queryByText('Invalid email or password')).not.toBeInTheDocument();
   });
 
+  // Same pass-through as issue #70 above, extended to the other two cases
+  // issue #26 called out: a 429 lockout needs a "please wait" message, not a
+  // password-retry prompt, and a 5xx must never be mistaken for a credentials
+  // problem.
+  it('shows a "please wait" message for a rate-limit lockout, not a credentials error', async () => {
+    const rateLimitError = new Error('Too many attempts. Please wait a minute and try again.');
+    rateLimitError.status = 429;
+    adminApi.login.mockRejectedValueOnce(rateLimitError);
+    const user = userEvent.setup();
+    renderApp('/login');
+
+    await user.type(await screen.findByLabelText(/^Manager Email/i), 'admin@trackme.com');
+    await user.type(screen.getByLabelText(/^Password/), 'secret123');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(
+      await screen.findByText('Too many attempts. Please wait a minute and try again.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Invalid email or password')).not.toBeInTheDocument();
+  });
+
+  it('shows the server-error message for a 5xx login failure, distinct from the credentials/lockout cases', async () => {
+    const serverError = new Error('Request failed');
+    serverError.status = 500;
+    adminApi.login.mockRejectedValueOnce(serverError);
+    const user = userEvent.setup();
+    renderApp('/login');
+
+    await user.type(await screen.findByLabelText(/^Manager Email/i), 'admin@trackme.com');
+    await user.type(screen.getByLabelText(/^Password/), 'secret123');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByText('Request failed')).toBeInTheDocument();
+    expect(screen.queryByText('Invalid email or password')).not.toBeInTheDocument();
+  });
+
   it('redirects an already-authenticated super-admin away from /login to their dashboard', async () => {
     writeStoredAuth({ token: 'sa-token', user: { role: 'super-admin' } }, true);
 

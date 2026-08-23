@@ -22,6 +22,82 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-23 — Close issue backlog: realistic error-response coverage + a real double-redirect fix (#26)
+
+- **Branch:** claude/tender-fermi-fqpwga
+- **Modules touched:** [`docs/modules/AUTH.md`](modules/AUTH.md), [`docs/modules/DASHBOARD.md`](modules/DASHBOARD.md)
+- **What changed:**
+  - **Fixed a real bug found while writing this coverage:** `api.js`'s `handleUnauthorized` was
+    called twice for a single request whose token refresh failed — once inside the retry's
+    `catch`, then again via the unconditional `isAuthFailure` check right after it, since the
+    `catch` had no `return`/`throw` to stop the fall-through. That queued two competing
+    `window.location.assign('/login?...')` calls per session expiry. Fixed by letting the `catch`
+    fall through to the single unified handler instead of calling it itself. Verified with a
+    concurrent-requests test (several queries hitting a dead session at once, sharing one refresh
+    call per issue #53, all now redirecting exactly once each to the same place).
+  - Added the 409/429/5xx coverage issue #26 asked for: duplicate-conflict messages on
+    ManagersPage, RoutesPage, and ManagerVehiclesPage's create forms; a 429 lockout and a 5xx
+    server error each showing a distinct login message (App.test.jsx already covered
+    wrong-password/deactivated from issue #70); a dedicated test confirming a 5xx never clears the
+    session or redirects, as the counterpart to the existing 401/403 coverage.
+  - Added partial-failure isolation tests to DashboardPage and OperationsPage: one of several
+    parallel queries failing (`useOperationsOverview` / `usePendingVehicleRequests`) now has a
+    regression test confirming the other data still renders normally and exactly one scoped
+    `ErrorState` appears, not a page-wide banner duplicated onto sections that didn't fail.
+  - No other source changes — everything else here was pure test-coverage debt.
+- **Why:** working the GitHub issue backlog per `docs/guides/WORKING_AN_ISSUE.md`.
+- **Contract impact:** none.
+- **Tests:** updated `src/__tests__/App.test.jsx`, `src/__tests__/api.auth.test.js`,
+  `src/pages/__tests__/ManagersPage.test.jsx`, `src/pages/__tests__/RoutesPage.test.jsx`,
+  `src/pages/__tests__/ManagerVehiclesPage.test.jsx`, `src/pages/__tests__/DashboardPage.test.jsx`,
+  `src/pages/__tests__/OperationsPage.test.jsx`. `npm test` (707 passed) and `npm run lint`
+  (0 errors) both green.
+- **Docs updated:** `docs/TESTING_GUIDE.md` (Auth and Session, Managers, Routes, Buses and
+  Requests, Dashboard sections — 9 new rows); `docs/modules/DASHBOARD.md`,
+  `docs/modules/ACCOUNTS.md`, `docs/modules/OPERATIONS.md` (Tests-covering-this-module rows).
+- **Follow-ups / known issues:** `docs/modules/ROUTES.md` is still the pre-existing
+  `PLANNED (doc)` stub — RoutesPage's new 409 test is recorded in `TESTING_GUIDE.md` instead.
+  Writing that module doc from scratch is out of scope for this test-coverage issue.
+
+---
+
+## 2026-08-23 — Close issue backlog: ManagerVehiclesPage/DataTable/ErrorBoundary edge-case tests (#27)
+
+- **Branch:** claude/tender-fermi-fqpwga
+- **Modules touched:** [`docs/modules/BUSES.md`](modules/BUSES.md)
+- **What changed:**
+  - Added the regression tests issue #27 asked for: reopening the add-vehicle dialog no longer
+    risks stale field data leaking into a fresh attempt; switching Existing → Custom → Existing
+    route mode within one open dialog session doesn't silently carry over the earlier pick; a
+    rapid double-click on Create/Submit Request only fires one mutation (needed a stateful
+    `useCreateManagerVehicle` mock — the existing static mock can't flip `isPending`, so it could
+    never have caught a real regression here); an edit against a vehicle deleted in the background
+    now has a regression test confirming the server's specific "Vehicle not found" message
+    surfaces, not a generic fallback.
+  - `DataTable`: added tests confirming page navigation is always driven by the real `data` array,
+    not a caller-reported `totalCount` that undercounts it, and that a `totalCount` in the
+    thousands still renders correctly.
+  - `ErrorBoundary`: added a test crashing with a realistic malformed-API-payload shape
+    (`undefined.map()`) instead of only the synthetic `Bomb` thrower, and confirming real content
+    actually comes back after Reload (simulated via unmount/remount) rather than only checking the
+    mocked `reload()` was called.
+  - No source/behavior changes — this issue was pure test-coverage debt.
+  - Issue #18 (gate the assignable-routes fetch behind dialog-open) was investigated again and
+    left open, same conclusion as three prior passes: implementing it as written would regress the
+    vehicles table's route-name column, which now depends on the same query (issue #67, filed
+    after #18). Needs a maintainer scope decision, not another routine pass — see the issue's
+    comment thread.
+- **Why:** working the GitHub issue backlog per `docs/guides/WORKING_AN_ISSUE.md`.
+- **Contract impact:** none.
+- **Tests:** updated `src/pages/__tests__/ManagerVehiclesPage.test.jsx`,
+  `src/components/shared/__tests__/data-table.test.jsx`,
+  `src/layout/__tests__/ErrorBoundary.test.jsx`. `npm test` (697 passed) and `npm run lint`
+  (0 errors) both green.
+- **Docs updated:** `docs/TESTING_GUIDE.md` (Buses and Requests section, 5 new rows).
+- **Follow-ups / known issues:** issue #18 still open, needs a maintainer decision (see above).
+
+---
+
 ## 2026-08-23 — Audit remediation: tracking count, responsive tables, cache lifetime, bundle split
 
 - **Branch:** feature/audit-remediation

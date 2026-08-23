@@ -106,6 +106,30 @@ describe('DashboardPage', () => {
     expect(screen.queryByText('0')).toBeNull();
   });
 
+  // Issue #26: DashboardPage runs three independent queries in parallel — a
+  // failure in one shouldn't take the others down with it, and the failed
+  // one's error should show only where it failed, not as a page-wide banner.
+  it('renders KPI cards normally when only the operations query fails, showing that error only in the table', () => {
+    defaultHooks({ metrics: METRICS });
+    useOperationsOverview.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: Object.assign(new Error('Internal server error'), { status: 500 }),
+      refetch: vi.fn(),
+    });
+    render(<MemoryRouter><DashboardPage /></MemoryRouter>);
+
+    // The KPI cards still rendered their real values.
+    expect(screen.getByText('4')).toBeInTheDocument(); // totalManagers
+    expect(screen.queryByText('—')).toBeNull(); // the isError placeholder from issue #51 — not triggered here
+
+    // Exactly one error surface (the operations table's own, not a page-wide
+    // banner duplicating it) — the KPI section's own dashQ.isError banner
+    // never renders since only opsQ failed.
+    expect(screen.getAllByText('Failed to load')).toHaveLength(1);
+    expect(screen.getByText('Server error. Please try again in a moment.')).toBeInTheDocument();
+  });
+
   it('renders operations table rows', () => {
     setup({ ops: [makeOp('1', 'Colombo–Kandy'), makeOp('2', 'Galle–Matara')] });
     expect(screen.getByText('Colombo–Kandy')).toBeInTheDocument();

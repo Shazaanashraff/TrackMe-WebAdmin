@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -636,5 +637,115 @@ describe('ManagerVehiclesPage create-dialog discard confirmation', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+});
+
+// ----------------------------------------------------------------
+// Misc edge-case gaps (issue #27)
+// ----------------------------------------------------------------
+describe('ManagerVehiclesPage misc edge cases (issue #27)', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('reopening the create dialog after closing partway through starts fresh, not with stale data', async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+    await user.type(screen.getByLabelText(/vehicle id/i), 'STALE-ID');
+    await user.type(screen.getByLabelText(/vehicle name/i), 'Stale Name');
+
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+
+    expect(screen.getByLabelText(/vehicle id/i)).toHaveValue('');
+    expect(screen.getByLabelText(/vehicle name/i)).toHaveValue('');
+  });
+
+  it('switching Existing → Custom → Existing within one open dialog does not carry over a stale route selection', async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+
+    await chooseOption(user, /^route$/i, /Public Route/i);
+    expect(screen.getByRole('combobox', { name: /^route$/i })).toHaveTextContent('Public Route');
+
+    await user.click(screen.getByLabelText(/custom route/i));
+    expect(screen.queryByRole('combobox', { name: /^route$/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByLabelText(/^existing route$/i));
+    // Back on Existing, the earlier pick isn't silently retained — the
+    // handler clears routeId whenever routeMode changes away from EXISTING,
+    // so switching away and back leaves the picker unset.
+    expect(screen.getByRole('combobox', { name: /^route$/i })).toHaveTextContent(/select a route/i);
+
+    // And it's still fully usable after the round trip.
+    await chooseOption(user, /^route$/i, /Second Route/i);
+    expect(screen.getByRole('combobox', { name: /^route$/i })).toHaveTextContent('Second Route');
+  });
+
+  it('disables the submit button before a second rapid click can fire a duplicate create request', async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn(() => new Promise(() => {})); // never resolves; only the call count matters
+
+    useManagerVehicles.mockReturnValue({
+      data: { data: [] }, isLoading: false, isError: false, error: null, refetch: vi.fn(),
+    });
+    useManagerAssignableRoutes.mockReturnValue({ data: { data: ROUTES }, isLoading: false });
+    useManagerRequests.mockReturnValue({ data: { data: [] }, isLoading: false });
+    useUpdateManagerVehicle.mockReturnValue(makeMutation());
+    useRequestDeleteVehicle.mockReturnValue(makeMutation());
+    // A static mock never flips `isPending`, so this needs to behave like the
+    // real mutation hook: pending state that actually changes on submit and
+    // re-renders the button's `disabled` prop with it.
+    useCreateManagerVehicle.mockImplementation(() => {
+      const [isPending, setIsPending] = useState(false);
+      return {
+        isPending,
+        mutateAsync: (payload) => {
+          setIsPending(true);
+          return mutateAsync(payload);
+        },
+      };
+    });
+
+    render(<MemoryRouter><ManagerVehiclesPage /></MemoryRouter>);
+
+    await fillStep0(user, { routeMode: 'CUSTOM' });
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+
+    const submitBtn = screen.getByRole('button', { name: /create vehicle|submit request/i });
+    await user.dblClick(submitBtn);
+
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+  }, 20000);
+
+  it('shows a clear "already exists" message on a 409 duplicate-vehicle-id conflict from the server (issue #26)', async () => {
+    const conflict = Object.assign(new Error('A vehicle with this ID already exists'), { status: 409 });
+    const createMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(conflict) });
+    const { user } = setup({ createMut });
+
+    await fillStep0(user, { routeMode: 'CUSTOM' });
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.click(screen.getByRole('button', { name: /create vehicle|submit request/i }));
+
+    expect(await screen.findByText('A vehicle with this ID already exists')).toBeInTheDocument();
+  }, 20000);
+
+  it('shows the server\'s specific "not found" message, not a generic error, when saving an edit for a vehicle deleted in the background', async () => {
+    const notFound = Object.assign(new Error('Vehicle not found'), { status: 404 });
+    const updateMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(notFound) });
+    const { user } = setup({ updateMut });
+
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+    await screen.findByRole('dialog');
+
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    expect(await screen.findByText('Vehicle not found')).toBeInTheDocument();
+    expect(screen.queryByText(/an error occurred|request failed/i)).not.toBeInTheDocument();
   });
 });

@@ -117,7 +117,7 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
 | Layer | File | What it locks |
 |---|---|---|
 | Unit | `src/hooks/__tests__/` | query keys, `enabled` gating on `managerId` |
-| Unit | `src/pages/__tests__/` | overview render, empty/error states, URL param sync |
+| Unit | `src/pages/__tests__/` | overview render, empty/error states, URL param sync; partial-failure isolation — `usePendingVehicleRequests` failing alone leaves the overview table rendering normally, with exactly one scoped `ErrorState` (issue #26) |
 | E2E | Playwright | super-admin reaches Operations; a manager does not |
 
 ## 8. Change protocol
