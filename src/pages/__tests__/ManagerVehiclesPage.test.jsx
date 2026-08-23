@@ -723,6 +723,18 @@ describe('ManagerVehiclesPage misc edge cases (issue #27)', () => {
     expect(mutateAsync).toHaveBeenCalledTimes(1);
   }, 20000);
 
+  it('shows a clear "already exists" message on a 409 duplicate-vehicle-id conflict from the server (issue #26)', async () => {
+    const conflict = Object.assign(new Error('A vehicle with this ID already exists'), { status: 409 });
+    const createMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(conflict) });
+    const { user } = setup({ createMut });
+
+    await fillStep0(user, { routeMode: 'CUSTOM' });
+    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.click(screen.getByRole('button', { name: /create vehicle|submit request/i }));
+
+    expect(await screen.findByText('A vehicle with this ID already exists')).toBeInTheDocument();
+  }, 20000);
+
   it('shows the server\'s specific "not found" message, not a generic error, when saving an edit for a vehicle deleted in the background', async () => {
     const notFound = Object.assign(new Error('Vehicle not found'), { status: 404 });
     const updateMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(notFound) });

@@ -130,7 +130,10 @@ const request = async (path, options = {}) => {
         await getSharedRefresh();
         return request(path, { ...options, retryAfterRefresh: false });
       } catch {
-        handleUnauthorized(data.message);
+        // Fall through to the unified isAuthFailure handling below instead of
+        // calling handleUnauthorized here too — this is still the same 401,
+        // and calling it twice queued two competing '/login' redirects for
+        // every session-expiry request that failed to refresh.
       }
     }
 

@@ -158,6 +158,25 @@ describe('ManagersPage', () => {
     expect(createMut.mutateAsync).not.toHaveBeenCalled();
   });
 
+  // Issue #26: a 409 (duplicate email) should read as a specific, actionable
+  // conflict, not fold into the generic error surface a network/5xx failure
+  // would show.
+  it('shows a clear "already exists" message on a 409 duplicate-email conflict', async () => {
+    const conflict = Object.assign(new Error('A manager with this email already exists'), { status: 409 });
+    const createMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(conflict) });
+    const { user } = setup({ createMut });
+    await user.click(screen.getByRole('button', { name: /add manager/i }));
+    await screen.findByRole('heading', { name: /add manager/i });
+
+    await user.type(screen.getByLabelText(/manager name/i), 'Carol');
+    await user.type(screen.getByLabelText(/email/i), 'carol@co.com');
+    await user.type(screen.getByLabelText(/^password$/i), 'CarolPass1!');
+    await user.type(screen.getByLabelText(/confirm password/i), 'CarolPass1!');
+    await user.click(screen.getByRole('button', { name: /create manager/i }));
+
+    expect(await screen.findByText('A manager with this email already exists')).toBeInTheDocument();
+  });
+
   it('toggles password visibility', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: /add manager/i }));

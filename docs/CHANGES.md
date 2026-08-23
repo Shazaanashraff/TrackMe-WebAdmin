@@ -22,6 +22,42 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-23 — Close issue backlog: realistic error-response coverage + a real double-redirect fix (#26)
+
+- **Branch:** claude/tender-fermi-fqpwga
+- **Modules touched:** [`docs/modules/AUTH.md`](modules/AUTH.md), [`docs/modules/DASHBOARD.md`](modules/DASHBOARD.md)
+- **What changed:**
+  - **Fixed a real bug found while writing this coverage:** `api.js`'s `handleUnauthorized` was
+    called twice for a single request whose token refresh failed — once inside the retry's
+    `catch`, then again via the unconditional `isAuthFailure` check right after it, since the
+    `catch` had no `return`/`throw` to stop the fall-through. That queued two competing
+    `window.location.assign('/login?...')` calls per session expiry. Fixed by letting the `catch`
+    fall through to the single unified handler instead of calling it itself. Verified with a
+    concurrent-requests test (several queries hitting a dead session at once, sharing one refresh
+    call per issue #53, all now redirecting exactly once each to the same place).
+  - Added the 409/429/5xx coverage issue #26 asked for: duplicate-conflict messages on
+    ManagersPage, RoutesPage, and ManagerVehiclesPage's create forms; a 429 lockout and a 5xx
+    server error each showing a distinct login message (App.test.jsx already covered
+    wrong-password/deactivated from issue #70); a dedicated test confirming a 5xx never clears the
+    session or redirects, as the counterpart to the existing 401/403 coverage.
+  - Added partial-failure isolation tests to DashboardPage and OperationsPage: one of several
+    parallel queries failing (`useOperationsOverview` / `usePendingVehicleRequests`) now has a
+    regression test confirming the other data still renders normally and exactly one scoped
+    `ErrorState` appears, not a page-wide banner duplicated onto sections that didn't fail.
+  - No other source changes — everything else here was pure test-coverage debt.
+- **Why:** working the GitHub issue backlog per `docs/guides/WORKING_AN_ISSUE.md`.
+- **Contract impact:** none.
+- **Tests:** updated `src/__tests__/App.test.jsx`, `src/__tests__/api.auth.test.js`,
+  `src/pages/__tests__/ManagersPage.test.jsx`, `src/pages/__tests__/RoutesPage.test.jsx`,
+  `src/pages/__tests__/ManagerVehiclesPage.test.jsx`, `src/pages/__tests__/DashboardPage.test.jsx`,
+  `src/pages/__tests__/OperationsPage.test.jsx`. `npm test` (707 passed) and `npm run lint`
+  (0 errors) both green.
+- **Docs updated:** `docs/TESTING_GUIDE.md` (Auth and Session, Managers, Routes, Buses and
+  Requests, Dashboard sections — 9 new rows).
+- **Follow-ups / known issues:** none.
+
+---
+
 ## 2026-08-23 — Close issue backlog: ManagerVehiclesPage/DataTable/ErrorBoundary edge-case tests (#27)
 
 - **Branch:** claude/tender-fermi-fqpwga

@@ -157,6 +157,35 @@ describe('OperationsPage', () => {
     expect(screen.getByText(/failed to load/i)).toBeInTheDocument();
   });
 
+  // Issue #26: OperationsPage runs several independent queries in parallel —
+  // one failing shouldn't take the others down, and its error should show
+  // only in its own section, not as a page-wide banner.
+  it('renders the manager overview normally when only the requests query fails, showing that error only in the requests table', () => {
+    defaultHooks({ overview: [MGR_A, MGR_B] });
+    usePendingVehicleRequests.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: Object.assign(new Error('Internal server error'), { status: 500 }),
+      refetch: vi.fn(),
+    });
+    render(
+      <TooltipProvider>
+        <MemoryRouter initialEntries={['/operations']}>
+          <OperationsPage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    );
+
+    // The overview table still rendered its real rows.
+    expect(screen.getByText('Alice Smith')).toBeInTheDocument();
+    expect(screen.getByText('Bob Jones')).toBeInTheDocument();
+
+    // Exactly one error surface (the requests table's own), not a second one
+    // duplicated onto the overview table that didn't actually fail.
+    expect(screen.getAllByText('Failed to load')).toHaveLength(1);
+    expect(screen.getByText('Server error. Please try again in a moment.')).toBeInTheDocument();
+  });
+
   it('renders manager rows in the overview table', () => {
     setup();
     expect(screen.getByText('Alice Smith')).toBeInTheDocument();

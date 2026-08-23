@@ -254,6 +254,24 @@ describe('RoutesPage', () => {
     });
   });
 
+  // Issue #26: a 409 (duplicate route name/id) should read as a specific
+  // conflict, not a generic failure message.
+  it('shows a clear "already exists" message on a 409 duplicate-route-name conflict', async () => {
+    const conflict = Object.assign(new Error('A route with this routeId already exists'), { status: 409 });
+    const createMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(conflict) });
+    const { user } = setup({ createMut });
+
+    await user.type(screen.getByLabelText(/route id/i), 'RT-NW-01');
+    await user.type(screen.getByLabelText(/route name/i), 'Colombo–Negombo');
+    await user.type(screen.getByLabelText(/source/i), 'Colombo');
+    await user.type(screen.getByLabelText(/destination/i), 'Negombo');
+    await user.type(screen.getByLabelText(/distance/i), '37');
+    await user.type(screen.getByLabelText(/fare/i), '120');
+    await user.click(screen.getByRole('button', { name: /create route/i }));
+
+    expect(await screen.findByText('A route with this routeId already exists')).toBeInTheDocument();
+  });
+
   it('defaults QR attendance to disabled and includes it in the create payload when enabled', async () => {
     const createMut = makeMutation();
     const { user } = setup({ createMut });

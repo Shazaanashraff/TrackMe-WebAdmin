@@ -114,6 +114,73 @@ describe('api.js request layer', () => {
     expect(locationAssignSpy).toHaveBeenCalledWith('/login?reason=session_expired');
   });
 
+  // Issue #26: a failed refresh used to call handleUnauthorized twice for the
+  // same 401 (once in the retry's catch, once more in the unconditional
+  // isAuthFailure check right after) — two competing '/login' redirects
+  // queued for one session expiry. Fixed by letting the catch fall through
+  // to the single unified handler instead of calling it itself.
+  it('calls handleUnauthorized exactly once for a single request whose refresh fails, not twice', async () => {
+    writeStoredAuth({ token: 'expired-token', refreshToken: 'dead-refresh', user: { role: 'admin' } }, true);
+
+    global.fetch
+      .mockResolvedValueOnce(jsonResponse({ message: 'Not authorized, token failed' }, 401)) // original call
+      .mockResolvedValueOnce(jsonResponse({ message: 'Refresh token expired' }, 401)); // refresh call fails
+
+    await expect(adminApi.getManagers()).rejects.toThrow('Not authorized, token failed');
+
+    expect(locationAssignSpy).toHaveBeenCalledTimes(1);
+    expect(locationAssignSpy).toHaveBeenCalledWith('/login?reason=session_expired');
+  });
+
+  // Several requests can hit a dead session at once (e.g. a dashboard's
+  // parallel queries) — each shares the one refresh call (issue #53), and
+  // since that refresh fails only once, each of the N callers' catches now
+  // falls through to its own single handleUnauthorized call. All redirect to
+  // the same place, and the session ends up consistently cleared either way.
+  it('several requests failing at the same moment a session expires all redirect to the same place, session left cleared', async () => {
+    writeStoredAuth({ token: 'expired-token', refreshToken: 'dead-refresh', user: { role: 'admin' } }, true);
+
+    global.fetch.mockImplementation((url) => {
+      if (String(url).includes('/api/auth/refresh-token')) {
+        return Promise.resolve(jsonResponse({ message: 'Refresh token expired' }, 401));
+      }
+      return Promise.resolve(jsonResponse({ message: 'Not authorized, token failed' }, 401));
+    });
+
+    const results = await Promise.allSettled([
+      adminApi.getManagers(),
+      adminApi.getManagers(),
+      adminApi.getManagers(),
+    ]);
+
+    expect(results.every((r) => r.status === 'rejected')).toBe(true);
+
+    // Only one refresh call for all three concurrent 401s (issue #53's
+    // single-flight refresh) — confirms these really raced concurrently
+    // rather than resolving one at a time.
+    const refreshCalls = global.fetch.mock.calls.filter(([url]) => String(url).includes('/api/auth/refresh-token'));
+    expect(refreshCalls).toHaveLength(1);
+
+    expect(readStoredAuth()).toBeNull();
+    for (const call of locationAssignSpy.mock.calls) {
+      expect(call).toEqual(['/login?reason=session_expired']);
+    }
+    expect(locationAssignSpy.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  // Issue #26: the 401/403 auth-failure path is well covered above; a 5xx is
+  // the other half — a genuine server outage must never be mistaken for an
+  // expired session and log the user out.
+  it('a 5xx server error does not clear the session or redirect to /login', async () => {
+    writeStoredAuth({ token: 'valid-token', refreshToken: 'refresh-1', user: { role: 'admin' } }, true);
+    global.fetch.mockResolvedValueOnce(jsonResponse({ message: 'Internal server error' }, 500));
+
+    await expect(adminApi.getManagers()).rejects.toThrow('Internal server error');
+
+    expect(readStoredAuth()).not.toBeNull();
+    expect(locationAssignSpy).not.toHaveBeenCalled();
+  });
+
   it('a 403 that is not an auth-token message (permission-denied) does not clear the session', async () => {
     writeStoredAuth({ token: 'valid-token', refreshToken: 'refresh-1', user: { role: 'admin' } }, true);
 
