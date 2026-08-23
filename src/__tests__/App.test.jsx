@@ -316,6 +316,27 @@ describe('App — logout', () => {
     expect(await screen.findByRole('button', { name: /sign in/i })).toBeInTheDocument();
     expect(readStoredAuth()).toBeNull();
   });
+
+  it('wipes the persisted query cache on logout, so the next manager to sign in on this browser never sees stale rows', async () => {
+    // Regression test for the leak the audit flagged in §7.1: without this,
+    // Manager B could briefly see Manager A's cached vehicles/drivers before
+    // their own fetches land. Seed the storage key the persister writes to
+    // directly, since exercising a real fetch+persist cycle isn't needed to
+    // prove logout clears it.
+    window.localStorage.setItem(
+      'trackme-admin-query-cache',
+      JSON.stringify({ clientState: { queries: [], mutations: [] } })
+    );
+    writeStoredAuth({ token: 'sa-token', user: { role: 'super-admin', email: 'admin@trackme.com' } }, true);
+    const user = userEvent.setup();
+    renderApp('/dashboard');
+
+    await screen.findByText('dashboard-stub');
+    await user.click(screen.getByRole('button', { name: 'Sign out' }));
+
+    await screen.findByRole('button', { name: /sign in/i });
+    expect(window.localStorage.getItem('trackme-admin-query-cache')).toBeNull();
+  });
 });
 
 describe('LoginShell — session-expired message via query param (issue #46)', () => {

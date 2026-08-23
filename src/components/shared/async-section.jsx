@@ -1,7 +1,9 @@
 import { CardSkeleton } from './card-skeleton';
 import { ErrorState } from './error-state';
 import { EmptyState } from './empty-state';
+import { OfflineCard } from './offline-card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 
 export function AsyncSection({
   isLoading,
@@ -16,6 +18,8 @@ export function AsyncSection({
   emptyAction,
   children,
 }) {
+  const isOnline = useOnlineStatus();
+
   if (isLoading) return loadingFallback ?? <CardSkeleton />;
 
   const hasData = Array.isArray(data) ? data.length > 0 : data != null;
@@ -25,13 +29,20 @@ export function AsyncSection({
     // discard what's already on screen — that's strictly worse than doing
     // nothing. Keep the last-known-good content and say so; only replace it
     // with the full error state when there was never anything to show
-    // (issue #21).
+    // (issue #21). Being offline isn't a failure, so it gets its own calm
+    // wording instead of the "couldn't refresh" one used for a real error —
+    // the two look identical to a query, but mean very different things to
+    // whoever's staring at the amber strip.
     if (hasData) {
       return (
         <div className="space-y-3">
           <Alert variant="warning">
             <AlertDescription className="flex items-center justify-between gap-3">
-              <span>Couldn&apos;t refresh — showing last known data.</span>
+              <span>
+                {isOnline
+                  ? "Couldn't refresh — showing last known data."
+                  : 'Offline — showing saved information.'}
+              </span>
               {onRetry && (
                 <button
                   type="button"
@@ -47,6 +58,7 @@ export function AsyncSection({
         </div>
       );
     }
+    if (!isOnline) return <OfflineCard onRetry={onRetry} />;
     return <ErrorState error={error} onRetry={onRetry} />;
   }
 
