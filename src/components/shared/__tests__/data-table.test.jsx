@@ -165,6 +165,38 @@ describe('DataTable — pagination', () => {
     render(<DataTable columns={COLS} data={makeRows(11)} totalCount={47} />);
     expect(screen.getByText('1–10 of 47')).toBeInTheDocument();
   });
+
+  // Issue #27: totalCount is only ever a display label — actual page
+  // navigation must still be driven off the real `data` array, even when a
+  // caller's reported total doesn't match what was actually handed over.
+  it('paginates by the real row count when totalCount undercounts the actual rows given', async () => {
+    const user = userEvent.setup();
+    render(<DataTable columns={COLS} data={makeRows(15)} totalCount={5} />);
+
+    expect(screen.getByText('Person 1')).toBeInTheDocument();
+    expect(screen.getByText('Person 10')).toBeInTheDocument();
+    expect(screen.queryByText('Person 11')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /next/i }));
+
+    // The remaining real rows are still reachable even though totalCount
+    // claimed there were only 5 in total.
+    expect(screen.getByText('Person 11')).toBeInTheDocument();
+    expect(screen.getByText('Person 15')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled();
+  });
+
+  it('handles a totalCount in the thousands without breaking the range display or page navigation', async () => {
+    const user = userEvent.setup();
+    render(<DataTable columns={COLS} data={makeRows(25)} totalCount={3417} />);
+
+    expect(screen.getByText('1–10 of 3417')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /next/i }));
+
+    expect(screen.getByText('11–20 of 3417')).toBeInTheDocument();
+    expect(screen.getByText('Person 11')).toBeInTheDocument();
+  });
 });
 
 // ── column visibility toolbar ─────────────────────────────────────────────────

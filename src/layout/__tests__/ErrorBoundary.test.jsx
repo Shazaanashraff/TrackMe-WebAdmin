@@ -49,4 +49,44 @@ describe('ErrorBoundary', () => {
     await user.click(screen.getByRole('button', { name: 'Reload' }));
     expect(reload).toHaveBeenCalledOnce();
   });
+
+  // Issue #27: a synthetic `Bomb` throw only proves the catch path fires: it
+  // doesn't prove the boundary actually lets a fixed page recover afterward.
+  // Crash with a realistic malformed-API-payload shape instead, then simulate
+  // what the mocked Reload button doesn't — a real reload discards this whole
+  // tree and mounts a fresh one — and confirm the fallback UI's content is
+  // gone and the real content is back, not just that the mock fired.
+  it('recovers real content after a realistic malformed-payload crash and reload, not just the mocked reload call', async () => {
+    const user = userEvent.setup();
+    const reload = vi.fn();
+    vi.spyOn(window, 'location', 'get').mockReturnValue({ reload });
+
+    function RouteList({ payload }) {
+      return <div>{payload.items.map((i) => i.name).join(', ')}</div>;
+    }
+
+    const { unmount } = render(
+      <ColorModeProvider>
+        <ErrorBoundary>
+          <RouteList payload={{}} />
+        </ErrorBoundary>
+      </ColorModeProvider>,
+    );
+
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reload' }));
+    expect(reload).toHaveBeenCalledOnce();
+
+    unmount();
+    render(
+      <ColorModeProvider>
+        <ErrorBoundary>
+          <RouteList payload={{ items: [{ name: 'Route 4' }] }} />
+        </ErrorBoundary>
+      </ColorModeProvider>,
+    );
+
+    expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
+    expect(screen.getByText('Route 4')).toBeInTheDocument();
+  });
 });

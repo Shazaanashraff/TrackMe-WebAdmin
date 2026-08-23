@@ -22,6 +22,43 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-23 — Close issue backlog: ManagerVehiclesPage/DataTable/ErrorBoundary edge-case tests (#27)
+
+- **Branch:** claude/tender-fermi-fqpwga
+- **Modules touched:** [`docs/modules/BUSES.md`](modules/BUSES.md)
+- **What changed:**
+  - Added the regression tests issue #27 asked for: reopening the add-vehicle dialog no longer
+    risks stale field data leaking into a fresh attempt; switching Existing → Custom → Existing
+    route mode within one open dialog session doesn't silently carry over the earlier pick; a
+    rapid double-click on Create/Submit Request only fires one mutation (needed a stateful
+    `useCreateManagerVehicle` mock — the existing static mock can't flip `isPending`, so it could
+    never have caught a real regression here); an edit against a vehicle deleted in the background
+    now has a regression test confirming the server's specific "Vehicle not found" message
+    surfaces, not a generic fallback.
+  - `DataTable`: added tests confirming page navigation is always driven by the real `data` array,
+    not a caller-reported `totalCount` that undercounts it, and that a `totalCount` in the
+    thousands still renders correctly.
+  - `ErrorBoundary`: added a test crashing with a realistic malformed-API-payload shape
+    (`undefined.map()`) instead of only the synthetic `Bomb` thrower, and confirming real content
+    actually comes back after Reload (simulated via unmount/remount) rather than only checking the
+    mocked `reload()` was called.
+  - No source/behavior changes — this issue was pure test-coverage debt.
+  - Issue #18 (gate the assignable-routes fetch behind dialog-open) was investigated again and
+    left open, same conclusion as three prior passes: implementing it as written would regress the
+    vehicles table's route-name column, which now depends on the same query (issue #67, filed
+    after #18). Needs a maintainer scope decision, not another routine pass — see the issue's
+    comment thread.
+- **Why:** working the GitHub issue backlog per `docs/guides/WORKING_AN_ISSUE.md`.
+- **Contract impact:** none.
+- **Tests:** updated `src/pages/__tests__/ManagerVehiclesPage.test.jsx`,
+  `src/components/shared/__tests__/data-table.test.jsx`,
+  `src/layout/__tests__/ErrorBoundary.test.jsx`. `npm test` (697 passed) and `npm run lint`
+  (0 errors) both green.
+- **Docs updated:** `docs/TESTING_GUIDE.md` (Buses and Requests section, 5 new rows).
+- **Follow-ups / known issues:** issue #18 still open, needs a maintainer decision (see above).
+
+---
+
 ## 2026-08-23 — Audit remediation: tracking count, responsive tables, cache lifetime, bundle split
 
 - **Branch:** feature/audit-remediation
