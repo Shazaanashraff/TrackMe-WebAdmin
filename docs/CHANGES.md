@@ -53,8 +53,11 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
   `src/pages/__tests__/OperationsPage.test.jsx`. `npm test` (707 passed) and `npm run lint`
   (0 errors) both green.
 - **Docs updated:** `docs/TESTING_GUIDE.md` (Auth and Session, Managers, Routes, Buses and
-  Requests, Dashboard sections — 9 new rows).
-- **Follow-ups / known issues:** none.
+  Requests, Dashboard sections — 9 new rows); `docs/modules/DASHBOARD.md`,
+  `docs/modules/ACCOUNTS.md`, `docs/modules/OPERATIONS.md` (Tests-covering-this-module rows).
+- **Follow-ups / known issues:** `docs/modules/ROUTES.md` is still the pre-existing
+  `PLANNED (doc)` stub — RoutesPage's new 409 test is recorded in `TESTING_GUIDE.md` instead.
+  Writing that module doc from scratch is out of scope for this test-coverage issue.
 
 ---
 

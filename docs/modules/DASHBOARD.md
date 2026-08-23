@@ -71,7 +71,7 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
 
 | Layer | File | What it locks |
 |---|---|---|
-| RTL | `src/pages/__tests__/DashboardPage.test.jsx` | KPI stat cards, no fabricated currency symbols, empty-operations state, the compact Analytics placeholder (issue #15) — asserts no `py-10` ancestor around the "Not enough data yet" text |
+| RTL | `src/pages/__tests__/DashboardPage.test.jsx` | KPI stat cards, no fabricated currency symbols, empty-operations state, the compact Analytics placeholder (issue #15) — asserts no `py-10` ancestor around the "Not enough data yet" text; partial-failure isolation (issue #26) — `useOperationsOverview` failing alone leaves the KPI cards rendering normally, with exactly one scoped `ErrorState`, not a page-wide banner |
 | RTL | `src/pages/__tests__/ManagerDashboardPage.test.jsx` | booking-summary stat cards, confirmed/cancelled counts, pending-request count, fleet snapshot rows, the compact Booking Trend placeholder (issue #15) — asserts no `py-12` ancestor |
 
 ## 8. Change protocol
