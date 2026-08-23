@@ -104,6 +104,7 @@ model in [`AUTH.md`](../../../backend/docs/modules/AUTH.md).
 | Unit | `src/pages/__tests__/ManagersPage.test.jsx` | manager directory CRUD, button migration (issue #49-ui), persistent row-scoped status-toggle error + inline delete-failure error (issue #43), required-field asterisk + `aria-required` on Name/Email/(create-mode) Password/Confirm — not on the edit dialog's optional password-reset fields (issue #11); 409 duplicate-email conflict shows the server's specific message, not a generic one (issue #26). |
 | Unit | `src/pages/__tests__/ManagerAccountsPage.test.jsx` | driver directory, create-driver validation, enrollment-key rotate/revert/reveal, per-row reveal pending independence (issue #68), disable-driver confirmation (issue #50). |
 | Unit | `src/components/shared/__tests__/confirm-dialog.test.jsx` | shared confirm/reject-with-reason modal behavior reused by disable-driver here. |
+| e2e (Playwright) | `e2e/cross-role-onboarding.spec.ts` | a super-admin creates a manager via the real Add Manager dialog, then that manager does a real click-through sign-in (not seeded) and creates their first vehicle — the "set up a new customer" journey spanning both roles in one flow (issue #28). |
 
 ## 8. Change protocol
 

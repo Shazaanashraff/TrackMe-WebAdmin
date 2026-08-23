@@ -181,6 +181,40 @@ export async function mockSuperAdminRoutesBackend(
   return { routes };
 }
 
+export interface MockManager {
+  _id: string;
+  name: string;
+  email: string;
+  isActive?: boolean;
+}
+
+/**
+ * Mocks the super-admin managers endpoint (GET list / POST create) that
+ * ManagersPage touches, with in-memory state so a created manager shows up
+ * in the directory immediately — no live backend/DB needed.
+ */
+export async function mockSuperAdminManagersBackend(page: Page, opts: { managers?: MockManager[] } = {}) {
+  const managers: MockManager[] = opts.managers ? [...opts.managers] : [];
+
+  await page.route('**/api/super-admin/managers', (route) => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON() as { name: string; email: string; password: string };
+      const created: MockManager = {
+        _id: `mgr-${managers.length + 1}`,
+        name: body.name,
+        email: body.email,
+        isActive: true,
+      };
+      managers.push(created);
+      route.fulfill(json({ success: true, data: created, message: 'Manager created' }, 201));
+      return;
+    }
+    route.fulfill(json({ success: true, data: managers }));
+  });
+
+  return { managers };
+}
+
 export interface MockRoute {
   routeId: string;
   routeName?: string;
@@ -203,25 +237,72 @@ export interface MockChangeRequest {
   resolution?: 'KEEP_OLD' | 'ADOPT_NEW' | null;
 }
 
+export interface MockManagerVehicle {
+  vehicleId: string;
+  vehicleName?: string;
+  numberPlate: string;
+  routeId?: string | null;
+  vehicleType?: string;
+  serviceType?: string;
+  isActive?: boolean;
+  driverId?: { name: string } | null;
+  organization?: { name: string } | null;
+}
+
 /**
  * Mocks every backend endpoint the manager shell touches, with in-memory
- * state for custom routes so naming a route makes it show up as ACTIVE and
- * in the assignable-routes dropdown — without needing a live backend/DB.
+ * state for custom routes (so naming a route makes it show up as ACTIVE and
+ * in the assignable-routes dropdown) and for vehicles (so creating one shows
+ * up in the fleet table) — without needing a live backend/DB.
  */
 export async function mockManagerBackend(
   page: Page,
-  opts: { customRoutes?: MockRoute[]; changeRequests?: MockChangeRequest[] } = {}
+  opts: {
+    customRoutes?: MockRoute[];
+    changeRequests?: MockChangeRequest[];
+    vehicles?: MockManagerVehicle[];
+  } = {}
 ) {
   const publicRoutes: MockRoute[] = [
     { routeId: 'PUB-1', routeName: 'Public Route 1', visibility: 'PUBLIC' },
   ];
   const customRoutes: MockRoute[] = opts.customRoutes ? [...opts.customRoutes] : [];
   const changeRequests: MockChangeRequest[] = opts.changeRequests ? [...opts.changeRequests] : [];
+  const vehicles: MockManagerVehicle[] = opts.vehicles ? [...opts.vehicles] : [];
   const createRequests: unknown[] = [];
 
   await page.route('**/api/manager/dashboard', (route) => route.fulfill(json({ success: true, data: {} })));
   await page.route('**/api/manager/buses', (route) => route.fulfill(json({ success: true, data: [] })));
   await page.route('**/api/manager/requests', (route) => route.fulfill(json({ success: true, data: [] })));
+
+  // GET /api/manager/vehicles — the fleet table on ManagerVehiclesPage.
+  await page.route('**/api/manager/vehicles', (route) => {
+    route.fulfill(json({ success: true, data: vehicles }));
+  });
+
+  // POST /api/manager/vehicle-accounts — a manager's first vehicle is created
+  // outright; every one after that would be submitted for super-admin
+  // approval instead (mirrors the backend's real branching, see src/api.js).
+  await page.route('**/api/manager/vehicle-accounts', async (route) => {
+    const body = route.request().postDataJSON() as Partial<MockManagerVehicle> & { driverName?: string };
+    const created: MockManagerVehicle = {
+      vehicleId: body.vehicleId as string,
+      vehicleName: body.vehicleName || body.numberPlate,
+      numberPlate: body.numberPlate as string,
+      routeId: body.routeId || null,
+      vehicleType: body.vehicleType,
+      serviceType: body.serviceType,
+      isActive: true,
+      driverId: body.driverName ? { name: body.driverName } : null,
+      organization: null,
+    };
+    if (vehicles.length === 0) {
+      vehicles.push(created);
+      route.fulfill(json({ success: true, data: { vehicle: created } }, 201));
+      return;
+    }
+    route.fulfill(json({ success: true, data: { requestId: `veh-req-${vehicles.length + 1}` } }, 201));
+  });
 
   await page.route('**/api/manager/routes', (route) => {
     const active = customRoutes.filter((r) => r.status === 'ACTIVE');
@@ -277,5 +358,5 @@ export async function mockManagerBackend(
     route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from([]) })
   );
 
-  return { createRequests, customRoutes, changeRequests };
+  return { createRequests, customRoutes, changeRequests, vehicles };
 }
