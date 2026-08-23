@@ -1,9 +1,17 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AsyncSection } from '../async-section';
 
+function setOnline(value) {
+  Object.defineProperty(navigator, 'onLine', { value, writable: true, configurable: true });
+}
+
 describe('AsyncSection', () => {
+  beforeEach(() => {
+    setOnline(true);
+  });
+
   it('renders children when data is present and not loading', () => {
     render(
       <AsyncSection isLoading={false} data={[{ id: 1 }]}>
@@ -141,5 +149,63 @@ describe('AsyncSection', () => {
       </AsyncSection>,
     );
     expect(screen.getByText('Add one now')).toBeInTheDocument();
+  });
+
+  it('shows a calm OfflineCard instead of ErrorState when there is no data and the device is offline', () => {
+    setOnline(false);
+    render(
+      <AsyncSection isLoading={false} error={new Error('Failed to fetch')} data={null} onRetry={() => {}}>
+        <p>never</p>
+      </AsyncSection>,
+    );
+    expect(screen.getByText("Can't load this right now")).toBeInTheDocument();
+    expect(screen.queryByText('Failed to load')).not.toBeInTheDocument();
+    expect(screen.queryByText('never')).not.toBeInTheDocument();
+  });
+
+  it('still shows the full red ErrorState offline once wired to a retry that succeeds online (no data, but online)', () => {
+    // Sanity check the two states aren't accidentally merged: online + no data still
+    // reads as a real failure, not a calm offline card.
+    render(
+      <AsyncSection isLoading={false} error={new Error('Fetch failed')} data={null} onRetry={() => {}}>
+        <p>never</p>
+      </AsyncSection>,
+    );
+    expect(screen.getByText('Failed to load')).toBeInTheDocument();
+  });
+
+  it('wires onRetry through the OfflineCard', async () => {
+    setOnline(false);
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+    render(
+      <AsyncSection isLoading={false} error={new Error('Failed to fetch')} data={null} onRetry={onRetry}>
+        <p>never</p>
+      </AsyncSection>,
+    );
+    await user.click(screen.getByRole('button', { name: /try again/i }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('labels the stale-data banner "Offline" instead of "Couldn\'t refresh" when the device is offline', () => {
+    setOnline(false);
+    render(
+      <AsyncSection isLoading={false} error={new Error('Failed to fetch')} data={[{ id: 1 }]} onRetry={() => {}}>
+        <p>Vehicle list here</p>
+      </AsyncSection>,
+    );
+    expect(screen.getByText(/offline — showing saved information/i)).toBeInTheDocument();
+    expect(screen.queryByText(/couldn.t refresh/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Vehicle list here')).toBeInTheDocument();
+  });
+
+  it('keeps the "Couldn\'t refresh" wording when online and a background refetch just failed', () => {
+    render(
+      <AsyncSection isLoading={false} error={new Error('Fetch failed')} data={[{ id: 1 }]} onRetry={() => {}}>
+        <p>Vehicle list here</p>
+      </AsyncSection>,
+    );
+    expect(screen.getByText(/couldn.t refresh/i)).toBeInTheDocument();
+    expect(screen.queryByText(/offline — showing saved information/i)).not.toBeInTheDocument();
   });
 });

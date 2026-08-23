@@ -25,6 +25,7 @@ import { ManagerRequestsPage } from './pages/ManagerRequestsPage';
 import { ManagerSettingsPage } from './pages/ManagerSettingsPage';
 import { adminApi } from './api';
 import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
+import { clearPersistedQueryCache } from './lib/queryClient';
 import { useRefreshData } from './hooks/use-refresh';
 import { useTypographyScope } from './hooks/use-typography-scope';
 import { StyleGuidePage } from './pages/StyleGuidePage';
@@ -185,6 +186,7 @@ export default function App() {
 
           if (rejectedByServer) {
             clearStoredAuth();
+            clearPersistedQueryCache();
             if (!cancelled) {
               setAuth(null);
             }
@@ -206,6 +208,7 @@ export default function App() {
 
   const handleLogout = () => {
     clearStoredAuth();
+    clearPersistedQueryCache();
     setAuth(null);
     toast('Logged out successfully');
   };
