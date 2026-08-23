@@ -35,3 +35,6 @@ test-results/
 .env
 .env.*
 !.env.example
+
+# Claude Code's own scratch space (e.g. isolated agent worktrees) — never repo content.
+.claude/
