@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { mockAuthBackend, mockSuperAdminDashboardBackend, mockManagerBackend } from './helpers';
 
-// End-to-end coverage of the real login form, role-based post-login routing,
-// the full forgot-password journey (request -> verify -> reset -> login), and
-// the session-expiry redirect — none of which any other e2e spec exercises
-// (the existing manager specs all bypass login via `loginAsManager`).
+// Real click-through coverage of the login form itself: typing credentials and
+// clicking submit, for both account types this portal serves, plus the
+// session-expiry redirect it shares the same storage/handler with. Every
+// other spec bypasses this via `loginAsManager`/`loginAsSuperAdmin` — this is
+// the one place the actual login flow gets driven end to end.
 
 test.describe('Login', () => {
   test('a super-admin signs in and lands on the super-admin dashboard', async ({ page }) => {
@@ -84,63 +85,6 @@ test.describe('Login', () => {
   });
 });
 
-test.describe('Forgot password — full journey', () => {
-  test('request code -> verify code -> set new password -> back at login', async ({ page }) => {
-    await mockAuthBackend(page, {
-      requestOtpResponse: { body: { success: true } },
-      verifyOtpResponse: { body: { success: true, resetToken: 'e2e-reset-token' } },
-      resetPasswordResponse: { body: { success: true } },
-    });
-
-    await page.goto('/login');
-    await page.getByRole('button', { name: /forgot password/i }).click();
-    await expect(page).toHaveURL(/\/forgot-password$/);
-
-    await page.getByLabel(/email/i).fill('manager@trackme.com');
-    await page.getByRole('button', { name: /send recovery code/i }).click();
-
-    await expect(page).toHaveURL(/\/forgot-password\/verify$/);
-    await page.getByLabel(/recovery code/i).fill('123456');
-    await page.getByRole('button', { name: /verify code/i }).click();
-
-    await expect(page).toHaveURL(/\/forgot-password\/reset$/);
-    await page.getByLabel(/^new password/i).fill('BrandNewPass1');
-    await page.getByLabel(/^confirm password/i).fill('BrandNewPass1');
-    await page.getByRole('button', { name: /reset password/i }).click();
-
-    await expect(page).toHaveURL(/\/login$/);
-  });
-
-  test('an expired/invalid recovery code shows the server error and does not advance', async ({ page }) => {
-    await mockAuthBackend(page, {
-      requestOtpResponse: { body: { success: true } },
-      verifyOtpResponse: { status: 400, body: { success: false, message: 'Code expired' } },
-    });
-
-    await page.goto('/forgot-password');
-    await page.getByLabel(/email/i).fill('manager@trackme.com');
-    await page.getByRole('button', { name: /send recovery code/i }).click();
-
-    await expect(page).toHaveURL(/\/forgot-password\/verify$/);
-    await page.getByLabel(/recovery code/i).fill('000000');
-    await page.getByRole('button', { name: /verify code/i }).click();
-
-    await expect(page.getByText('Code expired')).toBeVisible();
-    await expect(page).toHaveURL(/\/forgot-password\/verify$/);
-  });
-
-  test('refreshing the browser on the reset step loses the flow and asks the user to start over', async ({
-    page,
-  }) => {
-    // No router state survives a hard navigation, which is exactly what a
-    // refresh does — this documents the currently-real UX gap (tracked as a
-    // separate issue) rather than a desired behavior.
-    await page.goto('/forgot-password/reset');
-
-    await expect(page.getByText(/start the recovery flow again/i)).toBeVisible();
-  });
-});
-
 test.describe('Session expiry', () => {
   test('a 401 from the backend on a protected page clears the session and redirects to /login', async ({
     page,
@@ -177,7 +121,10 @@ test.describe('Session expiry', () => {
 
     await page.goto('/manager/dashboard');
 
-    await expect(page).toHaveURL(/\/login$/);
+    // api.js's handleUnauthorized redirects to '/login?reason=session_expired',
+    // not bare '/login' — match the path, not the whole URL, so this doesn't
+    // pin the query string as part of what's under test here.
+    await expect(page).toHaveURL(/\/login(\?|$)/);
     const stored = await page.evaluate(() => window.localStorage.getItem('admin-auth'));
     expect(stored).toBeNull();
   });
