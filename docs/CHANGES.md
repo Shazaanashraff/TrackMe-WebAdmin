@@ -22,6 +22,35 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-23 — Close misc component edge-case test gaps (issue #27)
+
+- **Branch:** issue/27-misc-component-edge-case-tests
+- **Modules touched:** [`docs/modules/BUSES.md`](modules/BUSES.md) (no doc content changed — behavior matched what's documented; only `docs/TESTING_GUIDE.md` rows added)
+- **What changed:** Test-only, no source behavior changed. Closed the 5 gaps from the 2026-08-07
+  audit:
+  - `ManagerVehiclesPage`: reopening the add-vehicle dialog after closing it partway through
+    (via Cancel or the discard-confirm prompt) starts a clean form, not stale field data; switching
+    route mode EXISTING→CUSTOM→EXISTING within one open session doesn't resurrect the previously
+    picked route.
+  - `data-table.jsx`: pagination still navigates correctly off the real row count when the
+    server-reported `totalCount` doesn't match the actual rows returned, and with a total in the
+    thousands.
+  - `ManagerVehiclesPage`: rapid double-click on "Create Vehicle" only fires one mutation call.
+  - `ManagerVehiclesPage`: editing a vehicle already deleted in the background surfaces the
+    backend's specific "Vehicle not found for this manager" 404 message, not a generic error.
+  - `ErrorBoundary`: a realistic malformed-payload crash (`undefined.map()`) is caught, and the
+    test now demonstrates actual recovery (unmount/remount with a well-formed payload) instead of
+    only checking that `window.location.reload` was called.
+- **Why:** 2026-08-07 test-coverage audit (issue #27).
+- **Contract impact:** none.
+- **Tests:** `src/pages/__tests__/ManagerVehiclesPage.test.jsx`,
+  `src/components/shared/__tests__/data-table.test.jsx`,
+  `src/layout/__tests__/ErrorBoundary.test.jsx` — 12 new cases.
+- **Docs updated:** `docs/TESTING_GUIDE.md` (new rows under "Buses and Requests" and a new
+  "Shared Components" section).
+- **Follow-ups / known issues:** none — no behavior discrepancy found; all 5 items reflected
+  already-correct app behavior.
+
 ## 2026-08-23 — Audit remediation: tracking count, responsive tables, cache lifetime, bundle split
 
 - **Branch:** feature/audit-remediation

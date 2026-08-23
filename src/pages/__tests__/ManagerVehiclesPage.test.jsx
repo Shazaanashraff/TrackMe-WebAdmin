@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -439,6 +440,24 @@ describe('ManagerVehiclesPage edit and delete', () => {
     expect(updateMut.mutateAsync).not.toHaveBeenCalled();
   });
 
+  it('shows a clear "not found" message, not a generic error, when saving an edit for a vehicle deleted in the background (stale-edit conflict)', async () => {
+    // Matches backend/src/controllers/managerController.js updateManagerVehicle:
+    // a 404 with this exact message when the vehicle the manager is editing has
+    // already been removed by someone else since the page loaded it.
+    const staleError = Object.assign(new Error('Vehicle not found for this manager'), { status: 404 });
+    const updateMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(staleError) });
+    const { user } = setup({ updateMut });
+
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+    await screen.findByRole('dialog');
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+
+    await waitFor(() => expect(updateMut.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(screen.getByText('Vehicle not found for this manager')).toBeInTheDocument();
+    expect(screen.queryByText(/an unexpected error occurred/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/request failed/i)).not.toBeInTheDocument();
+  });
+
   it('opens delete confirmation dialog when Delete Req is clicked', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: /delete req/i }));
@@ -543,6 +562,48 @@ describe('ManagerVehiclesPage create — bootstrap vs request', () => {
     expect(toast).toHaveBeenCalledWith(expect.stringMatching(/vehicle created.*driver id/i));
   }, 20000);
 
+  it('disables the Create Vehicle button after the first click, preventing a duplicate submission on rapid double-click', async () => {
+    defaultHooks({ vehicles: [] });
+
+    let resolveCreate;
+    const createPromise = new Promise((resolve) => { resolveCreate = resolve; });
+    const mutateImpl = vi.fn(() => createPromise);
+
+    // The rest of this file mocks useCreateManagerVehicle with a flat, static
+    // { isPending: false } object, which can never flip mid-test. This one test
+    // needs isPending to genuinely toggle while the request is in flight — the
+    // same way react-query's real mutation state does — because that is exactly
+    // what the Create button's disabled state is wired to.
+    useCreateManagerVehicle.mockImplementation(() => {
+      const [isPending, setIsPending] = useState(false);
+      return {
+        isPending,
+        mutateAsync: async (payload) => {
+          setIsPending(true);
+          try {
+            return await mutateImpl(payload);
+          } finally {
+            setIsPending(false);
+          }
+        },
+      };
+    });
+
+    const user = userEvent.setup();
+    render(<MemoryRouter><ManagerVehiclesPage /></MemoryRouter>);
+
+    await fillStep0(user, { routeMode: 'CUSTOM' });
+    await user.click(screen.getByRole('button', { name: /continue/i })); // skip the driver step
+
+    const submitBtn = screen.getByRole('button', { name: /^create vehicle$/i });
+    await user.dblClick(submitBtn);
+
+    expect(mutateImpl).toHaveBeenCalledTimes(1);
+
+    resolveCreate({ data: { vehicle: { vehicleId: 'VEHICLE-99' } } });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  }, 20000);
+
   it('submits a request instead of creating when the manager already has a vehicle', async () => {
     const createMut = makeMutation({
       mutateAsync: vi.fn().mockResolvedValue({
@@ -636,5 +697,87 @@ describe('ManagerVehiclesPage create-dialog discard confirmation', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+});
+
+// ----------------------------------------------------------------
+// Reopen after a partial close, and switching route modes within one
+// open session (issue #27, regression angle on issue #8's data-loss fix)
+// ----------------------------------------------------------------
+describe('ManagerVehiclesPage create-dialog reopen and mode switch', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('does not leak stale field data into a fresh attempt after closing partway through and reopening', async () => {
+    const { user } = setup();
+
+    // Open, fill step 0, and advance into the driver step — a partial attempt.
+    await fillStep0(user, { routeMode: 'CUSTOM' });
+    await user.type(screen.getByLabelText(/driver name/i), 'Kamal');
+
+    // Close via the explicit Cancel button (immediate discard, no prompt).
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    // Reopen a fresh attempt.
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+
+    // Back on step 0 (not still on the driver step), with every field cleared.
+    expect(screen.getByText(/step 1 of 3/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/vehicle id/i)).toHaveValue('');
+    expect(screen.getByLabelText(/vehicle name/i)).toHaveValue('');
+    expect(screen.getByLabelText(/number plate/i)).toHaveValue('');
+  });
+
+  it('does not leak stale field data into a fresh attempt after a discard-confirmed close and reopen', async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+    await user.type(screen.getByLabelText(/vehicle id/i), 'VEHICLE-99');
+    await user.type(screen.getByLabelText(/number plate/i), 'ABC-1234');
+    // Blur explicitly before Escape: numberPlate's onBlur (tidyPlate) would
+    // otherwise fire implicitly when the alertdialog's focus trap steals focus
+    // on Escape, outside of this interaction's act() wrapping.
+    await user.tab();
+
+    // Accidental dismissal mid-way — discard the unsaved data via the confirm prompt.
+    await user.keyboard('{Escape}');
+    const confirm = await screen.findByRole('alertdialog');
+    await user.click(within(confirm).getByRole('button', { name: /^discard$/i }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    });
+
+    // Reopen: none of the discarded values should reappear.
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+
+    expect(screen.getByLabelText(/vehicle id/i)).toHaveValue('');
+    expect(screen.getByLabelText(/number plate/i)).toHaveValue('');
+  });
+
+  it('clears the selected route when switching from EXISTING to CUSTOM, and does not resurrect it switching back', async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+    await user.type(screen.getByLabelText(/vehicle id/i), 'VEHICLE-99');
+    await user.type(screen.getByLabelText(/number plate/i), 'ABC-1234');
+
+    // EXISTING is the default mode — pick a route.
+    await user.click(screen.getByLabelText(/^route$/i));
+    await user.click(await screen.findByRole('option', { name: /Public Route/i }));
+    expect(screen.getByRole('combobox', { name: /^route$/i })).toHaveTextContent('Public Route');
+
+    // Switch to CUSTOM: the route picker disappears (no route needed).
+    await user.click(screen.getByLabelText(/custom route/i));
+    expect(screen.queryByRole('combobox', { name: /^route$/i })).not.toBeInTheDocument();
+
+    // Switch back to EXISTING within the same open session: the previous
+    // selection must not silently linger now that its value was cleared.
+    await user.click(screen.getByLabelText(/existing route/i));
+    expect(screen.getByRole('combobox', { name: /^route$/i })).toHaveTextContent(/select a route/i);
   });
 });

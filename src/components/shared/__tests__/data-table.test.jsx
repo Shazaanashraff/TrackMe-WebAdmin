@@ -165,6 +165,52 @@ describe('DataTable — pagination', () => {
     render(<DataTable columns={COLS} data={makeRows(11)} totalCount={47} />);
     expect(screen.getByText('1–10 of 47')).toBeInTheDocument();
   });
+
+  // Real page/pagination math (getPageCount, prev/next enable state) is driven
+  // off the actual `data` rows passed in, not `totalCount` — totalCount only
+  // feeds the "X–Y of Z" label. A server that reports a totalCount out of sync
+  // with the rows it actually returned must not corrupt that page navigation.
+  it('keeps page navigation correct off the actual rows when totalCount does not match them', async () => {
+    const user = userEvent.setup();
+    // 15 real rows (2 pages at PAGE_SIZE=10) but the server claims a much
+    // higher total — e.g. a stale/miscounted totalCount from a race with a
+    // concurrent write.
+    render(<DataTable columns={COLS} data={makeRows(15)} totalCount={9999} />);
+
+    // Label uses the (mismatched) reported total...
+    expect(screen.getByText('1–10 of 9999')).toBeInTheDocument();
+    // ...but navigation is still governed by the 2 real pages of rows.
+    expect(screen.getByRole('button', { name: /previous/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled();
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /next/i }));
+
+    // rangeEnd is (pageIndex+1)*pageSize clamped by the reported total, so a
+    // total this much larger than the real row count doesn't clamp it down —
+    // the label estimates off the page size, same formula the existing
+    // "uses totalCount prop" test above already exercises with a mismatched total.
+    expect(screen.getByText('11–20 of 9999')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /previous/i })).not.toBeDisabled();
+  });
+
+  it('holds up with a total in the thousands', async () => {
+    const user = userEvent.setup();
+    render(<DataTable columns={COLS} data={makeRows(25)} totalCount={3500} />);
+
+    expect(screen.getByText('1–10 of 3500')).toBeInTheDocument();
+    expect(screen.getByText('1 / 3')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /next/i }));
+    expect(screen.getByText('11–20 of 3500')).toBeInTheDocument();
+    expect(screen.getByText('2 / 3')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /next/i }));
+    expect(screen.getByText('21–30 of 3500')).toBeInTheDocument();
+    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /next/i })).toBeDisabled();
+  });
 });
 
 // ── column visibility toolbar ─────────────────────────────────────────────────
