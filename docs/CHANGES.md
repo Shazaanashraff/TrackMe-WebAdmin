@@ -22,6 +22,35 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-26 — Merge feature/enrollment-queue-contract-doc: labelled organization details, badge stays live
+
+- **Branch:** feature/merge-enrollment-queue-contract-doc
+- **Modules touched:** [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:**
+  - `feature/enrollment-queue-contract-doc` (2026-08-20) predated the 2026-08-21 tabs/driver-filter/Remove
+    rewrite below and was never merged. Brought forward the two pieces of it main still lacked instead of
+    the whole branch, since most of it had already been superseded:
+    - The "Organization details" column now renders the backend's labelled `organizationDetails`
+      (`Grade: 4`), falling back to raw `organizationValues` — closing the gap the 2026-08-21 entry
+      flagged as "left alone as out of scope".
+    - `useEnrollmentRequests` again writes the loaded PENDING queue's length into the badge's count
+      cache (guarded to skip while a `?driver=` filter is active, so a partial list can't undercount the
+      badge), and `useEnrollmentRequestCount` polls every 30s and refetches on window focus. Main had
+      lost this when the 2026-08-21 rewrite reimplemented the hook from an older base; without it the nav
+      badge only updated after an approve/reject/remove action, not when a request arrived mid-session.
+  - Not adopted: the branch's Contact-only column (drops the email) and its separate `organization.name`
+    field — those are UX calls main never made, and are out of scope for a conflict resolution.
+- **Why:** picking up genuine, still-unaddressed fixes from an otherwise-superseded branch before
+  discarding the rest of it.
+- **Contract impact:** none new — `passenger.organizationDetails` was already returned by the backend
+  (`managerEnrollmentsController.js`), just unused on this page until now.
+- **Tests:** `src/hooks/__tests__/use-enrollment-requests.test.jsx` (brought forward from the branch,
+  covers the poll and the badge sync). `npm test` and `npm run lint` re-run clean.
+- **Docs updated:** this entry; `docs/TESTING_GUIDE.md` (DataTable per-column cell class row restored).
+- **Follow-ups / known issues:** none.
+
+---
+
 ## 2026-08-23 — Add missing Playwright e2e specs: login, password-reset, cross-role onboarding (#28)
 
 - **Branch:** issue/28-playwright-e2e-specs
@@ -214,6 +243,75 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 - **Follow-ups / known issues:** the Organization details column still prints raw field keys
   (`grade:`) even though the backend also returns labelled `organizationDetails`. Left alone as
   out of scope.
+
+---
+
+## 2026-08-20 — Requests table drops the email and names the organization
+
+- **Branch:** feature/enrollment-queue-contract-doc
+- **Modules touched:** enrollment requests, [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:**
+  - The Account column is now Contact: the passenger's phone (falling back to the owning
+    account's), with the email dropped.
+  - "Organization details" is now Organization: the organization's name, then its form answers
+    labelled the way that organization asked for them (`Grade: 4`, not `grade: 4`), read from the
+    new `organizationDetails` payload with the raw `organizationValues` map as a fallback.
+- **Why:** the column showed `grade: 4` and never said which organization asked, and the email
+  took a column's width for something a manager does not act on.
+- **Contract impact:** consumes the new `organization` and `passenger.organizationDetails` fields
+  on `GET /api/manager/enrollment-requests` (backend change in the same session).
+- **Tests:** `src/pages/__tests__/ManagerRequestsPage.test.jsx` (contact, organization, and
+  fallback cases; the stale "Managed profile · relation" expectation, which the page has not
+  rendered for some time, was replaced with the rider-code identity it does render).
+  - Both multi-line columns (and the rest of the data columns) now pass
+    `meta: { cellClassName: 'align-top' }`, supported by a small addition to `DataTable`, so the
+    row reads as one line instead of staggering where a cell has a second line.
+- **Docs updated:** [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md),
+  two TESTING_GUIDE rows.
+- **Follow-ups / known issues:** none
+
+---
+
+## 2026-08-20 — Requests nav badge keeps up with requests that arrive mid-session
+
+- **Branch:** feature/enrollment-queue-contract-doc
+- **Modules touched:** enrollment requests, [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:**
+  - `useEnrollmentRequestCount` polls every 30s (`ENROLLMENT_COUNT_POLL_MS`) and refetches on
+    window focus, instead of holding the value it fetched when the shell first mounted.
+  - `useEnrollmentRequests('PENDING')` writes the length of the queue it loaded into the count
+    cache, so the Requests page and the nav badge always agree.
+- **Why:** a pending request was listed on the Requests page while the "Requests" nav link showed
+  no badge. The shell that renders the badge never unmounts, so the count only refreshed on a
+  reload or after a decision invalidated it.
+- **Contract impact:** none. Same `GET /api/manager/enrollment-requests/count` endpoint.
+- **Tests:** `src/hooks/__tests__/use-enrollment-requests.test.jsx` (new).
+- **Docs updated:** [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md),
+  TESTING_GUIDE row.
+- **Follow-ups / known issues:** `src/pages/__tests__/ManagerRequestsPage.test.jsx` has one
+  pre-existing failure (it expects a "Managed profile · <relation>" tag the page no longer
+  renders); untouched by this change.
+
+---
+
+## 2026-08-19 — Record that the enrollment queue's passenger payload is now populated
+
+- **Branch:** main
+- **Modules touched:** enrollment requests — [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:** Docs only. The backend was resolving a queued request's passenger from the
+  enrollment's deprecated `userId`, which the rider-profile enrollment path writes as null, so
+  every request the current passenger app makes arrived as `passenger: null` and the Passenger and
+  Organization details columns sat empty. Fixed backend-side; this page already read `riderCode`
+  and `organizationValues` and needed no change. The contract table now lists the real passenger
+  shape, including that `passenger._id` is a rider profile id.
+- **Why:** Keep the contract table honest about what this page actually receives.
+- **Contract impact:** `GET /api/manager/enrollment-requests` — same shape, correctly populated,
+  plus `riderCode`, `contactPhone` and `organizationValues`. Backend doc:
+  `TrackMe-backend/docs/modules/ADMIN.md`.
+- **Tests:** none — docs only.
+- **Docs updated:** `docs/modules/ENROLLMENT_REQUESTS.md` (§4 contract, §5 note).
+- **Follow-ups / known issues:** `ManagerRequestsPage.test.jsx` fixtures still omit `riderCode`
+  and `organizationValues`, so neither column is locked by a test.
 
 ---
 
