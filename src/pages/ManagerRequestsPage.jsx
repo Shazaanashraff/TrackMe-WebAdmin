@@ -52,6 +52,14 @@ const formatWhen = (value) => {
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
 };
 
+// The backend labels and orders these against the organization's own enrolment
+// form. Older payloads only carry the raw `key: value` map, so that is still
+// read as a fallback rather than leaving the column empty.
+const organizationDetails = (passenger) => {
+  if (Array.isArray(passenger?.organizationDetails)) return passenger.organizationDetails;
+  return Object.entries(passenger?.organizationValues || {}).map(([key, value]) => ({ key, label: key, value }));
+};
+
 const passengerLabel = (passenger) => {
   const name = passenger?.name || 'this student';
   if (passenger?.account?.email) {
@@ -176,11 +184,11 @@ export function ManagerRequestsPage() {
         accessorKey: 'passenger',
         enableSorting: false,
         cell: (i) => {
-          const values = Object.entries(i.getValue()?.organizationValues || {});
-          return values.length ? (
+          const details = organizationDetails(i.getValue());
+          return details.length ? (
             <div className="space-y-0.5 text-xs">
-              {values.map(([key, value]) => (
-                <div key={key}><span className="text-muted-foreground">{key}: </span>{value}</div>
+              {details.map((detail) => (
+                <div key={detail.key}><span className="text-muted-foreground">{detail.label}: </span>{detail.value}</div>
               ))}
             </div>
           ) : <span className="text-muted-foreground">None</span>;

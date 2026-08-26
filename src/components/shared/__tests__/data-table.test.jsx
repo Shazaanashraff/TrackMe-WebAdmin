@@ -22,6 +22,24 @@ function setup(props = {}) {
   return { user, ...utils };
 }
 
+// ── per-column cell styling ──────────────────────────────────────────────────
+
+describe('DataTable: column cell class', () => {
+  it('applies meta.cellClassName to that column only', () => {
+    const columns = [
+      { id: 'name', header: 'Name', accessorKey: 'name', meta: { cellClassName: 'align-top' } },
+      { id: 'role', header: 'Role', accessorKey: 'role' },
+    ];
+    render(<DataTable columns={columns} data={makeRows(1)} />);
+
+    const cells = screen.getAllByRole('cell');
+    expect(cells[0]).toHaveClass('align-top');
+    expect(cells[1]).not.toHaveClass('align-top');
+    // The default alignment is untouched where no class is asked for.
+    expect(cells[1]).toHaveClass('align-middle');
+  });
+});
+
 // ── state machine ─────────────────────────────────────────────────────────────
 
 describe('DataTable: state machine', () => {

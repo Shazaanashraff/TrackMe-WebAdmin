@@ -189,7 +189,11 @@ export function DataTable({
                 onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row.original); } } : undefined}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  // `meta.cellClassName` lets a column opt out of the default
+                  // middle alignment: in a table where some cells are two lines
+                  // and some are one, centring every cell staggers the first
+                  // lines against each other.
+                  <TableCell key={cell.id} className={cell.column.columnDef.meta?.cellClassName}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
