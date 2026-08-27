@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shouldDehydrateQuery, isLiveQueryKey } from '../queryClient';
+import { shouldDehydrateQuery, isLiveQueryKey, isCredentialQueryKey } from '../queryClient';
 import { qk } from '../queryKeys';
 
 // Walks every key factory in queryKeys.js and calls it with a placeholder
@@ -30,10 +30,30 @@ describe('isLiveQueryKey', () => {
   });
 });
 
+describe('isCredentialQueryKey', () => {
+  it('flags the driver enrollment-key query', () => {
+    expect(isCredentialQueryKey(qk.drivers.enrollmentKey('driver-1'))).toBe(true);
+  });
+
+  it('does not flag ordinary driver keys', () => {
+    expect(isCredentialQueryKey(qk.drivers.list())).toBe(false);
+    expect(isCredentialQueryKey(qk.drivers.all())).toBe(false);
+  });
+});
+
 describe('shouldDehydrateQuery — the persistence safety rail', () => {
   it('refuses to persist the live fleet-tracking key', () => {
     expect(
       shouldDehydrateQuery({ queryKey: qk.vehicles.managerLive(), state: { status: 'success' } })
+    ).toBe(false);
+  });
+
+  it('refuses to persist the driver enrollment key — a credential stays in memory only', () => {
+    expect(
+      shouldDehydrateQuery({
+        queryKey: qk.drivers.enrollmentKey('driver-1'),
+        state: { status: 'success' },
+      })
     ).toBe(false);
   });
 
@@ -52,16 +72,19 @@ describe('shouldDehydrateQuery — the persistence safety rail', () => {
     ).toBe(true);
   });
 
-  it('walks every key this app can produce: only the live key is excluded, everything else persists', () => {
+  it('walks every key this app can produce: only live + credential keys are excluded, everything else persists', () => {
     const keys = collectAllKeys(qk);
     expect(keys.length).toBeGreaterThan(10); // sanity check the walk actually found keys
 
     const liveKeys = keys.filter(isLiveQueryKey);
     expect(liveKeys).toEqual([qk.vehicles.managerLive()]);
 
+    const credentialKeys = keys.filter(isCredentialQueryKey);
+    expect(credentialKeys).toEqual([qk.drivers.enrollmentKey('placeholder')]);
+
     for (const key of keys) {
       const decision = shouldDehydrateQuery({ queryKey: key, state: { status: 'success' } });
-      if (isLiveQueryKey(key)) {
+      if (isLiveQueryKey(key) || isCredentialQueryKey(key)) {
         expect(decision, `expected ${JSON.stringify(key)} to be excluded from persistence`).toBe(false);
       } else {
         expect(decision, `expected ${JSON.stringify(key)} to persist`).toBe(true);

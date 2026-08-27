@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MoreHorizontal, Users, UserCheck, UserX, Lock, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
@@ -151,6 +151,81 @@ function driverStatus(driver) {
   return { variant: 'settled', label: 'Active' };
 }
 
+// The enrollment key is a credential, so it stays hidden until asked for. As its
+// own cell each row reads a `shown` flag held on the page (survives the cell
+// remounting when `columns` recomputes) over a shared cached query
+// (useDriverEnrollmentKey). Show / Hide flip the flag, the cached key value
+// survives both, and a key opened while online stays readable through a
+// disconnect. Offline, "Show key" only opens a key already in cache; one never
+// opened this session needs a connection (the key is never on disk).
+function EnrollmentKeyCell({ driver, isOnline, shown, onToggle, onKeyState }) {
+  const keyQ = useDriverEnrollmentKey(driver._id, { enabled: shown });
+  const key = keyQ.data?.data?.enrollmentKey;
+  const canRevert = keyQ.data?.data?.canRevert;
+  const hasCachedKey = Boolean(key);
+
+  // Bubble canRevert up so the row's actions menu can show "Restore previous
+  // key". Depend on the primitive values, not keyQ.data's identity, so this
+  // never re-fires just because the query object was recreated.
+  useEffect(() => {
+    if (shown && key != null) onKeyState(driver._id, canRevert);
+  }, [shown, key, canRevert, driver._id, onKeyState]);
+
+  useEffect(() => {
+    if (keyQ.isError) toast(`Failed: ${keyQ.error?.message || 'Unknown error'}`);
+  }, [keyQ.isError, keyQ.error]);
+
+  // Privacy changes what the key does, so it is flagged on the key itself rather
+  // than as a column of its own.
+  const lock = driver.isPrivate ? (
+    <Badge variant="warning" title="Private: redeeming this key needs your approval">
+      <Lock className="h-3 w-3" aria-hidden="true" />
+      Approval
+    </Badge>
+  ) : null;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(key);
+      toast('Enrollment key copied');
+    } catch {
+      toast('Could not copy to clipboard');
+    }
+  };
+
+  if (!shown || !key) {
+    const blockedOffline = !isOnline && !hasCachedKey;
+    const loading = shown && keyQ.isFetching && !key;
+    return (
+      <div className="flex items-center gap-1.5">
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={loading || blockedOffline}
+          title={blockedOffline ? "Reconnect to open a key you haven't viewed yet" : undefined}
+          onClick={() => (shown && keyQ.isError ? keyQ.refetch() : onToggle(driver._id, true))}
+        >
+          {loading ? 'Loading…' : 'Show key'}
+        </Button>
+        {lock}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {lock}
+      {/* The key is one token, and wrapping it mid-code makes it unreadable and
+          hard to transcribe over the phone. */}
+      <code className="whitespace-nowrap rounded bg-surface-muted px-1.5 py-0.5 text-xs">
+        {key}
+      </code>
+      <Button size="sm" variant="ghost" onClick={handleCopy}>Copy</Button>
+      <Button size="sm" variant="ghost" onClick={() => onToggle(driver._id, false)}>Hide</Button>
+    </div>
+  );
+}
+
 export function ManagerAccountsPage() {
   const navigate = useNavigate();
   const isOnline = useOnlineStatus();
@@ -168,7 +243,6 @@ export function ManagerAccountsPage() {
   const deleteM = useDeleteDriver();
   const resetPwM = useResetDriverPassword();
   const viewPwM = useDriverPassword();
-  const revealKeyM = useDriverEnrollmentKey();
   const rotateKeyM = useRotateDriverEnrollmentKey();
   const revertKeyM = useRevertDriverEnrollmentKey();
 
@@ -189,17 +263,24 @@ export function ManagerAccountsPage() {
   const [disableTarget, setDisableTarget] = useState(null);
   const [newPassword, setNewPassword] = useState('');
 
-  // Keys are credentials, so they stay hidden until asked for and are held per
-  // row rather than fetched with the directory.
-  const [revealedKeys, setRevealedKeys] = useState({});
-  // driverId -> the last replacement can still be undone.
+  // driverId -> the last replacement can still be undone. Populated from each
+  // row's <EnrollmentKeyCell> once its key query resolves, and from a
+  // rotate/revert here.
   const [revertable, setRevertable] = useState({});
-  // driverId -> reveal request in flight. `revealKeyM` is a single shared
-  // mutation instance for the whole table, so its own isPending/variables
-  // reflect only the most recent call — a keyed map here is what lets two
-  // rows' pending state stay independent when a manager clicks "Show key" on
-  // one row, then another, before the first response arrives.
-  const [revealingIds, setRevealingIds] = useState({});
+  // driverId -> the key row is expanded. Held here, not in the cell, because
+  // `columns` recomputes (and react-table remounts the cell) whenever
+  // `revertable` changes. The key *value* still comes from the shared query
+  // cache, so a remount keeps it; only this expand flag needs to outlive one.
+  const [shownKeys, setShownKeys] = useState({});
+  const toggleKeyShown = useCallback((driverId, next) => {
+    setShownKeys((prev) => {
+      if (Boolean(prev[driverId]) === next) return prev;
+      const copy = { ...prev };
+      if (next) copy[driverId] = true;
+      else delete copy[driverId];
+      return copy;
+    });
+  }, []);
 
   const drivers = driversQ.data?.data || [];
   const organizations = organizationsQ.data?.data || [];
@@ -281,11 +362,9 @@ export function ManagerAccountsPage() {
         setDialogOpen(false);
       } else {
         const result = await createM.mutateAsync(createPayload(form));
-        // Shown immediately so the manager can hand it over. It is retrievable
-        // later, but surfacing it here saves a round trip.
-        if (result?.enrollmentKey) {
-          setRevealedKeys((prev) => ({ ...prev, [result.data._id]: result.enrollmentKey }));
-        }
+        // The new key is surfaced in the lastCreated card below so the manager
+        // can hand it over straight away; the directory row shows it on demand
+        // like every other row (its "Show key" opens instantly once online).
         setLastCreated({
           name: result?.data?.name || form.name,
           email: result?.data?.email || '',
@@ -328,33 +407,25 @@ export function ManagerAccountsPage() {
   };
 
   // The server decides whether an undo is still available, so the option
-  // survives a refresh instead of living only in this tab's memory.
-  const rememberRevertable = (driverId, canRevert) =>
-    setRevertable((prev) => ({ ...prev, [driverId]: Boolean(canRevert) }));
-
-  const handleRevealKey = async (driver) => {
-    setRevealingIds((prev) => ({ ...prev, [driver._id]: true }));
-    try {
-      const result = await revealKeyM.mutateAsync({ driverId: driver._id });
-      setRevealedKeys((prev) => ({ ...prev, [driver._id]: result?.data?.enrollmentKey }));
-      rememberRevertable(driver._id, result?.data?.canRevert);
-    } catch (err) {
-      toast(`Failed: ${err?.message || 'Unknown error'}`);
-    } finally {
-      setRevealingIds((prev) => {
-        const next = { ...prev };
-        delete next[driver._id];
-        return next;
-      });
-    }
-  };
+  // survives a refresh instead of living only in this tab's memory. Stable
+  // identity — <EnrollmentKeyCell> lists it in an effect dependency.
+  const rememberRevertable = useCallback(
+    (driverId, canRevert) =>
+      setRevertable((prev) =>
+        prev[driverId] === Boolean(canRevert)
+          ? prev
+          : { ...prev, [driverId]: Boolean(canRevert) },
+      ),
+    [],
+  );
 
   const handleConfirmRotateKey = async () => {
     if (!rotateTarget) return;
     const driver = rotateTarget;
     try {
       const result = await rotateKeyM.mutateAsync({ driverId: driver._id });
-      setRevealedKeys((prev) => ({ ...prev, [driver._id]: result?.data?.enrollmentKey }));
+      // The hook's onSuccess writes the new key into the reveal query's cache;
+      // here we just carry the undo point.
       rememberRevertable(driver._id, result?.data?.canRevert ?? true);
       setRotateTarget(null);
       // Offered right here as well as in the row menu, because the moment a
@@ -370,23 +441,14 @@ export function ManagerAccountsPage() {
 
   const handleRevertKey = async (driver) => {
     try {
-      const result = await revertKeyM.mutateAsync({ driverId: driver._id });
-      setRevealedKeys((prev) => ({ ...prev, [driver._id]: result?.data?.enrollmentKey }));
+      await revertKeyM.mutateAsync({ driverId: driver._id });
+      // The hook's onSuccess writes the restored key into the reveal query's cache.
       rememberRevertable(driver._id, false);
       toast('Previous enrollment key restored. The replacement no longer works.');
     } catch (err) {
       // A 409 means the undo was already spent — say that rather than "failed".
       rememberRevertable(driver._id, false);
       toast(err?.message || 'Could not restore the previous enrollment key');
-    }
-  };
-
-  const handleCopyKey = async (driverId) => {
-    try {
-      await navigator.clipboard.writeText(revealedKeys[driverId]);
-      toast('Enrollment key copied');
-    } catch {
-      toast('Could not copy to clipboard');
     }
   };
 
@@ -596,62 +658,15 @@ export function ManagerAccountsPage() {
       header: 'Enrollment key',
       accessorKey: '_id',
       enableSorting: false,
-      cell: (info) => {
-        const driver = info.row.original;
-        const key = revealedKeys[driver._id];
-        const pending = Boolean(revealingIds[driver._id]);
-        // Privacy changes what the key does, so it is flagged on the key itself
-        // rather than as a column of its own.
-        const lock = driver.isPrivate ? (
-          <Badge
-            variant="warning"
-            title="Private: redeeming this key needs your approval"
-          >
-            <Lock className="h-3 w-3" aria-hidden="true" />
-            Approval
-          </Badge>
-        ) : null;
-
-        if (!key) {
-          return (
-            <div className="flex items-center gap-1.5">
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={pending || !isOnline}
-                title={isOnline ? undefined : 'Reconnect to look up the key'}
-                onClick={() => handleRevealKey(driver)}
-              >
-                {pending ? 'Loading…' : 'Show key'}
-              </Button>
-              {lock}
-            </div>
-          );
-        }
-
-        return (
-          <div className="flex items-center gap-1.5">
-            {lock}
-            {/* The key is one token, and wrapping it mid-code makes it
-                unreadable and hard to transcribe over the phone. */}
-            <code className="whitespace-nowrap rounded bg-surface-muted px-1.5 py-0.5 text-xs">
-              {key}
-            </code>
-            <Button size="sm" variant="ghost" onClick={() => handleCopyKey(driver._id)}>Copy</Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setRevealedKeys((prev) => {
-                const next = { ...prev };
-                delete next[driver._id];
-                return next;
-              })}
-            >
-              Hide
-            </Button>
-          </div>
-        );
-      },
+      cell: (info) => (
+        <EnrollmentKeyCell
+          driver={info.row.original}
+          isOnline={isOnline}
+          shown={Boolean(shownKeys[info.row.original._id])}
+          onToggle={toggleKeyShown}
+          onKeyState={rememberRevertable}
+        />
+      ),
     },
     {
       id: 'status',
@@ -718,7 +733,7 @@ export function ManagerAccountsPage() {
         );
       },
     },
-  ], [revealedKeys, revertable, revealingIds, liveByDriverId, fleetQ.isLoading, navigate, isOnline]);
+  ], [revertable, shownKeys, toggleKeyShown, liveByDriverId, fleetQ.isLoading, navigate, isOnline, rememberRevertable]);
 
   return (
     <div className="space-y-6">
