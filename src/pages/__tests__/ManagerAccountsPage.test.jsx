@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor, act } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ManagerAccountsPage } from '../ManagerAccountsPage';
@@ -32,8 +32,11 @@ vi.mock('react-router-dom', async (importOriginal) => ({
 
 vi.mock('sonner', () => ({ toast: vi.fn() }));
 
+vi.mock('@/hooks/use-online-status', () => ({ useOnlineStatus: vi.fn(() => true) }));
+
 import { toast } from 'sonner';
 import { useManagerFleetLive } from '@/hooks/use-tracking';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 
 import {
   useOrganizations,
@@ -83,6 +86,14 @@ function makeMutation(overrides = {}) {
   return { mutateAsync: vi.fn().mockResolvedValue({}), isPending: false, ...overrides };
 }
 
+// useDriverEnrollmentKey is now a query (per row, enabled on "Show key"), not a
+// shared mutation. Default: nothing cached, so every row shows "Show key".
+function makeKeyQuery(overrides = {}) {
+  return { data: undefined, isError: false, isFetching: false, error: null, refetch: vi.fn(), ...overrides };
+}
+const keyQueryWith = (enrollmentKey, canRevert = true) =>
+  makeKeyQuery({ data: { success: true, data: { enrollmentKey, canRevert } } });
+
 // One record per fleet vehicle, exactly as GET /api/manager/vehicles/live
 // returns it: the driver is named on the record, which is how a row finds its
 // own position.
@@ -99,10 +110,11 @@ function defaultHooks({
   drivers = DRIVERS,
   organizations = ORGANIZATIONS,
   fleet = [],
+  online = true,
   createMut,
   updateMut,
   viewPwMut,
-  revealMut,
+  keyQuery,
   rotateMut,
   revertMut,
 } = {}) {
@@ -111,12 +123,18 @@ function defaultHooks({
   });
   useOrganizations.mockReturnValue({ data: { data: organizations }, isLoading: false });
   useManagerFleetLive.mockReturnValue({ data: { data: fleet }, isLoading: false, error: null });
+  useOnlineStatus.mockReturnValue(online);
   useCreateDriver.mockReturnValue(createMut || makeMutation());
   useUpdateDriver.mockReturnValue(updateMut || makeMutation());
   useDeleteDriver.mockReturnValue(makeMutation());
   useResetDriverPassword.mockReturnValue(makeMutation());
   useDriverPassword.mockReturnValue(viewPwMut || makeMutation());
-  useDriverEnrollmentKey.mockReturnValue(revealMut || makeMutation());
+  // keyQuery may be a single object (same for every row) or a (driverId) => object.
+  if (typeof keyQuery === 'function') {
+    useDriverEnrollmentKey.mockImplementation((driverId) => keyQuery(driverId));
+  } else {
+    useDriverEnrollmentKey.mockReturnValue(keyQuery || makeKeyQuery());
+  }
   useRotateDriverEnrollmentKey.mockReturnValue(rotateMut || makeMutation());
   useRevertDriverEnrollmentKey.mockReturnValue(revertMut || makeMutation());
 }
@@ -318,53 +336,75 @@ describe('ManagerAccountsPage: enrollment key rotation', () => {
     expect(screen.queryByRole('menuitem', { name: /restore previous key/i })).not.toBeInTheDocument();
   });
 
-  it('offers the undo when the server reports a rotation is still recoverable', async () => {
-    const revealMut = makeMutation({
-      mutateAsync: vi.fn().mockResolvedValue({ data: { enrollmentKey: 'TMD-CUR-KEY-0001', canRevert: true } }),
-    });
-    const { user } = setup({ revealMut });
+  it('offers the undo once a revealed key reports a rotation is still recoverable', async () => {
+    // A reveal (from cache, after a page refresh) is how the option comes back.
+    const { user } = setup({ keyQuery: keyQueryWith('TMD-CUR-KEY-0001', true) });
 
-    // A reveal after a page refresh is how the option comes back.
     await user.click(screen.getAllByRole('button', { name: /show key/i })[0]);
+    expect(await screen.findByText('TMD-CUR-KEY-0001')).toBeInTheDocument();
 
     await openRowMenu(user);
     expect(await screen.findByRole('menuitem', { name: /restore previous key/i })).toBeInTheDocument();
   });
 
-  it('keeps each row\'s pending state independent under rapid clicks on different rows (issue #68)', async () => {
-    const deferred = {};
-    const revealMut = makeMutation({
-      mutateAsync: vi.fn(
-        ({ driverId }) => new Promise((resolve) => { deferred[driverId] = resolve; })
-      ),
+  it('reveals each row independently — one row\'s key does not open another\'s (issue #68)', async () => {
+    // Each row now has its own useDriverEnrollmentKey query + a page-held `shown`
+    // flag, so the shared-mutation variable race the issue described can't
+    // happen. Per-driver cached keys prove the rows stay independent.
+    const { user } = setup({
+      keyQuery: (driverId) => keyQueryWith(`TMD-KEY-${driverId}`, true),
     });
-    const { user } = setup({ revealMut });
 
-    // Click "Show key" on driver-1 first — its row starts loading while
-    // driver-2's is still idle.
+    const showButtons = screen.getAllByRole('button', { name: /show key/i });
+    expect(showButtons).toHaveLength(2); // DRIVERS fixture has two drivers
+
+    await user.click(showButtons[0]);
+    expect(await screen.findByText('TMD-KEY-driver-1')).toBeInTheDocument();
+    // The other row is untouched — still offering its own "Show key".
+    expect(screen.getAllByRole('button', { name: /show key/i })).toHaveLength(1);
+    expect(screen.queryByText('TMD-KEY-driver-2')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /show key/i }));
+    expect(await screen.findByText('TMD-KEY-driver-2')).toBeInTheDocument();
+    // driver-1's key is still shown.
+    expect(screen.getByText('TMD-KEY-driver-1')).toBeInTheDocument();
+  });
+
+  it('shows a Loading… label while a row\'s key query is fetching', async () => {
+    const { user } = setup({ keyQuery: makeKeyQuery({ isFetching: true }) });
     await user.click(screen.getAllByRole('button', { name: /show key/i })[0]);
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
-    const remaining = screen.getAllByRole('button', { name: /show key/i });
-    expect(remaining).toHaveLength(1);
+    expect(await screen.findByText('Loading…')).toBeInTheDocument();
+  });
+});
 
-    // Click driver-2's "Show key" before driver-1's request resolves. With a
-    // single shared mutation instance, driver-1's row would incorrectly stop
-    // showing "Loading…" the moment this second call starts, since the shared
-    // mutation's `variables` would now point at driver-2.
-    await user.click(remaining[0]);
-    expect(screen.getAllByText('Loading…')).toHaveLength(2);
-    expect(screen.queryByRole('button', { name: /show key/i })).not.toBeInTheDocument();
+describe('ManagerAccountsPage: enrollment key offline (Offline & Caching Audit, chunk 2)', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
 
-    // Resolve driver-1's request only — driver-2 must still show its own
-    // independent pending state.
-    await act(async () => { deferred['driver-1']({ data: { enrollmentKey: 'TMD-KEY-0001', canRevert: true } }); });
-    await waitFor(() => expect(screen.getByText('TMD-KEY-0001')).toBeInTheDocument());
-    expect(screen.getAllByText('Loading…')).toHaveLength(1);
+  it('disables "Show key" offline when the key is not already cached', () => {
+    setup({ online: false });
+    const btn = screen.getAllByRole('button', { name: /show key/i })[0];
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveAttribute('title', "Reconnect to open a key you haven't viewed yet");
+  });
 
-    // Resolve driver-2's request — nothing left pending.
-    await act(async () => { deferred['driver-2']({ data: { enrollmentKey: 'TMD-KEY-0002', canRevert: true } }); });
-    await waitFor(() => expect(screen.getByText('TMD-KEY-0002')).toBeInTheDocument());
-    expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
+  it('opens a key cached from an earlier reveal even while offline', async () => {
+    const { user } = setup({ online: false, keyQuery: keyQueryWith('TMD-CACHED-0001') });
+    const btn = screen.getAllByRole('button', { name: /show key/i })[0];
+    expect(btn).toBeEnabled();
+    await user.click(btn);
+    expect(await screen.findByText('TMD-CACHED-0001')).toBeInTheDocument();
+  });
+
+  it('re-hiding a cached key keeps it re-openable offline', async () => {
+    const { user } = setup({ online: false, keyQuery: keyQueryWith('TMD-CACHED-0002') });
+    await user.click(screen.getAllByRole('button', { name: /show key/i })[0]);
+    expect(await screen.findByText('TMD-CACHED-0002')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /hide/i }));
+    expect(screen.queryByText('TMD-CACHED-0002')).not.toBeInTheDocument();
+
+    await user.click(screen.getAllByRole('button', { name: /show key/i })[0]);
+    expect(await screen.findByText('TMD-CACHED-0002')).toBeInTheDocument();
   });
 });
 

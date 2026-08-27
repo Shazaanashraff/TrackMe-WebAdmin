@@ -45,10 +45,22 @@ export function isLiveQueryKey(queryKey) {
   return Array.isArray(queryKey) && queryKey.some((part) => part === 'live');
 }
 
+/**
+ * A credential (a driver's enrollment key) is cached in memory for the session
+ * so a brief disconnect doesn't blank a key the manager already opened — but it
+ * must never be written to disk on a possibly-shared admin machine. Excluded
+ * from the persister by the same opt-out shape as the live check: a literal
+ * 'enrollment-key' key segment names it (see qk.drivers.enrollmentKey).
+ */
+export function isCredentialQueryKey(queryKey) {
+  return Array.isArray(queryKey) && queryKey.some((part) => part === 'enrollment-key');
+}
+
 export function shouldDehydrateQuery(query) {
   // Don't persist a failed query — that would cache an error, not data.
   if (query.state.status !== 'success') return false;
   if (isLiveQueryKey(query.queryKey)) return false;
+  if (isCredentialQueryKey(query.queryKey)) return false;
   return true;
 }
 

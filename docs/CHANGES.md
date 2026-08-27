@@ -22,6 +22,45 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-27 — Enrollment keys readable offline for the session (Offline & Caching Audit, chunk 2)
+
+- **Branch:** feature/audit-remediation-enrollment-key-offline
+- **Modules touched:** [`ACCOUNTS.md`](modules/ACCOUNTS.md)
+- **What changed:**
+  - `useDriverEnrollmentKey` goes from `useMutation` to `useQuery(qk.drivers.enrollmentKey(id),
+    { enabled })` — `staleTime: Infinity`, `gcTime: 15min`, fired only on a row's "Show key" click.
+    A key opened while online now survives a disconnect (served from the in-memory cache) and
+    re-opens instantly after Hide. This GET is **not** audit-logged (only the password read is),
+    which is what makes caching it safe — the old "must be a mutation because it's audit-logged"
+    rationale in the code/docs was inaccurate for this key and is corrected.
+  - New `isCredentialQueryKey` in `src/lib/queryClient.js` — `shouldDehydrateQuery` excludes any
+    key segment `'enrollment-key'`, so the plaintext key is **never written to localStorage**. The
+    `queryClient.test.js` safety-rail walk asserts it alongside the live-key exclusion.
+  - The enrollment-key table column is now its own `<EnrollmentKeyCell>` with a private `shown`
+    toggle over its own query instance — the shared reveal mutation and the `revealingIds` /
+    `revealedKeys` page maps are gone (per-row independence, issue #68, is now structural). Rotate
+    / revert stay mutations but `setQueryData` their result into the reveal cache.
+  - Offline gate is now `!isOnline && !hasCachedKey` — an already-cached key opens offline; the
+    tooltip for an uncached one reads "Reconnect to open a key you haven't viewed yet".
+- **Why:** Offline & Caching Audit §7.10 / chunk 2 — a manager reading a key to a driver at the
+  kerb shouldn't be blocked by a wifi blip. Persisting to disk (the audit's literal suggestion)
+  was rejected: it would leave every driver's plaintext key in `localStorage` for 24h on a
+  possibly-shared admin machine.
+- **Contract impact:** none — no endpoint or payload change. `GET /api/manager/drivers/:id/
+  enrollment-key` is consumed the same way, just cached client-side now.
+- **Tests:** `src/hooks/__tests__/use-drivers.test.jsx` (new — query-not-mutation, cache reuse,
+  per-driver isolation, rotate/revert cache write), `src/pages/__tests__/ManagerAccountsPage.test.jsx`
+  (reveal tests reworked for the cell + query; new offline describe: disabled-when-uncached +
+  tooltip, cached key opens offline, re-open after Hide), `src/lib/__tests__/queryClient.test.js`
+  (`isCredentialQueryKey` + walk).
+- **Docs updated:** `ACCOUNTS.md` §4/§5/§6/§7/§7a (corrected the "audit-logged" claim, documented
+  the in-memory-not-disk cache), `TESTING_GUIDE.md` rows.
+- **Follow-ups / known issues:** a key never opened this session still can't be revealed on a cold
+  offline start — deliberate, a credential shouldn't be pre-fetched to disk. `getDriverEnrollmentKey`
+  lazily creates a key on first read for a keyless driver (idempotent after); unchanged from before.
+
+---
+
 ## 2026-08-27 — Offline & Caching Audit §7: the twenty pages, one at a time
 
 - **Branch:** feature/audit-remediation-webadmin-pages
