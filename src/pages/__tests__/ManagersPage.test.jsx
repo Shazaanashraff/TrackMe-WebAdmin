@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -451,5 +451,30 @@ describe('ManagersPage', () => {
     const viewBtns = screen.getAllByRole('button', { name: /view/i });
     await user.click(viewBtns[0]);
     expect(mockNavigate).toHaveBeenCalledWith('/operations?managerId=m1');
+  });
+
+  describe('offline (Offline & Caching Audit §7)', () => {
+    function setOnline(value) {
+      Object.defineProperty(navigator, 'onLine', { value, writable: true, configurable: true });
+    }
+    afterEach(() => setOnline(true));
+
+    it('disables Add / Edit / Activate-Deactivate / Delete while offline, leaving View usable', () => {
+      setOnline(false);
+      setup();
+      expect(screen.getByRole('button', { name: /add manager/i })).toBeDisabled();
+      expect(screen.getAllByRole('button', { name: /^edit$/i })[0]).toBeDisabled();
+      expect(screen.getAllByRole('button', { name: /deactivate|activate/i })[0]).toBeDisabled();
+      // MGR_B is already inactive, so its Delete is enabled online; offline it's disabled too.
+      const deleteBtns = screen.getAllByRole('button', { name: /^delete$/i });
+      deleteBtns.forEach((b) => expect(b).toBeDisabled());
+      expect(screen.getAllByRole('button', { name: /view/i })[0]).not.toBeDisabled();
+    });
+
+    it('keeps the actions enabled when online', () => {
+      setup();
+      expect(screen.getByRole('button', { name: /add manager/i })).not.toBeDisabled();
+      expect(screen.getAllByRole('button', { name: /^edit$/i })[0]).not.toBeDisabled();
+    });
   });
 });

@@ -120,6 +120,18 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
 | Unit | `src/pages/__tests__/` | overview render, empty/error states, URL param sync; partial-failure isolation — `usePendingVehicleRequests` failing alone leaves the overview table rendering normally, with exactly one scoped `ErrorState` (issue #26) |
 | E2E | Playwright | super-admin reaches Operations; a manager does not |
 
+## 7a. Offline behaviour (Offline & Caching Audit §7)
+
+The four sections (overview, manager detail, pending requests, audit log) fail independently. Offline:
+
+- Each `DataTable` shows its calm `OfflineCard` (or cached rows + amber strip) instead of a red
+  `ErrorState` — so a dropped wifi is three calm cards plus the one app-wide `OfflineBanner`, not
+  three red boxes. The stat cards render `stale`/`asOf`.
+- Review (Approve / Reject) and the vehicle-edit dialog gate on `!isOnline`
+  (`confirmDisabled`/`submitDisabled`). The Vehicle Requests card carries a `StaleChip`, `loud` on
+  the PENDING filter.
+- "Load older activity" already gates on `isFetching`; unchanged.
+
 ## 8. Change protocol
 
 See [`_MODULE_TEMPLATE.md`](../guides/_MODULE_TEMPLATE.md). Role-scoped: any change needs a test

@@ -5,13 +5,17 @@ import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
 import { AsyncSection } from '@/components/shared/async-section';
 import { Money } from '@/components/shared/money';
+import { StaleChip } from '@/components/shared/stale-chip';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useManagerDashboard } from '@/hooks/use-dashboard';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 
 export function ManagerDashboardPage() {
   const { user } = useOutletContext() ?? {};
+  const isOnline = useOnlineStatus();
   const dashQ = useManagerDashboard();
   const d = dashQ.data?.data;
+  const dashStale = !isOnline && Boolean(d);
 
   const fleet = d?.fleet || {};
   const bookings = d?.bookings || {};
@@ -38,6 +42,8 @@ export function ManagerDashboardPage() {
           value={fleet.totalVehicles ?? 'None'}
           icon={VehicleIcon}
           isLoading={dashQ.isLoading}
+          stale={dashStale}
+          asOf={dashQ.dataUpdatedAt}
         />
         <StatCard
           label="Active Vehicles"
@@ -48,26 +54,35 @@ export function ManagerDashboardPage() {
           }
           icon={VehicleIcon}
           isLoading={dashQ.isLoading}
+          stale={dashStale}
+          asOf={dashQ.dataUpdatedAt}
         />
         <StatCard
           label="Pending Requests"
           value={pending}
           icon={Hourglass}
           isLoading={dashQ.isLoading}
+          stale={dashStale}
+          asOf={dashQ.dataUpdatedAt}
         />
         <StatCard
           label="Total Revenue"
           value={dashQ.isLoading ? undefined : <Money amount={bookings.totalRevenue} />}
           icon={Wallet}
           isLoading={dashQ.isLoading}
+          stale={dashStale}
+          asOf={dashQ.dataUpdatedAt}
         />
       </div>
 
       {/* Booking summary */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Booking Summary</CardTitle>
-          <CardDescription>Confirmed and cancelled journeys across all your vehicles</CardDescription>
+        <CardHeader className="flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Booking Summary</CardTitle>
+            <CardDescription>Confirmed and cancelled journeys across all your vehicles</CardDescription>
+          </div>
+          <StaleChip updatedAt={dashQ.dataUpdatedAt} offline={!isOnline} />
         </CardHeader>
         <CardContent>
           <AsyncSection

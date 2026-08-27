@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Alert, Box, Button, TextField } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../api';
-import { AuthCard, ACCENT, ACCENT_HOVER, authFieldSx, authErrorAlertSx } from '../components/auth/AuthCard';
+import { AuthCard, ACCENT, ACCENT_HOVER, authFieldSx, authErrorAlertSx, authWarningAlertSx } from '../components/auth/AuthCard';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { saveForgotPasswordState } from '../lib/forgotPasswordSession';
 
 export function ForgotPasswordRequestPage() {
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -48,10 +50,17 @@ export function ForgotPasswordRequestPage() {
 
         {error ? <Alert severity="error" sx={authErrorAlertSx}>{error}</Alert> : null}
 
+        {!isOnline ? (
+          <Alert severity="warning" sx={authWarningAlertSx}>
+            You need a connection to request a recovery code. The code also expires
+            quickly once sent, so reconnect before asking for one.
+          </Alert>
+        ) : null}
+
         <Button
           type="submit"
           variant="contained"
-          disabled={loading}
+          disabled={loading || !isOnline}
           sx={{
             py: 1.2,
             borderRadius: 1.5,

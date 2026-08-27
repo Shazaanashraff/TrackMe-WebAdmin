@@ -21,6 +21,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { TableSkeleton } from './table-skeleton';
 import { ErrorState } from './error-state';
 import { EmptyState } from './empty-state';
+import { OfflineCard } from './offline-card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 10;
@@ -45,6 +48,7 @@ export function DataTable({
   renderMobileCard,
   totalCount,
 }) {
+  const isOnline = useOnlineStatus();
   const [sorting, setSorting] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: PAGE_SIZE });
@@ -62,7 +66,20 @@ export function DataTable({
   });
 
   if (isLoading) return <TableSkeleton rows={skeletonRows} cols={columns.length} />;
-  if (error) return <ErrorState error={error} onRetry={onRetry} />;
+
+  const hasRows = data.length > 0;
+
+  // Having rows always beats having an error: a background refetch that fails
+  // must not throw away the list the user is already reading. Only when there
+  // is nothing cached does the error take over the section — and a dropped
+  // connection gets the calm OfflineCard, not the red ErrorState, because
+  // offline and broken are different things (mirrors AsyncSection).
+  if (error && !hasRows) {
+    return isOnline
+      ? <ErrorState error={error} onRetry={onRetry} />
+      : <OfflineCard onRetry={onRetry} />;
+  }
+
   if (data.length === 0) {
     return (
       <EmptyState
@@ -83,6 +100,29 @@ export function DataTable({
 
   return (
     <div className="space-y-3">
+      {/* A stale copy is still on screen because a refetch failed. Say so
+          without discarding it — amber and calm when it's just offline. */}
+      {error && hasRows && (
+        <Alert variant="warning">
+          <AlertDescription className="flex items-center justify-between gap-3">
+            <span>
+              {isOnline
+                ? "Couldn't refresh — showing last known data."
+                : 'Offline — showing saved information.'}
+            </span>
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="shrink-0 underline underline-offset-2 hover:no-underline"
+              >
+                Retry
+              </button>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Column visibility toolbar */}
       {hideableCols.length > 0 && (
         <div className="flex justify-end">

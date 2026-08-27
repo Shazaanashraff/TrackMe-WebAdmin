@@ -35,6 +35,9 @@ export function ConfirmDialog({
   // reason survives for a retry, with the failure surfaced inline rather than
   // only in a transient toast.
   error,
+  // Blocks the confirm button (e.g. while offline) without closing the dialog,
+  // so a typed reason survives until the connection returns.
+  confirmDisabled = false,
 }) {
   const [reason, setReason] = useState('');
   const overLimit = reasonMaxLength != null && reason.length > reasonMaxLength;
@@ -93,7 +96,7 @@ export function ConfirmDialog({
           <Button
             variant={destructive ? 'destructive' : 'default'}
             onClick={handleConfirm}
-            disabled={pending || !canConfirm}
+            disabled={pending || !canConfirm || confirmDisabled}
           >
             {pending && (
               <span

@@ -5,6 +5,7 @@ import { adminApi } from '../api';
 import { AuthCard, ACCENT, ACCENT_HOVER, authErrorAlertSx, authWarningAlertSx } from '../components/auth/AuthCard';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/shared/password-input';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 
 // Consumes the invite/reset link a manager gets emailed (see backend
 // buildSetupLink: `${ADMIN_APP_URL}/activate?token=...`). Validates the token to
@@ -13,6 +14,7 @@ import { PasswordInput } from '@/components/shared/password-input';
 export function ActivateAccountPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const isOnline = useOnlineStatus();
   const token = searchParams.get('token') || '';
 
   const [checking, setChecking] = useState(true);
@@ -143,10 +145,17 @@ export function ActivateAccountPage() {
 
         {error ? <Alert severity="error" sx={authErrorAlertSx}>{error}</Alert> : null}
 
+        {!isOnline ? (
+          <Alert severity="warning" sx={authWarningAlertSx}>
+            You need a connection to set your password. This link also expires, so
+            reconnect and finish now.
+          </Alert>
+        ) : null}
+
         <Button
           type="submit"
           variant="contained"
-          disabled={submitting}
+          disabled={submitting || !isOnline}
           sx={{
             py: 1.2,
             borderRadius: 1.5,

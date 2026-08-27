@@ -131,4 +131,14 @@ describe('ConfirmDialog', () => {
     await user.click(btn);
     expect(onConfirm).not.toHaveBeenCalled();
   });
+
+  it('disables confirm when confirmDisabled (e.g. offline), leaving Cancel usable', async () => {
+    const onConfirm = vi.fn();
+    const { user } = setup({ onConfirm, confirmDisabled: true });
+    const btn = screen.getByRole('button', { name: /confirm/i });
+    expect(btn).toBeDisabled();
+    await user.click(btn);
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /cancel/i })).not.toBeDisabled();
+  });
 });

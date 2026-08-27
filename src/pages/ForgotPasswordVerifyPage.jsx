@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Alert, Box, Button, TextField, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { adminApi } from '../api';
-import { AuthCard, ACCENT, ACCENT_HOVER, authFieldSx, authErrorAlertSx } from '../components/auth/AuthCard';
+import { AuthCard, ACCENT, ACCENT_HOVER, authFieldSx, authErrorAlertSx, authWarningAlertSx } from '../components/auth/AuthCard';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { readForgotPasswordState, saveForgotPasswordState } from '../lib/forgotPasswordSession';
 
 // Client-side pacing only, well under the backend's 10-minute/3-attempt cap
@@ -12,6 +13,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
 export function ForgotPasswordVerifyPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isOnline = useOnlineStatus();
   const initialEmail = location.state?.email || readForgotPasswordState()?.email || '';
   const [email, setEmail] = useState(initialEmail);
   const [otp, setOtp] = useState('');
@@ -102,7 +104,7 @@ export function ForgotPasswordVerifyPage() {
             type="button"
             variant="text"
             onClick={handleResend}
-            disabled={resendLoading || resendCooldown > 0 || !email}
+            disabled={resendLoading || resendCooldown > 0 || !email || !isOnline}
             sx={{ textTransform: 'none', color: ACCENT, p: 0, minWidth: 0, fontSize: '0.8rem' }}
           >
             {resendCooldown > 0
@@ -119,10 +121,17 @@ export function ForgotPasswordVerifyPage() {
 
         {error ? <Alert severity="error" sx={authErrorAlertSx}>{error}</Alert> : null}
 
+        {!isOnline ? (
+          <Alert severity="warning" sx={authWarningAlertSx}>
+            You need a connection to verify the code — and it expires in 10 minutes,
+            so don&apos;t wait for the connection to come back.
+          </Alert>
+        ) : null}
+
         <Button
           type="submit"
           variant="contained"
-          disabled={loading}
+          disabled={loading || !isOnline}
           sx={{
             py: 1.2,
             borderRadius: 1.5,

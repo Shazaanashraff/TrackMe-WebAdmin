@@ -22,6 +22,57 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-27 — Offline & Caching Audit §7: the twenty pages, one at a time
+
+- **Branch:** feature/audit-remediation-webadmin-pages
+- **Modules touched:** [`DASHBOARD.md`](modules/DASHBOARD.md), [`ACCOUNTS.md`](modules/ACCOUNTS.md),
+  [`BUSES.md`](modules/BUSES.md), [`ROUTES.md`](modules/ROUTES.md), [`OPERATIONS.md`](modules/OPERATIONS.md),
+  [`ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md), [`AUTH.md`](modules/AUTH.md),
+  [`TRACKING.md`](modules/TRACKING.md), [`SETTINGS.md`](modules/SETTINGS.md)
+- **What changed:** the page-by-page offline walk the audit's §7 asks for, on top of the already-merged
+  Phase 1/2/4 infra. Six shared treatments:
+  - **`DataTable`** gained `AsyncSection`'s offline split — no cached rows + offline → calm `OfflineCard`
+    instead of the red `ErrorState`; a refetch failure with rows present keeps the table under an amber
+    "Offline — showing saved information" strip. One change, six pages (Managers, ManagerAccounts,
+    ManagerVehicles, ManagerRequests, Operations ×3).
+  - **New `StaleChip`** (`src/components/shared/stale-chip.jsx`), built on `RelativeTime`. Hidden when
+    fresh + online, so normal pages look unchanged; appears amber when offline, past a threshold, or
+    `loud`. Placed on the manager tables, both dashboards, RoutesPage, and — `loud` — the enrollment
+    request queue.
+  - **`StatCard`** gained a `stale` + `asOf` state: offline dashboards show the last-known number greyed
+    with an "as of HH:MM" line instead of a red dash. DashboardPage also suppresses its page-level
+    `ErrorState` when offline (the global `OfflineBanner` already says why, once).
+  - **Auth pages** (Login, ForgotPassword ×3, Activate) disable submit while `navigator.onLine` is false
+    with a caption; expiring-code pages add a "don't wait" note. Never queued.
+  - **Every consequential row action / create button / dialog submit** across the manager pages gates on
+    `!isOnline` with an "Unavailable offline" tooltip; `FormDialog`/`ConfirmDialog` gained optional
+    `submitDisabled`/`confirmDisabled` props for this (default false — existing callers unaffected).
+  - **ManagerTrackingPage**: an offline cold-load now shows the idle "Live tracking unavailable —
+    you're offline" panel instead of the red `ErrorState`; the map, markers, and 90s `STALE_AFTER_MS`
+    rule are untouched (they're the reference implementation).
+  - **EnrollmentFormPage**: calm offline state for a failed schema fetch; Save disabled offline; a
+    `useBlocker` + `beforeunload` unsaved-changes guard so a wifi blip can't drop form-builder work.
+  - Reference-data `staleTime` overrides: system routes 15 min; organizations / assignable routes /
+    enrollment schema 1 h.
+- **Why:** TrackMe Offline & Caching Audit (17 Aug 2026) §7 — the web-admin equivalent of the mobile
+  apps' completed §5/§6 screen walks. Mockup-first, approved before implementation.
+- **Contract impact:** none. No endpoint or socket payload changed; `dataUpdatedAt` is read off the
+  existing TanStack query results.
+- **Tests:** new `src/components/shared/__tests__/stale-chip.test.jsx`,
+  `src/pages/__tests__/EnrollmentFormPage.test.jsx`; offline cases added to `data-table.test.jsx`,
+  `stat-card.test.jsx`, `form-dialog.test.jsx`, `confirm-dialog.test.jsx`,
+  `DashboardPage.test.jsx`, `ManagerRequestsPage.test.jsx`. Full suite: 65 files / 758 tests pass
+  (baseline was 56 / 619, all green). Lint: 0 errors, 28 warnings (unchanged, all pre-existing).
+- **Docs updated:** this entry; `docs/TESTING_GUIDE.md` (new "Offline — page-by-page" section);
+  the module docs above.
+- **Follow-ups / known issues:**
+  - ManagerAccounts enrollment keys are **not** readable offline — the audit assumed they were persisted
+    with the directory, but `useDriverEnrollmentKey` is an on-demand, audit-logged mutation with no
+    cache. "Show key" is disabled offline like the other actions; making keys readable offline needs
+    that fetch converted to a persisted query (out of scope here).
+  - The `staleTime` overrides are ad-hoc constants, not the audit's `APP_DATA/REFERENCE/LIVE` tier
+    system (§9.4) — that remains a separate chunk.
+
 ## 2026-08-26 — Merge feature/enrollment-queue-contract-doc: labelled organization details, badge stays live
 
 - **Branch:** feature/merge-enrollment-queue-contract-doc

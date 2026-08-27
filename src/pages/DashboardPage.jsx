@@ -9,6 +9,7 @@ import { ErrorState } from '@/components/shared/error-state';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSuperAdminDashboard } from '@/hooks/use-dashboard';
 import { useOperationsOverview, usePendingVehicleRequests } from '@/hooks/use-operations';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 
 function SnapshotRow({ label, value, highlight = false }) {
   return (
@@ -22,11 +23,17 @@ function SnapshotRow({ label, value, highlight = false }) {
 }
 
 export function DashboardPage() {
+  const isOnline = useOnlineStatus();
   const dashQ = useSuperAdminDashboard();
   const opsQ = useOperationsOverview();
   const pendingQ = usePendingVehicleRequests({ status: 'PENDING' });
 
   const m = dashQ.data?.data;
+  // Offline with a cached payload: show the last-known numbers greyed with an
+  // "as of" time rather than a red dash on every card, and drop the page-level
+  // error — the app-wide OfflineBanner already says why, once.
+  const dashStale = !isOnline && Boolean(m);
+  const dashErrored = dashQ.isError && !dashStale;
   const totalManagers = m?.managers?.totalManagers ?? 0;
   const activeVehicles = m?.vehicles?.activeVehicles ?? 0;
   const confirmedBookings = m?.bookings?.confirmedBookings ?? 0;
@@ -53,32 +60,40 @@ export function DashboardPage() {
           value={totalManagers}
           icon={Users}
           isLoading={dashQ.isLoading}
-          isError={dashQ.isError}
+          isError={dashErrored}
+          stale={dashStale}
+          asOf={dashQ.dataUpdatedAt}
         />
         <StatCard
           label="Active Vehicles"
           value={activeVehicles}
           icon={VehicleIcon}
           isLoading={dashQ.isLoading}
-          isError={dashQ.isError}
+          isError={dashErrored}
+          stale={dashStale}
+          asOf={dashQ.dataUpdatedAt}
         />
         <StatCard
           label="Confirmed Bookings"
           value={confirmedBookings}
           icon={BookMarked}
           isLoading={dashQ.isLoading}
-          isError={dashQ.isError}
+          isError={dashErrored}
+          stale={dashStale}
+          asOf={dashQ.dataUpdatedAt}
         />
         <StatCard
           label="Avg Rating"
           value={hasAvgRating ? avgRatingNum.toFixed(1) : 'None'}
           icon={Star}
           isLoading={dashQ.isLoading}
-          isError={dashQ.isError}
+          isError={dashErrored}
+          stale={dashStale}
+          asOf={dashQ.dataUpdatedAt}
         />
       </div>
 
-      {dashQ.isError && (
+      {dashErrored && (
         <ErrorState error={dashQ.error} onRetry={dashQ.refetch} />
       )}
 
@@ -156,6 +171,8 @@ export function DashboardPage() {
           <CardContent className="pt-0 space-y-3">
             <AsyncSection
               isLoading={dashQ.isLoading}
+              error={dashQ.error}
+              onRetry={dashQ.refetch}
               data={m}
               emptyTitle="No metrics"
             >

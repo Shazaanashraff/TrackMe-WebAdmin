@@ -5,11 +5,13 @@ import { adminApi } from '../api';
 import { AuthCard, ACCENT, ACCENT_HOVER, authFieldSx, authErrorAlertSx, authWarningAlertSx } from '../components/auth/AuthCard';
 import { Label } from '@/components/ui/label';
 import { PasswordInput } from '@/components/shared/password-input';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { readForgotPasswordState, clearForgotPasswordState } from '../lib/forgotPasswordSession';
 
 export function ForgotPasswordResetPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isOnline = useOnlineStatus();
   const storedFlowState = readForgotPasswordState();
   const initialEmail = location.state?.email || storedFlowState?.email || '';
   const initialResetToken = location.state?.resetToken || storedFlowState?.resetToken || '';
@@ -106,10 +108,17 @@ export function ForgotPasswordResetPage() {
 
         {error ? <Alert severity="error" sx={authErrorAlertSx}>{error}</Alert> : null}
 
+        {!isOnline ? (
+          <Alert severity="warning" sx={authWarningAlertSx}>
+            You need a connection to reset your password. The reset token expires
+            shortly, so reconnect and finish now rather than waiting.
+          </Alert>
+        ) : null}
+
         <Button
           type="submit"
           variant="contained"
-          disabled={loading}
+          disabled={loading || !isOnline}
           sx={{
             py: 1.2,
             borderRadius: 1.5,

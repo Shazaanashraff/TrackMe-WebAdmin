@@ -78,4 +78,26 @@ describe('StatCard', () => {
     expect(screen.getByText('7')).toBeInTheDocument();
     expect(screen.queryByText('Failed to load')).toBeNull();
   });
+
+  it('keeps the last-known value with an "as of" line when stale (offline), not a red dash', () => {
+    const at = new Date('2026-08-27T14:32:00+05:30').getTime();
+    wrap(<StatCard label="Total Managers" value={18} stale asOf={at} />);
+    expect(screen.getByText('18')).toBeInTheDocument();
+    expect(screen.getByText(/^as of /i)).toHaveTextContent('as of 02:32 PM');
+    expect(screen.queryByText('—')).toBeNull();
+    expect(screen.queryByText('Failed to load')).toBeNull();
+  });
+
+  it('isError still wins over stale', () => {
+    wrap(<StatCard label="L" value={5} stale asOf={Date.now()} isError />);
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('Failed to load')).toBeInTheDocument();
+    expect(screen.queryByText(/^as of /i)).toBeNull();
+  });
+
+  it('omits the "as of" line when stale but no asOf timestamp is given', () => {
+    wrap(<StatCard label="L" value={5} stale />);
+    expect(screen.getByText('5')).toBeInTheDocument();
+    expect(screen.queryByText(/^as of /i)).toBeNull();
+  });
 });

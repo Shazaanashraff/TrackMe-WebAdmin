@@ -95,6 +95,13 @@ cross-repo coordination note beyond this doc itself.
 See [`ADDING_A_TEST.md`](../guides/ADDING_A_TEST.md) and the [`TESTING_GUIDE.md`](../TESTING_GUIDE.md)
 "Settings" section.
 
+## 7a. Offline behaviour (Offline & Caching Audit §7)
+
+Both settings pages are local preferences and stay fully usable offline. `AccountSettingsPanel`
+disables its "Save changes" button while `navigator.onLine` is false and shows a "You need a
+connection to save profile changes." warning; "Change password" (which navigates to the
+forgot-password flow) is unaffected.
+
 ## 8. Change protocol
 
 See [`_MODULE_TEMPLATE.md`](../guides/_MODULE_TEMPLATE.md). If a real email-change or

@@ -1,18 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Save } from 'lucide-react';
 import { toast } from 'sonner';
-import { useOutletContext } from 'react-router-dom';
+import { useBlocker, useOutletContext } from 'react-router-dom';
 import { PageHeader } from '@/components/shared/page-header';
+import { OfflineCard } from '@/components/shared/offline-card';
+import { StaleChip } from '@/components/shared/stale-chip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { useEnrollmentSchema, useOrganizations, useSaveEnrollmentSchema } from '@/hooks/use-enrollment-schema';
 
 export function EnrollmentFormPage() {
   const { user } = useOutletContext();
+  const isOnline = useOnlineStatus();
   const superAdmin = user?.role === 'super-admin';
   const organizationsQ = useOrganizations(superAdmin);
   const organizations = organizationsQ.data?.data || [];
@@ -20,14 +25,37 @@ export function EnrollmentFormPage() {
   const schemaQ = useEnrollmentSchema({ organizationId, superAdmin });
   const save = useSaveEnrollmentSchema({ organizationId, superAdmin });
   const [fields, setFields] = useState([]);
+  // The server's copy of what's currently on screen, so an edit can be told
+  // apart from a fresh load. Losing ten minutes of form-builder work to a wifi
+  // blip would be a genuinely bad experience.
+  const [savedSnapshot, setSavedSnapshot] = useState('[]');
+
+  const isDirty = useMemo(() => JSON.stringify(fields) !== savedSnapshot, [fields, savedSnapshot]);
 
   useEffect(() => {
     if (superAdmin && !organizationId && organizations[0]?._id) setOrganizationId(organizations[0]._id);
   }, [superAdmin, organizationId, organizations]);
 
   useEffect(() => {
-    if (schemaQ.data?.data?.fields) setFields(schemaQ.data.data.fields);
+    if (schemaQ.data?.data?.fields) {
+      setFields(schemaQ.data.data.fields);
+      setSavedSnapshot(JSON.stringify(schemaQ.data.data.fields));
+    }
   }, [schemaQ.data]);
+
+  // Warn before a route change (useBlocker) or a tab close/reload (beforeunload)
+  // drops unsaved edits.
+  const blocker = useBlocker(useCallback(
+    ({ currentLocation, nextLocation }) => isDirty && currentLocation.pathname !== nextLocation.pathname,
+    [isDirty],
+  ));
+
+  useEffect(() => {
+    if (!isDirty) return undefined;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [isDirty]);
 
   const update = (key, patch) => setFields((current) => current.map((field) => field.key === key ? { ...field, ...patch } : field));
   const move = (index, direction) => setFields((current) => {
@@ -38,7 +66,10 @@ export function EnrollmentFormPage() {
     return next.map((field, order) => ({ ...field, order }));
   });
   const submit = () => save.mutate(fields, {
-    onSuccess: () => toast('Enrollment form saved'),
+    onSuccess: () => {
+      setSavedSnapshot(JSON.stringify(fields));
+      toast('Enrollment form saved');
+    },
     onError: (error) => toast(error?.message || 'Could not save enrollment form'),
   });
 
@@ -62,13 +93,21 @@ export function EnrollmentFormPage() {
 
       <Alert><AlertDescription>Full name and guardian/contact phone are always collected by TrackMe. The fields below are the organization-specific details added to that standard information.</AlertDescription></Alert>
 
-      {schemaQ.isLoading ? <Skeleton className="h-72 w-full rounded-xl" /> : schemaQ.error ? (
-        <Alert variant="destructive"><AlertDescription>{schemaQ.error.message}</AlertDescription></Alert>
+      {schemaQ.isLoading ? <Skeleton className="h-72 w-full rounded-xl" /> : schemaQ.error && !config ? (
+        !isOnline
+          ? <Card><OfflineCard onRetry={schemaQ.refetch} description="You're offline and this form hasn't been saved to this browser yet. It'll load when you're back." /></Card>
+          : <Alert variant="destructive"><AlertDescription>{schemaQ.error.message}</AlertDescription></Alert>
       ) : config ? (
         <Card>
-          <CardHeader>
-            <CardTitle>{config.organization.name}</CardTitle>
-            <CardDescription>{config.organization.serviceType} · Form version {config.schemaVersion}</CardDescription>
+          <CardHeader className="flex-row items-start justify-between gap-3">
+            <div>
+              <CardTitle>{config.organization.name}</CardTitle>
+              <CardDescription>{config.organization.serviceType} · Form version {config.schemaVersion}</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              {isDirty && <span className="rounded-full border border-status-warning/30 bg-status-warning/10 px-2 py-0.5 text-xs font-medium text-status-warning">Unsaved changes</span>}
+              <StaleChip updatedAt={schemaQ.dataUpdatedAt} offline={!isOnline} />
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {fields.map((field, index) => (
@@ -93,12 +132,34 @@ export function EnrollmentFormPage() {
                 </div>
               </div>
             ))}
-            <div className="flex justify-end pt-3">
-              <Button onClick={submit} disabled={save.isPending}><Save className="mr-2 h-4 w-4" />{save.isPending ? 'Saving…' : 'Save form'}</Button>
+            {!isOnline && (
+              <Alert variant="warning">
+                <AlertDescription>
+                  You&rsquo;re offline. Keep editing — your changes stay on screen — but saving needs a connection.
+                </AlertDescription>
+              </Alert>
+            )}
+            <div className="flex items-center justify-end gap-3 pt-3">
+              {isDirty && isOnline && (
+                <span className="text-xs text-muted-foreground">Unsaved changes</span>
+              )}
+              <Button onClick={submit} disabled={save.isPending || !isOnline}>
+                <Save className="mr-2 h-4 w-4" />{save.isPending ? 'Saving…' : 'Save form'}
+              </Button>
             </div>
           </CardContent>
         </Card>
       ) : null}
+
+      <ConfirmDialog
+        open={blocker.state === 'blocked'}
+        onOpenChange={(open) => { if (!open && blocker.state === 'blocked') blocker.reset(); }}
+        title="Leave without saving?"
+        description="You have unsaved changes to this enrollment form. They'll be lost if you leave now."
+        confirmLabel="Leave"
+        destructive
+        onConfirm={() => blocker.proceed?.()}
+      />
     </div>
   );
 }
