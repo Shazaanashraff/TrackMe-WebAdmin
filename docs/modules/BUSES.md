@@ -97,6 +97,18 @@ Backend side: [`BUSES.md`](../../../backend/docs/modules/BUSES.md) (vehicle CRUD
   where this is felt yet. Revisit if/when fleet sizes grow enough for this to matter — the acceptance
   criteria in issue #10 explicitly allows this as the resolution.
 
+## 6a. Offline behaviour (Offline & Caching Audit §7)
+
+`useManagerVehicles` persists to disk; `useManagerAssignableRoutes` and `useOrganizations` get a
+1-hour `staleTime` (reference data, refetched far more often than it changes). Offline:
+
+- The `DataTable` shows cached rows under an amber strip, or a calm `OfflineCard` if nothing is
+  cached — not the red `ErrorState`. Stat cards render `stale`/`asOf` (they're computed from the
+  cached array, no extra fetch); a `StaleChip` sits by the table.
+- Add Vehicle, the create wizard's submit, Edit, and the delete-request confirm all gate on
+  `!isOnline`; the wizard shows a "your entries are kept — reconnect to submit" note. Nothing is
+  queued (a vehicle create/delete needs a visible approval result).
+
 ## 7. Tests covering this module
 
 | Layer | File | What it locks |

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { DashboardPage } from '../DashboardPage';
@@ -31,6 +31,7 @@ function defaultHooks({ metrics = METRICS, ops = [], pending = [], loading = fal
     isLoading: loading,
     isError: Boolean(error),
     error,
+    dataUpdatedAt: metrics ? Date.parse('2026-08-27T09:02:00.000Z') : 0,
     refetch: vi.fn(),
   });
   useOperationsOverview.mockReturnValue({
@@ -167,5 +168,29 @@ describe('DashboardPage', () => {
     const card = placeholder.closest('.py-3');
     expect(card).toBeInTheDocument();
     expect(placeholder.closest('.py-10')).toBeNull();
+  });
+
+  describe('offline', () => {
+    function setOnline(value) {
+      Object.defineProperty(navigator, 'onLine', { value, writable: true, configurable: true });
+    }
+    afterEach(() => setOnline(true));
+
+    it('offline with a cached payload shows the real numbers with an "as of" line, not red dashes or a page error', () => {
+      setOnline(false);
+      // A background refetch failed while offline, but the persisted payload is still here.
+      setup({ error: new Error('Failed to fetch') });
+
+      expect(screen.getAllByText('4').length).toBeGreaterThan(0); // totalManagers, real value
+      expect(screen.queryByText('—')).toBeNull();
+      expect(screen.queryByText('Failed to load')).toBeNull();
+      expect(screen.getAllByText(/^as of /i).length).toBe(4);
+    });
+
+    it('still shows the red error treatment when online (offline path did not swallow real failures)', () => {
+      setup({ error: new Error('Server error'), metrics: null });
+      expect(screen.getAllByText('—')).toHaveLength(4);
+      expect(screen.getAllByText(/failed to load/i).length).toBeGreaterThan(0);
+    });
   });
 });

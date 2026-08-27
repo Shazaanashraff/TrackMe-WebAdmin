@@ -17,6 +17,10 @@ export function FormDialog({
   pending = false,
   error,
   submitLabel = 'Save',
+  // Blocks the submit button without blocking the form itself — used to stop a
+  // write from being attempted while offline. The caller still shows the reason
+  // (a banner in the dialog body, a disabled trigger, etc.).
+  submitDisabled = false,
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,7 +47,7 @@ export function FormDialog({
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || submitDisabled}>
               {pending && (
                 <span
                   className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin"

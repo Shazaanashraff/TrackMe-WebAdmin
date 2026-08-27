@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DataTable } from '../data-table';
@@ -301,6 +301,52 @@ describe('DataTable — a11y', () => {
     dataRow.focus();
     await user.keyboard(' ');
     expect(onRowClick).toHaveBeenCalledOnce();
+  });
+});
+
+// ── offline state ────────────────────────────────────────────────────────────
+
+describe('DataTable — offline', () => {
+  function setOnline(value) {
+    Object.defineProperty(navigator, 'onLine', { value, writable: true, configurable: true });
+  }
+  afterEach(() => setOnline(true));
+
+  it('shows a calm OfflineCard instead of ErrorState when a fetch fails with no cached rows and the device is offline', () => {
+    setOnline(false);
+    render(<DataTable columns={COLS} data={[]} error={new Error('Failed to fetch')} onRetry={() => {}} />);
+    expect(screen.getByText("Can't load this right now")).toBeInTheDocument();
+    expect(screen.queryByText('Failed to load')).toBeNull();
+  });
+
+  it('still shows the red ErrorState for a no-data failure while online', () => {
+    render(<DataTable columns={COLS} data={[]} error={new Error('boom')} onRetry={() => {}} />);
+    expect(screen.getByText('Failed to load')).toBeInTheDocument();
+    expect(screen.queryByText("Can't load this right now")).toBeNull();
+  });
+
+  it('keeps the rows and adds an "Offline — showing saved information" strip when a refetch fails offline', () => {
+    setOnline(false);
+    render(<DataTable columns={COLS} data={makeRows(3)} error={new Error('Failed to fetch')} onRetry={() => {}} />);
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('Person 1')).toBeInTheDocument();
+    expect(screen.getByText(/offline — showing saved information/i)).toBeInTheDocument();
+    expect(screen.queryByText('Failed to load')).toBeNull();
+  });
+
+  it('uses the online "Couldn\'t refresh" wording on a refetch failure while still online', () => {
+    render(<DataTable columns={COLS} data={makeRows(3)} error={new Error('boom')} onRetry={() => {}} />);
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText(/couldn.t refresh/i)).toBeInTheDocument();
+  });
+
+  it('wires the stale strip Retry link through to onRetry', async () => {
+    setOnline(false);
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+    render(<DataTable columns={COLS} data={makeRows(2)} error={new Error('e')} onRetry={onRetry} />);
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 });
 

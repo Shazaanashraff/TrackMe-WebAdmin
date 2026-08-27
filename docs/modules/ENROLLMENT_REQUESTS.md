@@ -124,6 +124,19 @@ Verified against the backend 2026-08-12.
 See [`../guides/ADDING_A_TEST.md`](../guides/ADDING_A_TEST.md) and the traceability row in
 [`../TESTING_GUIDE.md`](../TESTING_GUIDE.md).
 
+## 7a. Offline behaviour (Offline & Caching Audit §7)
+
+`useEnrollmentRequests` persists to disk. Offline:
+
+- The `DataTable` shows cached rows under an amber strip (or a calm `OfflineCard` if nothing is
+  cached) instead of a red `ErrorState`.
+- Staleness is **loud** here — the PENDING tab carries a `loud` `StaleChip` ("Queue as of …") and,
+  when offline with rows, a prominent banner: "this queue may have changed since it was last
+  loaded." A stale queue means a manager could approve a request another manager already handled.
+- Approve / Decline / Remove are disabled offline (`!isOnline` on the buttons and
+  `confirmDisabled` on the ConfirmDialog) and are **never queued** — a decision on a withdrawn or
+  already-handled request must fail loudly, not silently replay.
+
 ## 8. Change protocol
 
 Any change to this module must:

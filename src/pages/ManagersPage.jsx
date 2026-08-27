@@ -6,9 +6,11 @@ import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
 import { DataTable } from '@/components/shared/data-table';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { StaleChip } from '@/components/shared/stale-chip';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { PasswordInput } from '@/components/shared/password-input';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -67,6 +69,7 @@ const EMPTY_FORM = { name: '', email: '', password: '', confirmPassword: '' };
 
 export function ManagersPage() {
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
   const managersQ = useManagers();
   const createM = useCreateManager();
   const updateM = useUpdateManager();
@@ -244,13 +247,20 @@ export function ManagersPage() {
               <Button size="sm" variant="ghost" onClick={() => navigate(`/operations?managerId=${row._id}`)}>
                 View
               </Button>
-              <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!isOnline}
+                title={isOnline ? undefined : 'Unavailable offline'}
+                onClick={() => openEdit(row)}
+              >
                 Edit
               </Button>
               <Button
                 size="sm"
                 variant="secondary"
-                disabled={toggling}
+                disabled={toggling || !isOnline}
+                title={isOnline ? undefined : 'Unavailable offline'}
                 onClick={() => handleToggleStatus(row)}
               >
                 {isInactive ? 'Activate' : 'Deactivate'}
@@ -258,8 +268,14 @@ export function ManagersPage() {
               <Button
                 size="sm"
                 variant="destructive"
-                disabled={!isInactive || deleteM.isPending}
-                title={isInactive ? undefined : 'Deactivate this manager before deleting'}
+                disabled={!isInactive || deleteM.isPending || !isOnline}
+                title={
+                  !isOnline
+                    ? 'Unavailable offline'
+                    : isInactive
+                      ? undefined
+                      : 'Deactivate this manager before deleting'
+                }
                 onClick={() => { setDeleteError(null); setDeleteTarget(row); }}
               >
                 Delete
@@ -282,7 +298,7 @@ export function ManagersPage() {
         );
       },
     },
-  ], [statusM.isPending, statusM.variables, deleteM.isPending, toggleErrors]);
+  ], [statusM.isPending, statusM.variables, deleteM.isPending, toggleErrors, isOnline]);
 
   return (
     <div className="space-y-6">
@@ -290,7 +306,7 @@ export function ManagersPage() {
         title="Managers"
         description="Maintain manager accounts, update access status, and rotate credentials securely."
         actions={
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} disabled={!isOnline} title={isOnline ? undefined : 'Unavailable offline'}>
             <Plus className="h-4 w-4 mr-1.5" />
             Add Manager
           </Button>
@@ -298,10 +314,16 @@ export function ManagersPage() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Total Managers" value={stats.total} icon={Users} isLoading={managersQ.isLoading} />
-        <StatCard label="Active Managers" value={stats.active} icon={UserCheck} isLoading={managersQ.isLoading} />
-        <StatCard label="Inactive Managers" value={stats.inactive} icon={UserX} isLoading={managersQ.isLoading} />
+        <StatCard label="Total Managers" value={stats.total} icon={Users} isLoading={managersQ.isLoading} stale={!isOnline} asOf={managersQ.dataUpdatedAt} />
+        <StatCard label="Active Managers" value={stats.active} icon={UserCheck} isLoading={managersQ.isLoading} stale={!isOnline} asOf={managersQ.dataUpdatedAt} />
+        <StatCard label="Inactive Managers" value={stats.inactive} icon={UserX} isLoading={managersQ.isLoading} stale={!isOnline} asOf={managersQ.dataUpdatedAt} />
       </div>
+
+      {rows.length > 0 && (
+        <div className="flex justify-end">
+          <StaleChip updatedAt={managersQ.dataUpdatedAt} offline={!isOnline} />
+        </div>
+      )}
 
       <DataTable
         columns={columns}
@@ -322,6 +344,7 @@ export function ManagersPage() {
         confirmLabel="Delete Manager"
         destructive
         pending={deleteM.isPending}
+        confirmDisabled={!isOnline}
         onConfirm={handleConfirmDelete}
         error={deleteError}
       />
@@ -333,6 +356,7 @@ export function ManagersPage() {
         submitLabel={editTarget ? 'Update Manager' : 'Create Manager'}
         onSubmit={handleSave}
         pending={submitting}
+        submitDisabled={!isOnline}
         error={serverError}
       >
         <div className="space-y-4">
@@ -384,7 +408,7 @@ export function ManagersPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={resetPwM.isPending || !form.password}
+                  disabled={resetPwM.isPending || !form.password || !isOnline}
                   onClick={handleSetPassword}
                 >
                   {resetPwM.isPending ? 'Updating…' : 'Update password'}

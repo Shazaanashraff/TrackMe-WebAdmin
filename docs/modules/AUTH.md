@@ -120,6 +120,14 @@ Backend side: [`AUTH.md`](../../../backend/docs/modules/AUTH.md) — four-collec
 | e2e (Playwright) | `e2e/login.spec.ts` | the real login form, typed and submitted (not the `loginAsManager`/`loginAsSuperAdmin` shortcut), for both roles this portal serves, plus the invalid-credentials, unsupported-role, and session-expiry-redirect cases (issue #28). |
 | e2e (Playwright) | `e2e/password-reset.spec.ts` | the full 3-screen forgot-password journey as one continuous flow, plus an expired code and a mid-flow refresh (issue #28). |
 
+## 7a. Offline behaviour (Offline & Caching Audit §7)
+
+LoginPage, the three ForgotPassword steps, and ActivateAccountPage each call `useOnlineStatus()`
+and, while `navigator.onLine` is false, disable their submit button and show a warning `Alert`
+("You need a connection to sign in.", etc.). The expiring-code pages (verify, reset, activate) add
+a "don't wait — the code expires" note. **Auth submits are never queued** — the user must see the
+real result (including "email already taken" / an expired token).
+
 ## 8. Change protocol
 
 See [`_MODULE_TEMPLATE.md`](../guides/_MODULE_TEMPLATE.md). Any change to `request()`'s

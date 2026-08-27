@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -262,6 +262,40 @@ describe('ManagerRequestsPage', () => {
     it('falls back to a sane tab when the URL asks for a status that does not exist', () => {
       setup({ route: '/manager/requests?status=NONSENSE' });
       expect(useEnrollmentRequests).toHaveBeenCalledWith('PENDING', '');
+    });
+  });
+
+  describe('offline', () => {
+    function setOnline(value) {
+      Object.defineProperty(navigator, 'onLine', { value, writable: true, configurable: true });
+    }
+    afterEach(() => setOnline(true));
+
+    it('disables Approve and Decline while offline and never queues a decision', async () => {
+      setOnline(false);
+      const user = userEvent.setup();
+      const { approve, reject } = setup();
+
+      const approveBtn = screen.getAllByRole('button', { name: /approve/i })[0];
+      const declineBtn = screen.getAllByRole('button', { name: /decline/i })[0];
+      expect(approveBtn).toBeDisabled();
+      expect(declineBtn).toBeDisabled();
+
+      await user.click(approveBtn);
+      expect(approve.mutate).not.toHaveBeenCalled();
+      expect(reject.mutate).not.toHaveBeenCalled();
+    });
+
+    it('warns that the pending queue may be out of date while offline', () => {
+      setOnline(false);
+      setup();
+      expect(screen.getByText(/this queue may have changed since it was last loaded/i)).toBeInTheDocument();
+    });
+
+    it('leaves the actions enabled when online', () => {
+      setup();
+      expect(screen.getAllByRole('button', { name: /approve/i })[0]).not.toBeDisabled();
+      expect(screen.queryByText(/this queue may have changed/i)).toBeNull();
     });
   });
 });

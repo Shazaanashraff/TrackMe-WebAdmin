@@ -106,6 +106,22 @@ model in [`AUTH.md`](../../../backend/docs/modules/AUTH.md).
 | Unit | `src/components/shared/__tests__/confirm-dialog.test.jsx` | shared confirm/reject-with-reason modal behavior reused by disable-driver here. |
 | e2e (Playwright) | `e2e/cross-role-onboarding.spec.ts` | a super-admin creates a manager via the real Add Manager dialog, then that manager does a real click-through sign-in (not seeded) and creates their first vehicle — the "set up a new customer" journey spanning both roles in one flow (issue #28). |
 
+## 7a. Offline behaviour (Offline & Caching Audit §7)
+
+`useManagers` / `useManagerDrivers` persist to disk. Offline:
+
+- The `DataTable` shows cached rows under an amber "Offline — showing saved information" strip, or a
+  calm `OfflineCard` if nothing is cached — never the red `ErrorState`. A `StaleChip` sits by the
+  table, and the stat cards render `stale`/`asOf`.
+- Every mutating control gates on `!isOnline` with an "Unavailable offline" tooltip: ManagersPage's
+  Add / Edit / Activate-Deactivate / Delete and the FormDialog/ConfirmDialog submits;
+  ManagerAccountsPage's Add Driver and the whole row action menu (edit, replace/restore key, view /
+  reset password, enable/disable, delete).
+- **Enrollment keys are not readable offline.** `useDriverEnrollmentKey` is an on-demand,
+  audit-logged mutation with no cache, so "Show key" is disabled offline. The audit assumed keys
+  were persisted with the directory; making them readable offline needs that fetch converted to a
+  persisted query (tracked, not done here).
+
 ## 8. Change protocol
 
 See [`_MODULE_TEMPLATE.md`](../guides/_MODULE_TEMPLATE.md). A role-scoping change needs a test

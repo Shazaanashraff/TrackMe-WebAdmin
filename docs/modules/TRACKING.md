@@ -72,10 +72,16 @@ The full event and authorization contract is in
 
 - **Loading:** flat `CardSkeleton`; no fake marker data.
 - **Empty fleet:** “No vehicles in your fleet”.
-- **REST error:** `ErrorState` with retry. Since issue #76, the message shown depends on whether
-  the error carries an `error.status` (a real rejection, e.g. this fleet fetch failing server-side)
-  or not (a genuine network/timeout failure, shown as a distinct retry-oriented message) — see
-  [`AUTH.md`](AUTH.md) §5 for the shared `humanizeError` logic this page inherits unchanged.
+- **REST error (online):** `ErrorState` with retry. Since issue #76, the message shown depends on
+  whether the error carries an `error.status` (a real rejection, e.g. this fleet fetch failing
+  server-side) or not (a genuine network/timeout failure, shown as a distinct retry-oriented
+  message) — see [`AUTH.md`](AUTH.md) §5 for the shared `humanizeError` logic this page inherits
+  unchanged.
+- **Device offline (Offline & Caching Audit §7):** takes precedence over the error branch. The
+  live keys are never persisted, so an offline cold-load has nothing to show — the page renders the
+  idle panel with "Live tracking unavailable — you're offline" (and a "Fleet: N vehicles" line if a
+  snapshot is still in memory) instead of the red `ErrorState`. A saved position is never plotted.
+  `mergeLiveRecord` / `trackingState` / `STALE_AFTER_MS` are untouched.
 - **Socket disconnected:** warning explains that 30-second REST polling continues; Socket.IO
   auto-reconnects.
 - **Live, no position:** the driver pressed GO but the first GPS fix has not arrived; the page says

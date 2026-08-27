@@ -10,12 +10,17 @@ export function useManagerDrivers() {
 }
 
 // Only fetched once a category is picked. The list is per category, so an
-// unfiltered fetch would be thrown away as soon as one is chosen.
+// unfiltered fetch would be thrown away as soon as one is chosen. Organizations
+// barely change, so an hour of staleness keeps the create/edit dialog from
+// refetching the dropdown every time it opens.
+export const ORGANIZATIONS_STALE_TIME = 60 * 60 * 1000;
+
 export function useOrganizations(serviceType) {
   return useQuery({
     queryKey: qk.organizations.byServiceType(serviceType),
     queryFn: () => adminApi.getManagerOrganizations(serviceType),
     enabled: Boolean(serviceType),
+    staleTime: ORGANIZATIONS_STALE_TIME,
   });
 }
 

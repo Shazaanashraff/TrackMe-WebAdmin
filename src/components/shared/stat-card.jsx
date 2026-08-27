@@ -3,7 +3,31 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
-export function StatCard({ label, value, icon: Icon, hint, trend, isLoading, isError, href }) {
+function formatAsOf(when) {
+  if (!when) return null;
+  return new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Colombo',
+  }).format(new Date(when));
+}
+
+export function StatCard({
+  label,
+  value,
+  icon: Icon,
+  hint,
+  trend,
+  isLoading,
+  isError,
+  href,
+  // `stale` + `asOf` (a timestamp, e.g. a query's dataUpdatedAt) render the
+  // last-known number greyed with an "as of HH:MM" line. Used offline instead
+  // of `isError`, so a dropped connection shows the cached count rather than a
+  // red dash.
+  stale = false,
+  asOf,
+}) {
   if (isLoading) {
     return (
       <div className="rounded-xl border border-border bg-surface p-5 space-y-3">
@@ -33,12 +57,15 @@ export function StatCard({ label, value, icon: Icon, hint, trend, isLoading, isE
         <span
           className={cn(
             'block text-3xl font-bold font-mono tabular-nums leading-none',
-            isError ? 'text-status-danger' : 'text-foreground',
+            isError ? 'text-status-danger' : stale ? 'text-muted-foreground' : 'text-foreground',
           )}
         >
           {isError ? '—' : value}
         </span>
         {isError && <p className="text-xs text-status-danger">Failed to load</p>}
+        {!isError && stale && asOf && (
+          <p className="text-xs text-muted-foreground">as of {formatAsOf(asOf)}</p>
+        )}
         {trend && (
           <div
             className={cn(

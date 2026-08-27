@@ -6,9 +6,11 @@ import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
 import { DataTable } from '@/components/shared/data-table';
 import { LiveIndicator } from '@/components/shared/live-indicator';
+import { StaleChip } from '@/components/shared/stale-chip';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { PasswordInput } from '@/components/shared/password-input';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -151,6 +153,7 @@ function driverStatus(driver) {
 
 export function ManagerAccountsPage() {
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
   const driversQ = useManagerDrivers();
   // Position is per vehicle, but a manager reads this page by driver, so the
   // snapshot is keyed back to the driver the backend reports on each record.
@@ -612,7 +615,13 @@ export function ManagerAccountsPage() {
         if (!key) {
           return (
             <div className="flex items-center gap-1.5">
-              <Button size="sm" variant="ghost" disabled={pending} onClick={() => handleRevealKey(driver)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={pending || !isOnline}
+                title={isOnline ? undefined : 'Reconnect to look up the key'}
+                onClick={() => handleRevealKey(driver)}
+              >
                 {pending ? 'Loading…' : 'Show key'}
               </Button>
               {lock}
@@ -668,25 +677,29 @@ export function ManagerAccountsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onSelect={() => openEdit(driver)}>Edit driver</DropdownMenuItem>
+              {!isOnline && (
+                <DropdownMenuItem disabled>Unavailable offline</DropdownMenuItem>
+              )}
+              <DropdownMenuItem disabled={!isOnline} onSelect={() => openEdit(driver)}>Edit driver</DropdownMenuItem>
               {/* "Rotate" is our word, not the manager's. The label says what
                   happens to the key they hand out; the endpoint keeps the
                   rotate name. */}
-              <DropdownMenuItem onSelect={() => setRotateTarget(driver)}>
+              <DropdownMenuItem disabled={!isOnline} onSelect={() => setRotateTarget(driver)}>
                 Replace enrollment key
               </DropdownMenuItem>
               {revertable[driver._id] && (
-                <DropdownMenuItem onSelect={() => handleRevertKey(driver)}>
+                <DropdownMenuItem disabled={!isOnline} onSelect={() => handleRevertKey(driver)}>
                   Restore previous key
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onSelect={() => handleViewPassword(driver)}>
+              <DropdownMenuItem disabled={!isOnline} onSelect={() => handleViewPassword(driver)}>
                 View password
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setResetTarget(driver)}>
+              <DropdownMenuItem disabled={!isOnline} onSelect={() => setResetTarget(driver)}>
                 Reset password
               </DropdownMenuItem>
               <DropdownMenuItem
+                disabled={!isOnline}
                 onSelect={() => (driver.isActive === false
                   ? handleToggleActive(driver)
                   : setDisableTarget(driver))}
@@ -694,6 +707,7 @@ export function ManagerAccountsPage() {
                 {driver.isActive === false ? 'Enable driver' : 'Disable driver'}
               </DropdownMenuItem>
               <DropdownMenuItem
+                disabled={!isOnline}
                 className="text-destructive focus:text-destructive"
                 onSelect={() => setDeleteTarget(driver)}
               >
@@ -704,7 +718,7 @@ export function ManagerAccountsPage() {
         );
       },
     },
-  ], [revealedKeys, revertable, revealingIds, liveByDriverId, fleetQ.isLoading, navigate]);
+  ], [revealedKeys, revertable, revealingIds, liveByDriverId, fleetQ.isLoading, navigate, isOnline]);
 
   return (
     <div className="space-y-6">
@@ -714,6 +728,8 @@ export function ManagerAccountsPage() {
         actions={
           <Button
             variant={onboarding ? 'outline' : 'default'}
+            disabled={!isOnline && !onboarding}
+            title={!isOnline && !onboarding ? 'Unavailable offline' : undefined}
             onClick={onboarding ? cancelOnboarding : startOnboarding}
           >
             {onboarding ? 'Close form' : (
@@ -974,11 +990,19 @@ export function ManagerAccountsPage() {
                   </Alert>
                 )}
 
+                {!isOnline && (
+                  <Alert variant="warning">
+                    <AlertDescription>
+                      You&apos;re offline. Your entries are kept here — reconnect to create the driver.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="flex justify-end gap-2 pt-1">
                   <Button type="button" variant="ghost" onClick={cancelOnboarding} disabled={submitting}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={submitting}>
+                  <Button type="submit" disabled={submitting || !isOnline}>
                     {submitting ? 'Creating…' : 'Create driver'}
                   </Button>
                 </div>
@@ -1038,17 +1062,20 @@ export function ManagerAccountsPage() {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Total Drivers" value={stats.total} icon={Users} isLoading={driversQ.isLoading} />
-        <StatCard label="Active" value={stats.active} icon={UserCheck} isLoading={driversQ.isLoading} />
-        <StatCard label="Setup Required" value={stats.needsSetup} icon={UserX} isLoading={driversQ.isLoading} />
+        <StatCard label="Total Drivers" value={stats.total} icon={Users} isLoading={driversQ.isLoading} stale={!isOnline} asOf={driversQ.dataUpdatedAt} />
+        <StatCard label="Active" value={stats.active} icon={UserCheck} isLoading={driversQ.isLoading} stale={!isOnline} asOf={driversQ.dataUpdatedAt} />
+        <StatCard label="Setup Required" value={stats.needsSetup} icon={UserX} isLoading={driversQ.isLoading} stale={!isOnline} asOf={driversQ.dataUpdatedAt} />
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Driver directory</CardTitle>
-          <CardDescription>
-            Every driver you manage, with their assigned vehicle and enrollment key.
-          </CardDescription>
+        <CardHeader className="flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Driver directory</CardTitle>
+            <CardDescription>
+              Every driver you manage, with their assigned vehicle and enrollment key.
+            </CardDescription>
+          </div>
+          <StaleChip updatedAt={driversQ.dataUpdatedAt} offline={!isOnline} />
         </CardHeader>
         <CardContent>
           <DataTable
@@ -1071,6 +1098,7 @@ export function ManagerAccountsPage() {
         submitLabel="Save Driver"
         onSubmit={handleSave}
         pending={submitting}
+        submitDisabled={!isOnline}
         error={serverError}
       >
         <div className="space-y-4">
@@ -1209,6 +1237,7 @@ export function ManagerAccountsPage() {
         submitLabel="Update Password"
         onSubmit={handleConfirmReset}
         pending={resetPwM.isPending}
+        submitDisabled={!isOnline}
       >
         <div className="space-y-1.5">
           <Label htmlFor="drv-new-password">New password</Label>
@@ -1230,6 +1259,7 @@ export function ManagerAccountsPage() {
         confirmLabel="Delete Driver"
         destructive
         pending={deleteM.isPending}
+        confirmDisabled={!isOnline}
         onConfirm={handleConfirmDelete}
       />
 
@@ -1244,6 +1274,7 @@ export function ManagerAccountsPage() {
         confirmLabel="Replace Key"
         destructive
         pending={rotateKeyM.isPending}
+        confirmDisabled={!isOnline}
         onConfirm={handleConfirmRotateKey}
       >
         <ul className="space-y-1.5 rounded-lg border border-border bg-surface-muted p-3 text-sm text-foreground">
@@ -1263,6 +1294,7 @@ export function ManagerAccountsPage() {
         confirmLabel="Disable Driver"
         destructive
         pending={updateM.isPending}
+        confirmDisabled={!isOnline}
         onConfirm={handleConfirmDisable}
       />
 

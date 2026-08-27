@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ManagerTrackingPage } from '@/pages/ManagerTrackingPage';
@@ -245,5 +245,35 @@ describe('ManagerTrackingPage', () => {
     // The details panel is on VH-002, which has no driver, rather than on
     // VH-001, the only vehicle with a position to plot.
     expect(screen.getByText('Unassigned')).toBeInTheDocument();
+  });
+
+  describe('offline (Offline & Caching Audit §7)', () => {
+    function setOnline(value) {
+      Object.defineProperty(navigator, 'onLine', { value, writable: true, configurable: true });
+    }
+    afterEach(() => setOnline(true));
+
+    it('shows the "unavailable — offline" panel instead of the map or a red error, and plots nothing', () => {
+      setOnline(false);
+      // Offline the live query has errored and there is no persisted fleet.
+      mockTracking({ fleet: [], error: Object.assign(new Error('Failed to fetch')) });
+      renderPage();
+
+      expect(screen.getByTestId('fleet-map-offline')).toBeInTheDocument();
+      expect(screen.getByText(/live tracking unavailable/i)).toBeInTheDocument();
+      expect(screen.queryByTestId('fleet-map')).toBeNull();
+      expect(screen.queryByText('Failed to load')).toBeNull();
+      expect(googleMapsMock.markerInstances.length).toBe(0);
+    });
+
+    it('names the fleet size when a snapshot is still in memory but stays map-less', () => {
+      setOnline(false);
+      mockTracking(); // FLEET has 2 vehicles
+      renderPage();
+
+      expect(screen.getByTestId('fleet-map-offline')).toBeInTheDocument();
+      expect(screen.getByText(/fleet: 2 vehicles/i)).toBeInTheDocument();
+      expect(screen.queryByTestId('fleet-map')).toBeNull();
+    });
   });
 });

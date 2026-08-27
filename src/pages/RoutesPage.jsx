@@ -7,6 +7,8 @@ import { AsyncSection } from '@/components/shared/async-section';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { StaleChip } from '@/components/shared/stale-chip';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -131,7 +133,7 @@ function normalizeProvince(rawValue) {
   return PROVINCE_LOOKUP.get(key) || null;
 }
 
-function buildRouteColumns({ onEdit, onToggleStatus, togglingRouteId, onDelete, toggleErrors, onDismissToggleError }) {
+function buildRouteColumns({ onEdit, onToggleStatus, togglingRouteId, onDelete, toggleErrors, onDismissToggleError, isOnline = true }) {
   return [
     { id: 'routeId', header: 'Route ID', accessorKey: 'routeId' },
     { id: 'routeName', header: 'Route Name', accessorKey: 'routeName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
@@ -153,13 +155,13 @@ function buildRouteColumns({ onEdit, onToggleStatus, togglingRouteId, onDelete, 
         return (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => onEdit(route)}>
+              <Button size="sm" variant="outline" disabled={!isOnline} title={isOnline ? undefined : 'Unavailable offline'} onClick={() => onEdit(route)}>
                 Edit
               </Button>
-              <Button size="sm" variant="secondary" disabled={toggling} onClick={() => onToggleStatus(route)}>
+              <Button size="sm" variant="secondary" disabled={toggling || !isOnline} title={isOnline ? undefined : 'Unavailable offline'} onClick={() => onToggleStatus(route)}>
                 {isInactive ? 'Activate' : 'Deactivate'}
               </Button>
-              <Button size="sm" variant="destructive" onClick={() => onDelete(route)}>
+              <Button size="sm" variant="destructive" disabled={!isOnline} title={isOnline ? undefined : 'Unavailable offline'} onClick={() => onDelete(route)}>
                 Delete
               </Button>
             </div>
@@ -184,6 +186,7 @@ function buildRouteColumns({ onEdit, onToggleStatus, togglingRouteId, onDelete, 
 }
 
 export function RoutesPage() {
+  const isOnline = useOnlineStatus();
   const routesQ = useSystemRoutes();
   const createM = useCreateSystemRoute();
   const updateM = useUpdateSystemRoute();
@@ -362,7 +365,8 @@ export function RoutesPage() {
     onDelete: (route) => { setDeleteError(null); setDeleteTarget(route); },
     toggleErrors,
     onDismissToggleError: clearToggleError,
-  }), [toggleM.isPending, toggleM.variables, toggleErrors]);
+    isOnline,
+  }), [toggleM.isPending, toggleM.variables, toggleErrors, isOnline]);
 
   return (
     <div className="space-y-6">
@@ -506,7 +510,15 @@ export function RoutesPage() {
               )}
             </div>
 
-            <Button type="submit" disabled={createM.isPending}>
+            {!isOnline && (
+              <Alert variant="warning">
+                <AlertDescription>
+                  You&apos;re offline. Your entries stay here — reconnect to create the route.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <Button type="submit" disabled={createM.isPending || !isOnline}>
               {createM.isPending ? 'Creating…' : 'Create Route'}
             </Button>
           </form>
@@ -526,6 +538,7 @@ export function RoutesPage() {
               )}
             </div>
             <div className="flex items-center gap-3">
+              <StaleChip updatedAt={routesQ.dataUpdatedAt} offline={!isOnline} />
               <Badge variant="secondary">{visibleRoutes.length} routes</Badge>
               <Button size="sm" variant="outline" onClick={() => setSelectedProvince(null)}>← All provinces</Button>
             </div>
@@ -547,7 +560,10 @@ export function RoutesPage() {
               <CardTitle className="text-base">Routes by Province Manager</CardTitle>
               <CardDescription>Click a province to view its routes</CardDescription>
             </div>
-            <span className="text-sm text-muted-foreground tabular-nums">{routes.length} routes total</span>
+            <div className="flex items-center gap-3">
+              <StaleChip updatedAt={routesQ.dataUpdatedAt} offline={!isOnline} />
+              <span className="text-sm text-muted-foreground tabular-nums">{routes.length} routes total</span>
+            </div>
           </CardHeader>
           <CardContent className="pt-0">
             <AsyncSection isLoading={routesQ.isLoading} error={routesQ.error} data={routes} isEmpty={false} onRetry={routesQ.refetch}>
@@ -602,6 +618,7 @@ export function RoutesPage() {
         confirmLabel="Delete Route"
         destructive
         pending={deleteM.isPending}
+        confirmDisabled={!isOnline}
         onConfirm={handleConfirmDelete}
         error={deleteError}
       />
@@ -613,6 +630,7 @@ export function RoutesPage() {
         submitLabel="Save Changes"
         onSubmit={handleEditSave}
         pending={updateM.isPending}
+        submitDisabled={!isOnline}
         error={editFormError}
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

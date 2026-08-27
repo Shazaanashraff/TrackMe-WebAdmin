@@ -5,8 +5,10 @@ import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
 import { DataTable } from '@/components/shared/data-table';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { StaleChip } from '@/components/shared/stale-chip';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { FormDialog } from '@/components/shared/form-dialog';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -100,6 +102,7 @@ function validateStep(form, step, vehicles = []) {
 export function ManagerVehiclesPage() {
   // Loads the manager's full fleet, not a page of it — a deliberate, documented
   // tradeoff (issue #10), not an oversight. See docs/modules/BUSES.md §6.
+  const isOnline = useOnlineStatus();
   const vehiclesQ = useManagerVehicles();
   const routesQ = useManagerAssignableRoutes();
   const requestsQ = useManagerRequests();
@@ -325,13 +328,13 @@ export function ManagerVehiclesPage() {
         const vehicle = i.row.original;
         return (
           <div className="flex gap-1.5">
-            <Button size="sm" variant="outline" onClick={() => openEdit(vehicle)}>Edit</Button>
-            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { setDeleteError(null); setDeleteTarget(vehicle); }}>Delete Req</Button>
+            <Button size="sm" variant="outline" disabled={!isOnline} title={isOnline ? undefined : 'Unavailable offline'} onClick={() => openEdit(vehicle)}>Edit</Button>
+            <Button size="sm" variant="ghost" className="text-destructive" disabled={!isOnline} title={isOnline ? undefined : 'Unavailable offline'} onClick={() => { setDeleteError(null); setDeleteTarget(vehicle); }}>Delete Req</Button>
           </div>
         );
       },
     },
-  ], [routeNameById, pendingDeleteVehicleIds]);
+  ], [routeNameById, pendingDeleteVehicleIds, isOnline]);
 
   return (
     <div className="space-y-6">
@@ -339,7 +342,7 @@ export function ManagerVehiclesPage() {
         title="Vehicle Management"
         description="Review managed vehicles, monitor availability, and add new ones to your fleet."
         actions={
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} disabled={!isOnline} title={isOnline ? undefined : 'Unavailable offline'}>
             <Plus className="h-4 w-4 mr-1.5" />
             Add Vehicle
           </Button>
@@ -347,10 +350,16 @@ export function ManagerVehiclesPage() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Total Vehicles" value={summary.total} icon={VehicleIcon} isLoading={vehiclesQ.isLoading} />
-        <StatCard label="Active Fleet" value={summary.active} icon={CheckCircle} isLoading={vehiclesQ.isLoading} />
-        <StatCard label="Inactive Fleet" value={summary.inactive} icon={XCircle} isLoading={vehiclesQ.isLoading} />
+        <StatCard label="Total Vehicles" value={summary.total} icon={VehicleIcon} isLoading={vehiclesQ.isLoading} stale={!isOnline} asOf={vehiclesQ.dataUpdatedAt} />
+        <StatCard label="Active Fleet" value={summary.active} icon={CheckCircle} isLoading={vehiclesQ.isLoading} stale={!isOnline} asOf={vehiclesQ.dataUpdatedAt} />
+        <StatCard label="Inactive Fleet" value={summary.inactive} icon={XCircle} isLoading={vehiclesQ.isLoading} stale={!isOnline} asOf={vehiclesQ.dataUpdatedAt} />
       </div>
+
+      {vehicles.length > 0 && (
+        <div className="flex justify-end">
+          <StaleChip updatedAt={vehiclesQ.dataUpdatedAt} offline={!isOnline} />
+        </div>
+      )}
 
       <DataTable
         columns={columns}
@@ -608,6 +617,14 @@ export function ManagerVehiclesPage() {
             </div>
           )}
 
+          {!isOnline && (
+            <Alert variant="warning">
+              <AlertDescription>
+                You&apos;re offline. Your entries are kept here — reconnect to submit.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={closeCreate} disabled={createM.isPending}>Cancel</Button>
             {createStep > 0 && (
@@ -616,7 +633,7 @@ export function ManagerVehiclesPage() {
             {createStep < 2 ? (
               <Button onClick={handleNext}>Continue</Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={createM.isPending}>
+              <Button onClick={handleSubmit} disabled={createM.isPending || !isOnline} title={isOnline ? undefined : 'Unavailable offline'}>
                 {createM.isPending
                   ? (vehicles.length > 0 ? 'Submitting…' : 'Creating…')
                   : (vehicles.length > 0 ? 'Submit Request' : 'Create Vehicle')}
@@ -634,6 +651,7 @@ export function ManagerVehiclesPage() {
         submitLabel="Save Changes"
         onSubmit={handleSaveEdit}
         pending={updateVehicleM.isPending}
+        submitDisabled={!isOnline}
         error={editError}
       >
         <div className="space-y-3">
@@ -732,6 +750,7 @@ export function ManagerVehiclesPage() {
         confirmLabel="Submit Request"
         requireReason
         pending={deleteReqM.isPending}
+        confirmDisabled={!isOnline}
         onConfirm={handleDeleteConfirm}
         error={deleteError}
       />

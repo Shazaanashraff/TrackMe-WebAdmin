@@ -74,6 +74,19 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
 | RTL | `src/pages/__tests__/DashboardPage.test.jsx` | KPI stat cards, no fabricated currency symbols, empty-operations state, the compact Analytics placeholder (issue #15) — asserts no `py-10` ancestor around the "Not enough data yet" text; partial-failure isolation (issue #26) — `useOperationsOverview` failing alone leaves the KPI cards rendering normally, with exactly one scoped `ErrorState`, not a page-wide banner |
 | RTL | `src/pages/__tests__/ManagerDashboardPage.test.jsx` | booking-summary stat cards, confirmed/cancelled counts, pending-request count, fleet snapshot rows, the compact Booking Trend placeholder (issue #15) — asserts no `py-12` ancestor |
 
+## 7a. Offline behaviour (Offline & Caching Audit §7)
+
+Both dashboards persist to disk (`gcTime` 24 h, non-live keys). Offline:
+
+- `StatCard` takes `stale` + `asOf` (`dashQ.dataUpdatedAt`) and shows the last-known number greyed
+  with an "as of HH:MM" line — never the red `—`/"Failed to load", which is reserved for a genuine
+  online failure. DashboardPage computes `dashStale = !isOnline && Boolean(data)` and
+  `dashErrored = isError && !dashStale`; the page-level `<ErrorState>` is suppressed while offline
+  (the app-wide `OfflineBanner` already says why, once).
+- The super-admin Dashboard's "Fleet Snapshot" `AsyncSection` now receives `error`/`onRetry` so it
+  degrades the same calm way instead of silently showing "No metrics".
+- ManagerDashboard's "Booking Summary" carries a `StaleChip`.
+
 ## 8. Change protocol
 
 See [`_MODULE_TEMPLATE.md`](../guides/_MODULE_TEMPLATE.md). If either dashboard endpoint ever

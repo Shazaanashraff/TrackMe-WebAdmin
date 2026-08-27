@@ -16,6 +16,7 @@ import {
 import { cn } from '@/lib/utils';
 import { getGoogleMapsApiKey } from '@/lib/googleMaps';
 import { trackingState, useManagerFleetTracking } from '@/hooks/use-tracking';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 
 const DEFAULT_CENTER = { lat: 7.8731, lng: 80.7718 };
 const SRI_LANKA_BOUNDS = { north: 10, south: 5.7, west: 79.4, east: 82.1 };
@@ -260,6 +261,7 @@ export function ManagerTrackingPage() {
   const [selectedVehicleId, setSelectedVehicleId] = useState(
     () => searchParams.get('vehicle') || '',
   );
+  const isOnline = useOnlineStatus();
   const tracking = useManagerFleetTracking(selectedVehicleId);
   const fleet = useMemo(() => tracking.fleet || [], [tracking.fleet]);
 
@@ -304,9 +306,11 @@ export function ManagerTrackingPage() {
   const liveCount = plotted.length;
   const pageDescription = tracking.isLoading
     ? 'Loading current fleet positions…'
-    : tracking.error
-      ? 'Monitor current positions across your fleet.'
-      : `${liveCount} of ${fleet.length} fleet vehicles broadcasting now.`;
+    : !isOnline
+      ? "Fleet positions are unavailable while you're offline."
+      : tracking.error
+        ? 'Monitor current positions across your fleet.'
+        : `${liveCount} of ${fleet.length} fleet vehicles broadcasting now.`;
   const googleMapsApiKey = getGoogleMapsApiKey();
   const hasLiveUnplotted = fleet.some((record) => trackingState(record) === 'live' && !toPoint(record.location));
 
@@ -340,13 +344,35 @@ export function ManagerTrackingPage() {
 
       {tracking.isLoading ? <CardSkeleton lines={8} /> : null}
 
-      {!tracking.isLoading && tracking.error ? (
+      {/* Offline is why the live query fails, and it's the one page where showing
+          less is correct: no map load, no last-known markers, just an honest
+          state. It takes precedence over the error branch. */}
+      {!tracking.isLoading && !isOnline ? (
+        <Card>
+          <div
+            data-testid="fleet-map-offline"
+            className="flex min-h-[420px] flex-col items-center justify-center gap-2 bg-surface-muted px-6 text-center"
+          >
+            <WifiOff aria-hidden className="size-8 text-status-warning" />
+            <p className="font-semibold text-foreground">Live tracking unavailable — you&rsquo;re offline</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              The map returns with a fresh timestamp the moment you reconnect. A saved
+              bus position is never shown.
+            </p>
+            {fleet.length > 0 ? (
+              <p className="text-xs text-muted-foreground">Fleet: {fleet.length} vehicle{fleet.length === 1 ? '' : 's'}.</p>
+            ) : null}
+          </div>
+        </Card>
+      ) : null}
+
+      {!tracking.isLoading && isOnline && tracking.error ? (
         <Card>
           <ErrorState error={tracking.error} onRetry={tracking.refetch} />
         </Card>
       ) : null}
 
-      {!tracking.isLoading && !tracking.error && fleet.length === 0 ? (
+      {!tracking.isLoading && isOnline && !tracking.error && fleet.length === 0 ? (
         <Card>
           <EmptyState
             icon={VehicleIcon}
@@ -356,7 +382,7 @@ export function ManagerTrackingPage() {
         </Card>
       ) : null}
 
-      {!tracking.isLoading && !tracking.error && fleet.length > 0 ? (
+      {!tracking.isLoading && isOnline && !tracking.error && fleet.length > 0 ? (
         <Card className="overflow-hidden">
           <div className="grid min-h-[560px] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div
