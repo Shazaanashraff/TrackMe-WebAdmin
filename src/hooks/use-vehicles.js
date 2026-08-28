@@ -24,11 +24,16 @@ export function useManagerVehicle(vehicleId) {
 // once-an-hour refresh is imperceptible.
 export const ASSIGNABLE_ROUTES_STALE_TIME = 60 * 60 * 1000;
 
-export function useManagerAssignableRoutes() {
+// Only the add/edit-vehicle dialogs' route picker needs the full assignable-routes
+// list, so callers gate it behind `enabled` (e.g. dialog-open) rather than fetching
+// it on every page visit (issue #18) — the vehicles table itself now gets each row's
+// route name inline from GET /api/manager/vehicles instead.
+export function useManagerAssignableRoutes({ enabled = true } = {}) {
   return useQuery({
     queryKey: qk.vehicles.assignableRoutes(),
     queryFn: () => adminApi.getManagerAssignableRoutes(),
     staleTime: ASSIGNABLE_ROUTES_STALE_TIME,
+    enabled,
   });
 }
 
