@@ -22,6 +22,34 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-28 — Gate the Vehicles page's assignable-routes fetch behind dialog-open (issue #18)
+
+- **Branch:** claude/peaceful-archimedes-8fmga3
+- **Modules touched:** buses ([`docs/modules/BUSES.md`](modules/BUSES.md))
+- **What changed:**
+  - `ManagerVehiclesPage`'s Route table column now reads `routeName` directly off each vehicle
+    row instead of looking it up in the assignable-routes list.
+  - `useManagerAssignableRoutes()` takes an `enabled` option; the page now passes
+    `enabled: createOpen || !!editVehicle`, so the full routes list is fetched only while the
+    create/edit dialog (its actual consumer now) is open — not on every page visit.
+- **Why:** issue #18 — visiting the page always fetched the whole assignable-routes list. Three
+  prior passes at this issue found gating it as originally written would regress the table's
+  route-name column (issue #67 made the table depend on the same query) and escalated for a
+  scope decision. The real fix needed a small backend contract change first (`routeName` resolved
+  server-side on each vehicle) so the table and the dialog picker could have independent data
+  sources — see `backend/docs/CHANGES.md`, 2026-08-28.
+- **Contract impact:** consumes `TrackMe-backend`'s `GET /api/manager/vehicles` `routeName`
+  addition (backend doc updated in that repo's own change).
+- **Tests:** `src/pages/__tests__/ManagerVehiclesPage.test.jsx` — updated the route-column
+  fixture/assertions to use the vehicle's own `routeName` instead of a routes-list lookup, and
+  added two cases asserting `useManagerAssignableRoutes` is called with `enabled: false` on a
+  plain page visit and `enabled: true` once the add-vehicle dialog opens. Full suite green (66
+  files / 777 tests), lint clean (0 errors).
+- **Docs updated:** `docs/modules/BUSES.md` §4/§5, `docs/TESTING_GUIDE.md`.
+- **Follow-ups / known issues:** none — closes #18.
+
+---
+
 ## 2026-08-27 — Enrollment keys readable offline for the session (Offline & Caching Audit, chunk 2)
 
 - **Branch:** feature/audit-remediation-enrollment-key-offline

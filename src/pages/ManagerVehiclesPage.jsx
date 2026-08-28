@@ -104,7 +104,6 @@ export function ManagerVehiclesPage() {
   // tradeoff (issue #10), not an oversight. See docs/modules/BUSES.md §6.
   const isOnline = useOnlineStatus();
   const vehiclesQ = useManagerVehicles();
-  const routesQ = useManagerAssignableRoutes();
   const requestsQ = useManagerRequests();
   const [createForm, setCreateForm] = useState(EMPTY_CREATE);
   // Per category, so it only loads once one is picked.
@@ -125,6 +124,11 @@ export function ManagerVehiclesPage() {
   const [deleteTarget, setDeleteTarget] = useState(null); // vehicle object
   const [deleteError, setDeleteError] = useState(null);
 
+  // Only the create/edit dialogs' route picker needs the full assignable-routes
+  // list — the table gets each row's route name inline from useManagerVehicles
+  // now (issue #18), so this stays off until a dialog that needs it is open.
+  const routesQ = useManagerAssignableRoutes({ enabled: createOpen || !!editVehicle });
+
   const vehicles = vehiclesQ.data?.data || [];
   const routes = useMemo(() => routesQ.data?.data || [], [routesQ.data]);
   const organizations = organizationsQ.data?.data || [];
@@ -134,13 +138,6 @@ export function ManagerVehiclesPage() {
     const active = vehicles.filter((b) => b.isActive !== false).length;
     return { total, active, inactive: total - active };
   }, [vehicles]);
-
-  // Same "name (code)" label the create/edit route pickers already use, so the
-  // table reads the same way the rest of this page does (issue #67).
-  const routeNameById = useMemo(
-    () => new Map(routes.map((r) => [r.routeId, r.routeName])),
-    [routes],
-  );
 
   // A delete "request" needs super-admin approval before it does anything —
   // without this, nothing in the table shows a request is even in flight
@@ -300,7 +297,7 @@ export function ManagerVehiclesPage() {
       cell: (i) => {
         const routeId = i.getValue();
         if (!routeId) return <span className="text-muted-foreground">Not set</span>;
-        const routeName = routeNameById.get(routeId);
+        const routeName = i.row.original.routeName;
         return routeName ? `${routeName} (${routeId})` : routeId;
       },
     },
@@ -334,7 +331,7 @@ export function ManagerVehiclesPage() {
         );
       },
     },
-  ], [routeNameById, pendingDeleteVehicleIds, isOnline]);
+  ], [pendingDeleteVehicleIds, isOnline]);
 
   return (
     <div className="space-y-6">
