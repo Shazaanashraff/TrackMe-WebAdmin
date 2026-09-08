@@ -49,7 +49,7 @@ const DESCRIPTION = {
 const formatWhen = (value) => {
   if (!value) return '-';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
 };
 
 const passengerLabel = (passenger) => {
