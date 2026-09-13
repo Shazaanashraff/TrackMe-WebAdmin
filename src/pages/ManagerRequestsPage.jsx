@@ -5,8 +5,10 @@ import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
 import { DataTable } from '@/components/shared/data-table';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { StaleChip } from '@/components/shared/stale-chip';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import {
   useEnrollmentRequests,
   useApproveEnrollmentRequest,
@@ -52,6 +54,14 @@ const formatWhen = (value) => {
   return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
 };
 
+// The backend labels and orders these against the organization's own enrolment
+// form. Older payloads only carry the raw `key: value` map, so that is still
+// read as a fallback rather than leaving the column empty.
+const organizationDetails = (passenger) => {
+  if (Array.isArray(passenger?.organizationDetails)) return passenger.organizationDetails;
+  return Object.entries(passenger?.organizationValues || {}).map(([key, value]) => ({ key, label: key, value }));
+};
+
 const passengerLabel = (passenger) => {
   const name = passenger?.name || 'this student';
   if (passenger?.account?.email) {
@@ -64,6 +74,7 @@ const isStatus = (value) => TABS.some((tab) => tab.value === value);
 
 export function ManagerRequestsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const isOnline = useOnlineStatus();
 
   // Both the tab and the driver filter live in the URL, so the Drivers page can
   // link straight to one driver's roster and the manager can share or reload the
@@ -176,11 +187,11 @@ export function ManagerRequestsPage() {
         accessorKey: 'passenger',
         enableSorting: false,
         cell: (i) => {
-          const values = Object.entries(i.getValue()?.organizationValues || {});
-          return values.length ? (
+          const details = organizationDetails(i.getValue());
+          return details.length ? (
             <div className="space-y-0.5 text-xs">
-              {values.map(([key, value]) => (
-                <div key={key}><span className="text-muted-foreground">{key}: </span>{value}</div>
+              {details.map((detail) => (
+                <div key={detail.key}><span className="text-muted-foreground">{detail.label}: </span>{detail.value}</div>
               ))}
             </div>
           ) : <span className="text-muted-foreground">None</span>;
@@ -232,7 +243,8 @@ export function ManagerRequestsPage() {
             <Button
               size="sm"
               variant="outline"
-              disabled={isDeciding}
+              disabled={isDeciding || !isOnline}
+              title={isOnline ? undefined : 'Unavailable offline'}
               onClick={() => setPendingDecision({ request: row.original, action: 'reject' })}
             >
               <X className="mr-1.5 h-4 w-4" />
@@ -240,7 +252,8 @@ export function ManagerRequestsPage() {
             </Button>
             <Button
               size="sm"
-              disabled={isDeciding}
+              disabled={isDeciding || !isOnline}
+              title={isOnline ? undefined : 'Unavailable offline'}
               onClick={() => setPendingDecision({ request: row.original, action: 'approve' })}
             >
               <Check className="mr-1.5 h-4 w-4" />
@@ -261,7 +274,8 @@ export function ManagerRequestsPage() {
             <Button
               size="sm"
               variant="outline"
-              disabled={isDeciding}
+              disabled={isDeciding || !isOnline}
+              title={isOnline ? undefined : 'Unavailable offline'}
               onClick={() => setPendingDecision({ request: row.original, action: 'remove' })}
             >
               <UserMinus className="mr-1.5 h-4 w-4" />
@@ -273,7 +287,7 @@ export function ManagerRequestsPage() {
     }
 
     return base;
-  }, [isDeciding, status]);
+  }, [isDeciding, status, isOnline]);
 
   const target = pendingDecision?.request;
   const action = pendingDecision?.action;
@@ -320,13 +334,30 @@ export function ManagerRequestsPage() {
         </p>
       )}
 
-      <Tabs value={status} onValueChange={setStatus} className="mb-4">
-        <TabsList>
-          {TABS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <Tabs value={status} onValueChange={setStatus}>
+          <TabsList>
+            {TABS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        {requests.length > 0 && (
+          <StaleChip
+            updatedAt={requestsQ.dataUpdatedAt}
+            offline={!isOnline}
+            loud={status === 'PENDING'}
+            label={status === 'PENDING' ? 'Queue as of' : 'Updated'}
+          />
+        )}
+      </div>
+
+      {status === 'PENDING' && !isOnline && requests.length > 0 && (
+        <p className="mb-4 rounded-lg border border-status-warning/30 bg-status-warning/10 px-3 py-2 text-sm text-status-warning">
+          Offline — this queue may have changed since it was last loaded. Approve and
+          decline are disabled until you reconnect.
+        </p>
+      )}
 
       <DataTable
         columns={columns}
@@ -346,6 +377,7 @@ export function ManagerRequestsPage() {
         confirmLabel={dialogCopy.confirmLabel}
         destructive={dialogCopy.destructive}
         pending={isDeciding}
+        confirmDisabled={!isOnline}
         onConfirm={runDecision}
       />
     </>

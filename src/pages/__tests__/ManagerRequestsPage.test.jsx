@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -25,13 +25,22 @@ const REQUESTS = [
     _id: 'req-1',
     status: 'PENDING',
     requestedAt: '2026-08-07T09:00:00.000Z',
-    passenger: { _id: 'u1', name: 'Nimal Fernando', email: 'nimal@t.com' },
+    organization: { _id: 'org-1', name: 'Ananda College', serviceType: 'SCHOOL' },
+    passenger: {
+      _id: 'u1',
+      name: 'Nimal Fernando',
+      email: 'nimal@t.com',
+      contactPhone: '0771111111',
+      organizationValues: { grade: '4' },
+      organizationDetails: [{ key: 'grade', label: 'Grade', value: '4' }],
+    },
     driver: { _id: 'd1', name: 'Kamal Perera', driverCode: 'DRV-4K7P-9XQ2' },
   },
   {
     _id: 'req-2',
     status: 'PENDING',
     requestedAt: '2026-08-07T10:00:00.000Z',
+    organization: { _id: 'org-1', name: 'Ananda College', serviceType: 'SCHOOL' },
     passenger: { _id: 'u2', name: 'Sithara Jay', email: '' },
     driver: { _id: 'd1', name: 'Kamal Perera', driverCode: 'DRV-4K7P-9XQ2' },
   },
@@ -51,17 +60,21 @@ const ENROLLED = [
 ];
 
 // A managed profile (a child, an employee the account holder added) has no
-// email of its own — the manager still needs to know whose account it is.
+// email or phone of its own — the manager still needs to know whose account it
+// is, and someone to call about the request.
 const MANAGED_REQUEST = {
   _id: 'req-3',
   status: 'PENDING',
   requestedAt: '2026-08-07T11:00:00.000Z',
+  organization: { _id: 'org-1', name: 'Ananda College', serviceType: 'SCHOOL' },
   passenger: {
     _id: 'u3',
     name: 'Amaya Perera',
+    riderCode: 'TMR-KH6L-Y9TP',
     email: '',
     relation: 'Daughter',
     isManagedProfile: true,
+    organizationDetails: [{ key: 'grade', label: 'Grade', value: '4' }],
     account: { name: 'Shazaan Ashraff', email: 'shazaan@t.com', phoneNumber: '0771234567' },
   },
   driver: { _id: 'd1', name: 'Kamal Perera', driverCode: 'DRV-4K7P-9XQ2' },
@@ -105,9 +118,31 @@ describe('ManagerRequestsPage', () => {
   it('lists each pending request with its passenger and driver', () => {
     setup();
     expect(screen.getByText('Nimal Fernando')).toBeInTheDocument();
-    expect(screen.getByText('nimal@t.com')).toBeInTheDocument();
     expect(screen.getByText('Sithara Jay')).toBeInTheDocument();
     expect(screen.getAllByText('Kamal Perera')).toHaveLength(2);
+  });
+
+  it('shows the passenger\'s own email in the Account column', () => {
+    setup();
+    expect(screen.getByText('nimal@t.com')).toBeInTheDocument();
+  });
+
+  it('labels each organization field instead of showing the raw key', () => {
+    setup();
+    expect(screen.getByText(/Grade:/)).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
+    // The raw field key never reaches the manager.
+    expect(screen.queryByText(/grade:/)).not.toBeInTheDocument();
+  });
+
+  it('falls back to the raw answers when a payload carries no labelled details', () => {
+    setup({
+      requests: [{
+        ...REQUESTS[0],
+        passenger: { ...REQUESTS[0].passenger, organizationDetails: undefined },
+      }],
+    });
+    expect(screen.getByText(/grade:/)).toBeInTheDocument();
   });
 
   it('tells the manager what the queue is for when it is empty', () => {
@@ -151,10 +186,10 @@ describe('ManagerRequestsPage', () => {
   });
 
   describe('a managed profile passenger', () => {
-    it('shows the "Managed profile" tag and relation under the name', () => {
+    it('identifies the rider profile by name and rider code', () => {
       setup({ requests: [MANAGED_REQUEST] });
       expect(screen.getByText('Amaya Perera')).toBeInTheDocument();
-      expect(screen.getByText('Managed profile · Daughter')).toBeInTheDocument();
+      expect(screen.getByText('TMR-KH6L-Y9TP')).toBeInTheDocument();
     });
 
     it('falls back to the owning account\'s email and phone in the Account column', () => {
@@ -227,6 +262,40 @@ describe('ManagerRequestsPage', () => {
     it('falls back to a sane tab when the URL asks for a status that does not exist', () => {
       setup({ route: '/manager/requests?status=NONSENSE' });
       expect(useEnrollmentRequests).toHaveBeenCalledWith('PENDING', '');
+    });
+  });
+
+  describe('offline', () => {
+    function setOnline(value) {
+      Object.defineProperty(navigator, 'onLine', { value, writable: true, configurable: true });
+    }
+    afterEach(() => setOnline(true));
+
+    it('disables Approve and Decline while offline and never queues a decision', async () => {
+      setOnline(false);
+      const user = userEvent.setup();
+      const { approve, reject } = setup();
+
+      const approveBtn = screen.getAllByRole('button', { name: /approve/i })[0];
+      const declineBtn = screen.getAllByRole('button', { name: /decline/i })[0];
+      expect(approveBtn).toBeDisabled();
+      expect(declineBtn).toBeDisabled();
+
+      await user.click(approveBtn);
+      expect(approve.mutate).not.toHaveBeenCalled();
+      expect(reject.mutate).not.toHaveBeenCalled();
+    });
+
+    it('warns that the pending queue may be out of date while offline', () => {
+      setOnline(false);
+      setup();
+      expect(screen.getByText(/this queue may have changed since it was last loaded/i)).toBeInTheDocument();
+    });
+
+    it('leaves the actions enabled when online', () => {
+      setup();
+      expect(screen.getAllByRole('button', { name: /approve/i })[0]).not.toBeDisabled();
+      expect(screen.queryByText(/this queue may have changed/i)).toBeNull();
     });
   });
 });

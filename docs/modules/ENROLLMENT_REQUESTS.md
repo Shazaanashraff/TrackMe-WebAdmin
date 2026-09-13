@@ -33,8 +33,8 @@ rider leaving. The Drivers page reaches it through a Riders count per driver
 
 | File | Responsibility |
 |---|---|
-| `src/pages/ManagerRequestsPage.jsx` | The page, tabbed **Pending / Enrolled / Declined**. `DataTable` of the rows for the selected status; Passenger/Account/Organization/Driver/Driver ID columns, then Requested (Pending) or Enrolled/Declined from `decidedAt` (the rest). Pending rows offer Approve/Decline, Enrolled rows offer Remove; all three open the same shared `ConfirmDialog`. `passengerLabel()` disambiguates a managed profile in the dialog title. Tab and driver filter both live in the URL (`?status=`, `?driver=`). |
-| `src/hooks/use-enrollment-requests.js` | `useEnrollmentRequests(status, driverId)`, `useEnrollmentRequestCount()` (nav badge, disabled for super-admins), `useApproveEnrollmentRequest`/`useRejectEnrollmentRequest`/`useRemoveEnrollment` — a decision invalidates both the list and the count together, and a removal also invalidates `qk.drivers` so the Riders count on the Drivers page follows it down. |
+| `src/pages/ManagerRequestsPage.jsx` | The page, tabbed **Pending / Enrolled / Declined**. `DataTable` of the rows for the selected status; Passenger/Account/Organization details/Driver/Driver ID columns, then Requested (Pending) or Enrolled/Declined from `decidedAt` (the rest). The Organization details column renders the backend's labelled `organizationDetails`, falling back to the raw `organizationValues` map. Pending rows offer Approve/Decline, Enrolled rows offer Remove; all three open the same shared `ConfirmDialog`. `passengerLabel()` disambiguates a managed profile in the dialog title. Tab and driver filter both live in the URL (`?status=`, `?driver=`). |
+| `src/hooks/use-enrollment-requests.js` | `useEnrollmentRequests(status, driverId)`, `useEnrollmentRequestCount()` (nav badge, disabled for super-admins), `useApproveEnrollmentRequest`/`useRejectEnrollmentRequest`/`useRemoveEnrollment` — a decision invalidates both the list and the count together, and a removal also invalidates `qk.drivers` so the Riders count on the Drivers page follows it down. An unfiltered `PENDING` load also writes its length straight into the count cache, and the count query itself polls every `ENROLLMENT_COUNT_POLL_MS` (30s) and refetches on window focus, so the nav badge stays live without a reload. |
 | `src/api.js` | `getEnrollmentRequests(status, driverId)`, `getEnrollmentRequestCount`, `approveEnrollmentRequest`, `rejectEnrollmentRequest`, `removeEnrollment` — all through the one `adminApi` HTTP layer. |
 | `src/lib/queryKeys.js` | `qk.enrollmentRequests.{list(status, driverId), count(), all()}` — keyed by driver too, so one driver's roster and the full list cache separately. |
 | `src/layout/AppShell.jsx` | Reads `useEnrollmentRequestCount()` to badge the "Enrollments" nav link on every manager screen. The badge still counts PENDING only. |
@@ -56,7 +56,7 @@ Verified against the backend 2026-08-12.
 
 | Kind | Endpoint | Client fn | Shape / notes |
 |---|---|---|---|
-| REST | `GET /api/manager/enrollment-requests?status=PENDING` | `getEnrollmentRequests` | `{data: Request[]}`. `Request.passenger = {name, email?, isManagedProfile, relation?, account?: {name, email, phoneNumber}}` — see backend `managerEnrollmentsController.js#requestSummary`. |
+| REST | `GET /api/manager/enrollment-requests?status=PENDING` | `getEnrollmentRequests` | `{data: Request[]}`. `Request.organization = {_id, name, serviceType}` (null only when nothing resolves one). `Request.passenger = {_id, name, riderCode, avatarUrl, contactPhone, email?, isManagedProfile, relation?, organizationValues: {…}, organizationDetails: [{key, label, value}], account?: {name, email, phoneNumber}}` — see backend `managerEnrollmentsController.js#resolvePassengers`. `_id` is the **rider profile's** id, not an account's. |
 | REST | `GET /api/manager/enrollment-requests/count` | `getEnrollmentRequestCount` | `{data: {count}}` — pending count for the nav badge, disabled (`enabled: false`) for super-admins to avoid a guaranteed 403. |
 | REST | `POST /api/manager/enrollment-requests/:id/approve` | `approveEnrollmentRequest` | Enrols the passenger with the driver; moves the request out of the pending list. |
 | REST | `POST /api/manager/enrollment-requests/:id/reject` | `rejectEnrollmentRequest` | Leaves the passenger unenrolled; they may redeem the key again later. |
@@ -69,6 +69,20 @@ Verified against the backend 2026-08-12.
 
 - **Approval is server-side.** This page renders what the backend says is pending for *this
   manager's* drivers — there is no client-side scoping to bypass or misconfigure.
+- **The table shows a phone, not an email.** The Contact column reads `passenger.contactPhone`
+  and falls back to the owning account's `phoneNumber`; the email was dropped because a manager
+  chasing a request calls rather than writes. `passengerLabel()` still names the account's email in
+  the confirm dialog, which is where disambiguating two same-named riders actually matters.
+- **The row is top-aligned, not centred.** Two of the columns render a second line (rider code,
+  form answers) and the rest are one line; with `DataTable`'s default `align-middle` each cell
+  centred on its own height, so the first lines staggered. Those columns pass
+  `meta: { cellClassName: 'align-top' }`; the actions column keeps the default so the buttons stay
+  centred against the whole row.
+- **The Organization column names the organization, then its answers.** The answers are stored
+  keyed by field key, so rendering `organizationValues` alone read as `grade: 4` with no sign of
+  whose form it was. The backend now sends `organization.name` plus `organizationDetails`
+  (labelled and ordered by that organization's enrolment form); the raw map is still read as a
+  fallback for a payload from an older backend.
 - **A managed profile has no email/phone of its own.** `passenger.email` is only ever present for a
   primary (self-registered) rider; a managed profile's `passenger.account.{email,phoneNumber}` is
   the owning account holder's, resolved backend-side via the profile's shared `identityId`. The
@@ -76,6 +90,18 @@ Verified against the backend 2026-08-12.
   `account` column's `cell()` in `ManagerRequestsPage.jsx`.
 - **The nav badge count is fetched on every manager screen**, not just this page — a manager sees
   it's non-zero before ever opening Requests.
+- **The badge count is polled, and the queue writes to it.** `AppShell` never unmounts, so a count
+  fetched once at sign-in would sit at its start value for the whole session and a request arriving
+  later would only appear after a reload. `useEnrollmentRequestCount` therefore refetches every
+  `ENROLLMENT_COUNT_POLL_MS` (30s) and on window focus, and `useEnrollmentRequests('PENDING')`
+  writes the length of the queue it just loaded into the count cache so this page and the badge
+  cannot disagree while both are on screen.
+- **`riderCode` and `organizationValues` were rendered here before the backend sent them.** The
+  page's Passenger and Organization details columns read both, and the backend resolved the
+  passenger from the enrolment's deprecated `userId` — which the rider-profile enrolment path
+  writes as null, so every request the current passenger app makes arrived as `passenger: null`
+  and both columns sat empty. Fixed backend-side on 2026-08-19 by resolving from `studentId`; this
+  page needed no change.
 
 ## 6. Known gotchas / regressions
 
@@ -97,6 +123,19 @@ Verified against the backend 2026-08-12.
 
 See [`../guides/ADDING_A_TEST.md`](../guides/ADDING_A_TEST.md) and the traceability row in
 [`../TESTING_GUIDE.md`](../TESTING_GUIDE.md).
+
+## 7a. Offline behaviour (Offline & Caching Audit §7)
+
+`useEnrollmentRequests` persists to disk. Offline:
+
+- The `DataTable` shows cached rows under an amber strip (or a calm `OfflineCard` if nothing is
+  cached) instead of a red `ErrorState`.
+- Staleness is **loud** here — the PENDING tab carries a `loud` `StaleChip` ("Queue as of …") and,
+  when offline with rows, a prominent banner: "this queue may have changed since it was last
+  loaded." A stale queue means a manager could approve a request another manager already handled.
+- Approve / Decline / Remove are disabled offline (`!isOnline` on the buttons and
+  `confirmDisabled` on the ConfirmDialog) and are **never queued** — a decision on a withdrawn or
+  already-handled request must fail loudly, not silently replay.
 
 ## 8. Change protocol
 

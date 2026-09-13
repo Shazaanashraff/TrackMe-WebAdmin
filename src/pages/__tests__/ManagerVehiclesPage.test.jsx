@@ -71,6 +71,9 @@ const VEHICLES = [
     vehicleName: 'Shuttle 1',
     numberPlate: 'AB-1234',
     routeId: 'PUB-1',
+    // Resolved server-side by GET /api/manager/vehicles (issue #18) — the table
+    // no longer derives this from the assignable-routes list.
+    routeName: 'Public Route',
     serviceType: 'PUBLIC',
     seatCapacity: 40,
     vehicleType: 'AC',
@@ -154,16 +157,32 @@ describe('ManagerVehiclesPage', () => {
 
   // Issue #67: the table used to show the raw route code with no lookup,
   // inconsistent with the friendly "name (code)" label the route pickers use.
+  // Issue #18: the name now comes from the vehicle row itself (resolved by
+  // GET /api/manager/vehicles), not a lookup against the assignable-routes list.
   it('resolves the route column to a friendly name (code), not the raw route id', () => {
-    setup(); // VEHICLES[0].routeId === 'PUB-1', which ROUTES names "Public Route"
+    setup(); // VEHICLES[0] carries routeId 'PUB-1' + routeName 'Public Route'
     expect(screen.getByText('Public Route (PUB-1)')).toBeInTheDocument();
     expect(screen.queryByText('PUB-1')).not.toBeInTheDocument();
   });
 
-  it('falls back to the raw route id when it is not in the assignable routes list', () => {
-    const orphanVehicle = { ...VEHICLES[0], routeId: 'ORPHAN-ROUTE' };
+  it('falls back to the raw route id when the backend could not resolve a route name', () => {
+    const orphanVehicle = { ...VEHICLES[0], routeId: 'ORPHAN-ROUTE', routeName: null };
     setup({ vehicles: [orphanVehicle] });
     expect(screen.getByText('ORPHAN-ROUTE')).toBeInTheDocument();
+  });
+
+  // Issue #18: the routes list is only needed once a dialog with a route
+  // picker is actually open — not on every page visit.
+  it('does not fetch the assignable-routes list until a dialog needing it is open', () => {
+    setup();
+    expect(useManagerAssignableRoutes).toHaveBeenCalledWith({ enabled: false });
+  });
+
+  it('fetches the assignable-routes list once the add-vehicle dialog opens', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
+    expect(useManagerAssignableRoutes).toHaveBeenLastCalledWith({ enabled: true });
   });
 });
 

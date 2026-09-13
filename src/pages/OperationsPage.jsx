@@ -11,6 +11,8 @@ import { RelativeTime } from '@/components/shared/relative-time';
 import { Money } from '@/components/shared/money';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { FormDialog } from '@/components/shared/form-dialog';
+import { StaleChip } from '@/components/shared/stale-chip';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,6 +39,7 @@ const AUDIT_LIMIT_STEP = 60;
 const AUDIT_LIMIT_MAX = 200;
 
 export function OperationsPage() {
+  const isOnline = useOnlineStatus();
   const [searchParams] = useSearchParams();
   const [selectedManagerId, setSelectedManagerId] = useState(searchParams.get('managerId') || '');
   const [reviewTarget, setReviewTarget] = useState(null); // { id, decision }
@@ -138,12 +141,12 @@ export function OperationsPage() {
     {
       id: 'actions', header: '', accessorKey: '_id', enableSorting: false,
       cell: (i) => (
-        <Button size="sm" variant="ghost" onClick={() => { setEditVehicle(i.row.original); setEditServiceType(i.row.original.serviceType || 'PUBLIC'); setVehicleDialogError(null); }}>
+        <Button size="sm" variant="ghost" disabled={!isOnline} title={isOnline ? undefined : 'Unavailable offline'} onClick={() => { setEditVehicle(i.row.original); setEditServiceType(i.row.original.serviceType || 'PUBLIC'); setVehicleDialogError(null); }}>
           Edit
         </Button>
       ),
     },
-  ], []);
+  ], [isOnline]);
 
   const requestColumns = useMemo(() => [
     { id: 'type', header: 'Type', accessorKey: 'type' },
@@ -169,11 +172,13 @@ export function OperationsPage() {
         const busy = reviewM.isPending && reviewM.variables?.requestId === i.getValue();
         return (
           <div className="flex gap-1.5">
-            <Button size="sm" variant="outline" disabled={busy}
+            <Button size="sm" variant="outline" disabled={busy || !isOnline}
+              title={isOnline ? undefined : 'Unavailable offline'}
               onClick={() => setReviewTarget({ id: i.getValue(), decision: 'APPROVE' })}>
               Approve
             </Button>
-            <Button size="sm" variant="destructive" disabled={busy}
+            <Button size="sm" variant="destructive" disabled={busy || !isOnline}
+              title={isOnline ? undefined : 'Unavailable offline'}
               onClick={() => setReviewTarget({ id: i.getValue(), decision: 'REJECT' })}>
               Reject
             </Button>
@@ -181,7 +186,7 @@ export function OperationsPage() {
         );
       },
     },
-  ], [reviewM.isPending, reviewM.variables]);
+  ], [reviewM.isPending, reviewM.variables, isOnline]);
 
   const auditColumns = useMemo(() => [
     { id: 'time', header: 'Time', accessorKey: 'createdAt', cell: (i) => i.getValue() ? <RelativeTime date={i.getValue()} /> : 'None' },
@@ -217,10 +222,10 @@ export function OperationsPage() {
 
       {/* Summary stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Managers" value={stats.total} icon={Activity} isLoading={overviewQ.isLoading} />
-        <StatCard label="Active Managers" value={stats.active} icon={CheckCircle} isLoading={overviewQ.isLoading} />
-        <StatCard label="Pending Requests" value={stats.pending} icon={ClipboardList} isLoading={requestsQ.isLoading} />
-        <StatCard label="Audit Records" value={stats.audit} icon={VehicleIcon} isLoading={auditQ.isLoading} />
+        <StatCard label="Total Managers" value={stats.total} icon={Activity} isLoading={overviewQ.isLoading} stale={!isOnline} asOf={overviewQ.dataUpdatedAt} />
+        <StatCard label="Active Managers" value={stats.active} icon={CheckCircle} isLoading={overviewQ.isLoading} stale={!isOnline} asOf={overviewQ.dataUpdatedAt} />
+        <StatCard label="Pending Requests" value={stats.pending} icon={ClipboardList} isLoading={requestsQ.isLoading} stale={!isOnline} asOf={requestsQ.dataUpdatedAt} />
+        <StatCard label="Audit Records" value={stats.audit} icon={VehicleIcon} isLoading={auditQ.isLoading} stale={!isOnline} asOf={auditQ.dataUpdatedAt} />
       </div>
 
       {/* Managers overview + detail */}
@@ -292,6 +297,8 @@ export function OperationsPage() {
             <CardTitle className="text-base">Vehicle Requests</CardTitle>
             <CardDescription>Pending vehicle account requests from managers</CardDescription>
           </div>
+          <div className="flex items-center gap-3">
+            <StaleChip updatedAt={requestsQ.dataUpdatedAt} offline={!isOnline} loud={requestStatus === 'PENDING' && !isOnline} />
           <Select value={requestStatus} onValueChange={setRequestStatus}>
             <SelectTrigger className="w-32 h-8 text-xs">
               <SelectValue />
@@ -302,6 +309,7 @@ export function OperationsPage() {
               <SelectItem value="REJECTED">Rejected</SelectItem>
             </SelectContent>
           </Select>
+          </div>
         </CardHeader>
         <CardContent className="pt-0">
           <DataTable
@@ -376,6 +384,7 @@ export function OperationsPage() {
         }
         confirmLabel={reviewTarget?.decision === 'APPROVE' ? 'Approve' : 'Reject'}
         requireReason={reviewTarget?.decision === 'REJECT'}
+        confirmDisabled={!isOnline}
         reasonMaxLength={500}
         pending={reviewM.isPending}
         onConfirm={handleReview}
@@ -389,6 +398,7 @@ export function OperationsPage() {
         submitLabel="Save Changes"
         onSubmit={handleSaveVehicle}
         pending={updateVehicleM.isPending}
+        submitDisabled={!isOnline}
         error={vehicleDialogError}
       >
         <div className="space-y-4">

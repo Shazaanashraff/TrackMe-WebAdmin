@@ -22,6 +22,153 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-08-28 — Gate the Vehicles page's assignable-routes fetch behind dialog-open (issue #18)
+
+- **Branch:** claude/peaceful-archimedes-8fmga3
+- **Modules touched:** buses ([`docs/modules/BUSES.md`](modules/BUSES.md))
+- **What changed:**
+  - `ManagerVehiclesPage`'s Route table column now reads `routeName` directly off each vehicle
+    row instead of looking it up in the assignable-routes list.
+  - `useManagerAssignableRoutes()` takes an `enabled` option; the page now passes
+    `enabled: createOpen || !!editVehicle`, so the full routes list is fetched only while the
+    create/edit dialog (its actual consumer now) is open — not on every page visit.
+- **Why:** issue #18 — visiting the page always fetched the whole assignable-routes list. Three
+  prior passes at this issue found gating it as originally written would regress the table's
+  route-name column (issue #67 made the table depend on the same query) and escalated for a
+  scope decision. The real fix needed a small backend contract change first (`routeName` resolved
+  server-side on each vehicle) so the table and the dialog picker could have independent data
+  sources — see `backend/docs/CHANGES.md`, 2026-08-28.
+- **Contract impact:** consumes `TrackMe-backend`'s `GET /api/manager/vehicles` `routeName`
+  addition (backend doc updated in that repo's own change).
+- **Tests:** `src/pages/__tests__/ManagerVehiclesPage.test.jsx` — updated the route-column
+  fixture/assertions to use the vehicle's own `routeName` instead of a routes-list lookup, and
+  added two cases asserting `useManagerAssignableRoutes` is called with `enabled: false` on a
+  plain page visit and `enabled: true` once the add-vehicle dialog opens. Full suite green (66
+  files / 777 tests), lint clean (0 errors).
+- **Docs updated:** `docs/modules/BUSES.md` §4/§5, `docs/TESTING_GUIDE.md`.
+- **Follow-ups / known issues:** none — closes #18.
+
+---
+
+## 2026-08-27 — Enrollment keys readable offline for the session (Offline & Caching Audit, chunk 2)
+
+- **Branch:** feature/audit-remediation-enrollment-key-offline
+- **Modules touched:** [`ACCOUNTS.md`](modules/ACCOUNTS.md)
+- **What changed:**
+  - `useDriverEnrollmentKey` goes from `useMutation` to `useQuery(qk.drivers.enrollmentKey(id),
+    { enabled })` — `staleTime: Infinity`, `gcTime: 15min`, fired only on a row's "Show key" click.
+    A key opened while online now survives a disconnect (served from the in-memory cache) and
+    re-opens instantly after Hide. This GET is **not** audit-logged (only the password read is),
+    which is what makes caching it safe — the old "must be a mutation because it's audit-logged"
+    rationale in the code/docs was inaccurate for this key and is corrected.
+  - New `isCredentialQueryKey` in `src/lib/queryClient.js` — `shouldDehydrateQuery` excludes any
+    key segment `'enrollment-key'`, so the plaintext key is **never written to localStorage**. The
+    `queryClient.test.js` safety-rail walk asserts it alongside the live-key exclusion.
+  - The enrollment-key table column is now its own `<EnrollmentKeyCell>` with a private `shown`
+    toggle over its own query instance — the shared reveal mutation and the `revealingIds` /
+    `revealedKeys` page maps are gone (per-row independence, issue #68, is now structural). Rotate
+    / revert stay mutations but `setQueryData` their result into the reveal cache.
+  - Offline gate is now `!isOnline && !hasCachedKey` — an already-cached key opens offline; the
+    tooltip for an uncached one reads "Reconnect to open a key you haven't viewed yet".
+- **Why:** Offline & Caching Audit §7.10 / chunk 2 — a manager reading a key to a driver at the
+  kerb shouldn't be blocked by a wifi blip. Persisting to disk (the audit's literal suggestion)
+  was rejected: it would leave every driver's plaintext key in `localStorage` for 24h on a
+  possibly-shared admin machine.
+- **Contract impact:** none — no endpoint or payload change. `GET /api/manager/drivers/:id/
+  enrollment-key` is consumed the same way, just cached client-side now.
+- **Tests:** `src/hooks/__tests__/use-drivers.test.jsx` (new — query-not-mutation, cache reuse,
+  per-driver isolation, rotate/revert cache write), `src/pages/__tests__/ManagerAccountsPage.test.jsx`
+  (reveal tests reworked for the cell + query; new offline describe: disabled-when-uncached +
+  tooltip, cached key opens offline, re-open after Hide), `src/lib/__tests__/queryClient.test.js`
+  (`isCredentialQueryKey` + walk).
+- **Docs updated:** `ACCOUNTS.md` §4/§5/§6/§7/§7a (corrected the "audit-logged" claim, documented
+  the in-memory-not-disk cache), `TESTING_GUIDE.md` rows.
+- **Follow-ups / known issues:** a key never opened this session still can't be revealed on a cold
+  offline start — deliberate, a credential shouldn't be pre-fetched to disk. `getDriverEnrollmentKey`
+  lazily creates a key on first read for a keyless driver (idempotent after); unchanged from before.
+
+---
+
+## 2026-08-27 — Offline & Caching Audit §7: the twenty pages, one at a time
+
+- **Branch:** feature/audit-remediation-webadmin-pages
+- **Modules touched:** [`DASHBOARD.md`](modules/DASHBOARD.md), [`ACCOUNTS.md`](modules/ACCOUNTS.md),
+  [`BUSES.md`](modules/BUSES.md), [`ROUTES.md`](modules/ROUTES.md), [`OPERATIONS.md`](modules/OPERATIONS.md),
+  [`ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md), [`AUTH.md`](modules/AUTH.md),
+  [`TRACKING.md`](modules/TRACKING.md), [`SETTINGS.md`](modules/SETTINGS.md)
+- **What changed:** the page-by-page offline walk the audit's §7 asks for, on top of the already-merged
+  Phase 1/2/4 infra. Six shared treatments:
+  - **`DataTable`** gained `AsyncSection`'s offline split — no cached rows + offline → calm `OfflineCard`
+    instead of the red `ErrorState`; a refetch failure with rows present keeps the table under an amber
+    "Offline — showing saved information" strip. One change, six pages (Managers, ManagerAccounts,
+    ManagerVehicles, ManagerRequests, Operations ×3).
+  - **New `StaleChip`** (`src/components/shared/stale-chip.jsx`), built on `RelativeTime`. Hidden when
+    fresh + online, so normal pages look unchanged; appears amber when offline, past a threshold, or
+    `loud`. Placed on the manager tables, both dashboards, RoutesPage, and — `loud` — the enrollment
+    request queue.
+  - **`StatCard`** gained a `stale` + `asOf` state: offline dashboards show the last-known number greyed
+    with an "as of HH:MM" line instead of a red dash. DashboardPage also suppresses its page-level
+    `ErrorState` when offline (the global `OfflineBanner` already says why, once).
+  - **Auth pages** (Login, ForgotPassword ×3, Activate) disable submit while `navigator.onLine` is false
+    with a caption; expiring-code pages add a "don't wait" note. Never queued.
+  - **Every consequential row action / create button / dialog submit** across the manager pages gates on
+    `!isOnline` with an "Unavailable offline" tooltip; `FormDialog`/`ConfirmDialog` gained optional
+    `submitDisabled`/`confirmDisabled` props for this (default false — existing callers unaffected).
+  - **ManagerTrackingPage**: an offline cold-load now shows the idle "Live tracking unavailable —
+    you're offline" panel instead of the red `ErrorState`; the map, markers, and 90s `STALE_AFTER_MS`
+    rule are untouched (they're the reference implementation).
+  - **EnrollmentFormPage**: calm offline state for a failed schema fetch; Save disabled offline; a
+    `useBlocker` + `beforeunload` unsaved-changes guard so a wifi blip can't drop form-builder work.
+  - Reference-data `staleTime` overrides: system routes 15 min; organizations / assignable routes /
+    enrollment schema 1 h.
+- **Why:** TrackMe Offline & Caching Audit (17 Aug 2026) §7 — the web-admin equivalent of the mobile
+  apps' completed §5/§6 screen walks. Mockup-first, approved before implementation.
+- **Contract impact:** none. No endpoint or socket payload changed; `dataUpdatedAt` is read off the
+  existing TanStack query results.
+- **Tests:** new `src/components/shared/__tests__/stale-chip.test.jsx`,
+  `src/pages/__tests__/EnrollmentFormPage.test.jsx`; offline cases added to `data-table.test.jsx`,
+  `stat-card.test.jsx`, `form-dialog.test.jsx`, `confirm-dialog.test.jsx`,
+  `DashboardPage.test.jsx`, `ManagerRequestsPage.test.jsx`. Full suite: 65 files / 758 tests pass
+  (baseline was 56 / 619, all green). Lint: 0 errors, 28 warnings (unchanged, all pre-existing).
+- **Docs updated:** this entry; `docs/TESTING_GUIDE.md` (new "Offline — page-by-page" section);
+  the module docs above.
+- **Follow-ups / known issues:**
+  - ManagerAccounts enrollment keys are **not** readable offline — the audit assumed they were persisted
+    with the directory, but `useDriverEnrollmentKey` is an on-demand, audit-logged mutation with no
+    cache. "Show key" is disabled offline like the other actions; making keys readable offline needs
+    that fetch converted to a persisted query (out of scope here).
+  - The `staleTime` overrides are ad-hoc constants, not the audit's `APP_DATA/REFERENCE/LIVE` tier
+    system (§9.4) — that remains a separate chunk.
+
+## 2026-08-26 — Merge feature/enrollment-queue-contract-doc: labelled organization details, badge stays live
+
+- **Branch:** feature/merge-enrollment-queue-contract-doc
+- **Modules touched:** [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:**
+  - `feature/enrollment-queue-contract-doc` (2026-08-20) predated the 2026-08-21 tabs/driver-filter/Remove
+    rewrite below and was never merged. Brought forward the two pieces of it main still lacked instead of
+    the whole branch, since most of it had already been superseded:
+    - The "Organization details" column now renders the backend's labelled `organizationDetails`
+      (`Grade: 4`), falling back to raw `organizationValues` — closing the gap the 2026-08-21 entry
+      flagged as "left alone as out of scope".
+    - `useEnrollmentRequests` again writes the loaded PENDING queue's length into the badge's count
+      cache (guarded to skip while a `?driver=` filter is active, so a partial list can't undercount the
+      badge), and `useEnrollmentRequestCount` polls every 30s and refetches on window focus. Main had
+      lost this when the 2026-08-21 rewrite reimplemented the hook from an older base; without it the nav
+      badge only updated after an approve/reject/remove action, not when a request arrived mid-session.
+  - Not adopted: the branch's Contact-only column (drops the email) and its separate `organization.name`
+    field — those are UX calls main never made, and are out of scope for a conflict resolution.
+- **Why:** picking up genuine, still-unaddressed fixes from an otherwise-superseded branch before
+  discarding the rest of it.
+- **Contract impact:** none new — `passenger.organizationDetails` was already returned by the backend
+  (`managerEnrollmentsController.js`), just unused on this page until now.
+- **Tests:** `src/hooks/__tests__/use-enrollment-requests.test.jsx` (brought forward from the branch,
+  covers the poll and the badge sync). `npm test` and `npm run lint` re-run clean.
+- **Docs updated:** this entry; `docs/TESTING_GUIDE.md` (DataTable per-column cell class row restored).
+- **Follow-ups / known issues:** none.
+
+---
+
 ## 2026-08-23 — Add missing Playwright e2e specs: login, password-reset, cross-role onboarding (#28)
 
 - **Branch:** issue/28-playwright-e2e-specs
@@ -214,6 +361,75 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 - **Follow-ups / known issues:** the Organization details column still prints raw field keys
   (`grade:`) even though the backend also returns labelled `organizationDetails`. Left alone as
   out of scope.
+
+---
+
+## 2026-08-20 — Requests table drops the email and names the organization
+
+- **Branch:** feature/enrollment-queue-contract-doc
+- **Modules touched:** enrollment requests, [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:**
+  - The Account column is now Contact: the passenger's phone (falling back to the owning
+    account's), with the email dropped.
+  - "Organization details" is now Organization: the organization's name, then its form answers
+    labelled the way that organization asked for them (`Grade: 4`, not `grade: 4`), read from the
+    new `organizationDetails` payload with the raw `organizationValues` map as a fallback.
+- **Why:** the column showed `grade: 4` and never said which organization asked, and the email
+  took a column's width for something a manager does not act on.
+- **Contract impact:** consumes the new `organization` and `passenger.organizationDetails` fields
+  on `GET /api/manager/enrollment-requests` (backend change in the same session).
+- **Tests:** `src/pages/__tests__/ManagerRequestsPage.test.jsx` (contact, organization, and
+  fallback cases; the stale "Managed profile · relation" expectation, which the page has not
+  rendered for some time, was replaced with the rider-code identity it does render).
+  - Both multi-line columns (and the rest of the data columns) now pass
+    `meta: { cellClassName: 'align-top' }`, supported by a small addition to `DataTable`, so the
+    row reads as one line instead of staggering where a cell has a second line.
+- **Docs updated:** [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md),
+  two TESTING_GUIDE rows.
+- **Follow-ups / known issues:** none
+
+---
+
+## 2026-08-20 — Requests nav badge keeps up with requests that arrive mid-session
+
+- **Branch:** feature/enrollment-queue-contract-doc
+- **Modules touched:** enrollment requests, [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:**
+  - `useEnrollmentRequestCount` polls every 30s (`ENROLLMENT_COUNT_POLL_MS`) and refetches on
+    window focus, instead of holding the value it fetched when the shell first mounted.
+  - `useEnrollmentRequests('PENDING')` writes the length of the queue it loaded into the count
+    cache, so the Requests page and the nav badge always agree.
+- **Why:** a pending request was listed on the Requests page while the "Requests" nav link showed
+  no badge. The shell that renders the badge never unmounts, so the count only refreshed on a
+  reload or after a decision invalidated it.
+- **Contract impact:** none. Same `GET /api/manager/enrollment-requests/count` endpoint.
+- **Tests:** `src/hooks/__tests__/use-enrollment-requests.test.jsx` (new).
+- **Docs updated:** [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md),
+  TESTING_GUIDE row.
+- **Follow-ups / known issues:** `src/pages/__tests__/ManagerRequestsPage.test.jsx` has one
+  pre-existing failure (it expects a "Managed profile · <relation>" tag the page no longer
+  renders); untouched by this change.
+
+---
+
+## 2026-08-19 — Record that the enrollment queue's passenger payload is now populated
+
+- **Branch:** main
+- **Modules touched:** enrollment requests — [`docs/modules/ENROLLMENT_REQUESTS.md`](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:** Docs only. The backend was resolving a queued request's passenger from the
+  enrollment's deprecated `userId`, which the rider-profile enrollment path writes as null, so
+  every request the current passenger app makes arrived as `passenger: null` and the Passenger and
+  Organization details columns sat empty. Fixed backend-side; this page already read `riderCode`
+  and `organizationValues` and needed no change. The contract table now lists the real passenger
+  shape, including that `passenger._id` is a rider profile id.
+- **Why:** Keep the contract table honest about what this page actually receives.
+- **Contract impact:** `GET /api/manager/enrollment-requests` — same shape, correctly populated,
+  plus `riderCode`, `contactPhone` and `organizationValues`. Backend doc:
+  `TrackMe-backend/docs/modules/ADMIN.md`.
+- **Tests:** none — docs only.
+- **Docs updated:** `docs/modules/ENROLLMENT_REQUESTS.md` (§4 contract, §5 note).
+- **Follow-ups / known issues:** `ManagerRequestsPage.test.jsx` fixtures still omit `riderCode`
+  and `organizationValues`, so neither column is locked by a test.
 
 ---
 

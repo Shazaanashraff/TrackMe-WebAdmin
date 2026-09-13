@@ -26,3 +26,13 @@ Pay particular attention to:
   confirmed against `backend/src/routes/routeRoutes.js`. (A prior version of this note claimed the
   catalogue lived under `/api/bus/` — that was never true for this page; `getSystemRoutes` /
   `createSystemRoute` / the three new mutations all call `/api/routes`.)
+
+## Offline behaviour (Offline & Caching Audit §7)
+
+`useSystemRoutes` persists to disk and now carries a 15-minute `staleTime` — the catalogue changes
+a few times a month, so a background refetch on every visit was pure waste; the create/edit/toggle/
+delete mutations still invalidate it on a real change. The page already used `AsyncSection` (so its
+offline branch was inherited), the province filter is client-side, and column sort runs over the
+fetched array. Added: the Create button and the row Edit / Activate-Deactivate / Delete gate on
+`!isOnline` (with the edit `FormDialog` and delete `ConfirmDialog` `submitDisabled`/`confirmDisabled`);
+a `StaleChip` sits in the list header.

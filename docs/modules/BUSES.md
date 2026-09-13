@@ -48,7 +48,7 @@ pending-deletion badge (§5) stay in sync without a manual refetch.
 
 | Kind | Name | Notes |
 |---|---|---|
-| REST | `GET /api/manager/vehicles` | The manager's own fleet. |
+| REST | `GET /api/manager/vehicles` | The manager's own fleet. Each item carries `routeName` (string or `null`), resolved server-side from `routeId` — added for issue #18, see §5. |
 | REST | `GET /api/manager/vehicles/:vehicleId` | Single vehicle (used by `useManagerVehicle`, not this page directly). |
 | REST | `PUT /api/manager/vehicles/:vehicleId` | Update (edit dialog). |
 | REST | `POST /api/manager/vehicle-accounts` | Create. First vehicle for the manager creates outright (`data.vehicle` in the response); every subsequent one creates a pending `ManagerVehicleRequest` instead — same endpoint, response shape tells you which happened. |
@@ -73,8 +73,19 @@ Backend side: [`BUSES.md`](../../../backend/docs/modules/BUSES.md) (vehicle CRUD
 - A failed delete-request keeps the `ConfirmDialog` open with the error shown inline via its
   `error` prop, and the typed reason is preserved for a retry (issue #48) — it does not silently
   revert to a toast-only failure.
-- The Route table column resolves `routeId` to `"name (code)"` via the same assignable-routes list
-  the pickers use, falling back to the raw id for an orphaned/unassignable route (issue #67).
+- The Route table column resolves `routeId` to `"name (code)"` from each vehicle's own `routeName`
+  (returned inline by `GET /api/manager/vehicles`, resolved in the backend controller), falling
+  back to the raw id when the backend couldn't resolve one (issue #67). This used to come from a
+  client-side lookup against the assignable-routes list — moved server-side by issue #18 (below)
+  so the table no longer needs that list at all.
+- **`useManagerAssignableRoutes()` only fetches while the create or edit dialog is open**
+  (`enabled: createOpen || !!editVehicle`) — it backs the dialogs' route picker exclusively now
+  that the table gets its route name inline (issue #18). Before issue #67 added the table's route
+  column, this fetch was already dialog-only in spirit but not actually gated; issue #67 then made
+  the table depend on the same query too, so gating it would have regressed the table until this
+  fix separated the two consumers. Landing this needed the backend to add `routeName` to
+  `GET /api/manager/vehicles` first (`backend/docs/CHANGES.md`, 2026-08-28) — the table has no
+  other source for the name.
 
 ## 6. Known gotchas
 
@@ -96,6 +107,18 @@ Backend side: [`BUSES.md`](../../../backend/docs/modules/BUSES.md) (vehicle CRUD
   existing opt-in pattern in `getManagerRequests`), and no manager fleet has come close to a size
   where this is felt yet. Revisit if/when fleet sizes grow enough for this to matter — the acceptance
   criteria in issue #10 explicitly allows this as the resolution.
+
+## 6a. Offline behaviour (Offline & Caching Audit §7)
+
+`useManagerVehicles` persists to disk; `useManagerAssignableRoutes` and `useOrganizations` get a
+1-hour `staleTime` (reference data, refetched far more often than it changes). Offline:
+
+- The `DataTable` shows cached rows under an amber strip, or a calm `OfflineCard` if nothing is
+  cached — not the red `ErrorState`. Stat cards render `stale`/`asOf` (they're computed from the
+  cached array, no extra fetch); a `StaleChip` sits by the table.
+- Add Vehicle, the create wizard's submit, Edit, and the delete-request confirm all gate on
+  `!isOnline`; the wizard shows a "your entries are kept — reconnect to submit" note. Nothing is
+  queued (a vehicle create/delete needs a visible approval result).
 
 ## 7. Tests covering this module
 

@@ -7,12 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useUpdateOwnProfile } from '@/hooks/use-profile';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 
 // Shared by SettingsPage (super-admin) and ManagerSettingsPage (manager) — the
 // self-service surface issue #6 asks for is identical for both roles, just
 // name-scoped account data instead of role-specific settings.
 export function AccountSettingsPanel({ user, onUserUpdate }) {
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
   const updateProfileM = useUpdateOwnProfile();
   const [name, setName] = useState(user?.name || '');
   const [error, setError] = useState('');
@@ -69,7 +71,13 @@ export function AccountSettingsPanel({ user, onUserUpdate }) {
               </Alert>
             ) : null}
 
-            <Button type="submit" disabled={isUnchanged || updateProfileM.isPending}>
+            {!isOnline ? (
+              <Alert variant="warning">
+                <AlertDescription>You need a connection to save profile changes.</AlertDescription>
+              </Alert>
+            ) : null}
+
+            <Button type="submit" disabled={isUnchanged || updateProfileM.isPending || !isOnline}>
               {updateProfileM.isPending ? 'Saving…' : 'Save changes'}
             </Button>
           </form>

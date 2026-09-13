@@ -72,4 +72,16 @@ describe('FormDialog', () => {
     setup({ open: false });
     expect(screen.queryByText('Add Manager')).toBeNull();
   });
+
+  it('disables submit when submitDisabled (e.g. offline) without blocking the form fields', () => {
+    setup({ submitDisabled: true });
+    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+    // Cancel is still usable
+    expect(screen.getByRole('button', { name: /cancel/i })).not.toBeDisabled();
+  });
+
+  it('leaves submit enabled when submitDisabled is not set', () => {
+    setup();
+    expect(screen.getByRole('button', { name: /save/i })).not.toBeDisabled();
+  });
 });

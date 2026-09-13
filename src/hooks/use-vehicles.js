@@ -17,10 +17,23 @@ export function useManagerVehicle(vehicleId) {
   });
 }
 
-export function useManagerAssignableRoutes() {
+// The routes a manager can assign a vehicle to barely change — an hour of
+// staleness here is fine and saves refetching the dropdown on every dialog
+// open. Route mutations invalidate qk.systemRoutes.all(), not this key, but
+// this list is only ever read inside the create/edit dialogs where a
+// once-an-hour refresh is imperceptible.
+export const ASSIGNABLE_ROUTES_STALE_TIME = 60 * 60 * 1000;
+
+// Only the add/edit-vehicle dialogs' route picker needs the full assignable-routes
+// list, so callers gate it behind `enabled` (e.g. dialog-open) rather than fetching
+// it on every page visit (issue #18) — the vehicles table itself now gets each row's
+// route name inline from GET /api/manager/vehicles instead.
+export function useManagerAssignableRoutes({ enabled = true } = {}) {
   return useQuery({
     queryKey: qk.vehicles.assignableRoutes(),
     queryFn: () => adminApi.getManagerAssignableRoutes(),
+    staleTime: ASSIGNABLE_ROUTES_STALE_TIME,
+    enabled,
   });
 }
 

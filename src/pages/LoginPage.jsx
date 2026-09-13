@@ -16,6 +16,7 @@ import {
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import { SriLankaRouteMap, MAP_BG } from '../components/auth/SriLankaRouteMap';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 
 // Brand blue — same accent as the user-app (user-app/src/theme/tokens.js: signal[500]).
 const ACCENT = '#3F6FF3';
@@ -48,6 +49,7 @@ export function LoginPage({
 }) {
   const [form, setForm] = useState({ email: '', password: '', rememberMe: true });
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const isOnline = useOnlineStatus();
 
   const handleChange = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -191,10 +193,25 @@ export function LoginPage({
                 </Alert>
               ) : null}
 
+              {!isOnline ? (
+                <Alert
+                  severity="warning"
+                  sx={{
+                    borderRadius: 1.5,
+                    backgroundColor: 'rgba(251,207,51,0.12)',
+                    color: '#FCE588',
+                    border: '1px solid rgba(251,207,51,0.35)',
+                    '& .MuiAlert-icon': { color: '#FBCF33' }
+                  }}
+                >
+                  You need a connection to sign in.
+                </Alert>
+              ) : null}
+
               <Button
                 type="submit"
                 variant="contained"
-                disabled={loading}
+                disabled={loading || !isOnline}
                 sx={{
                   mt: 0.5,
                   py: 1.2,

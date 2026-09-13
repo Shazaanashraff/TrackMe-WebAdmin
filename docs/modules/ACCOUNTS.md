@@ -53,8 +53,8 @@ from `qk.managers.*` / driver queries invalidate on the relevant mutation's `onS
 | REST | `PATCH /api/super-admin/managers/:id/reset-password` | Super-admin resets a manager's password. |
 | REST | `PATCH /api/super-admin/managers/:id/assign-vehicles` | Bulk vehicle (re)assignment. |
 | REST | `GET/POST/PUT/DELETE /api/manager/drivers[/:id]` | Driver CRUD, manager-scoped server-side. |
-| REST | `GET /api/manager/drivers/:id/password` | Returns the driver's password in the clear — **audit-logged on every call server-side**; never prefetch or call outside a direct manager request. |
-| REST | `GET /api/manager/drivers/:id/enrollment-key` | Reveal current enrollment key. |
+| REST | `GET /api/manager/drivers/:id/password` | Returns the driver's password in the clear — **audit-logged on every call server-side** (`DRIVER_PASSWORD_VIEWED`); never prefetch or call outside a direct manager request. |
+| REST | `GET /api/manager/drivers/:id/enrollment-key` | Reveal current enrollment key. **Not** audit-logged (unlike the password read). Lazily creates a key if the driver has none (idempotent thereafter). |
 | REST | `POST /api/manager/drivers/:id/enrollment-key/rotate` | Replace the key; old one stops working. Response includes `canRevert`. |
 | REST | `POST /api/manager/drivers/:id/enrollment-key/revert` | Undo the last rotation, while still recoverable. |
 
@@ -64,17 +64,25 @@ model in [`AUTH.md`](../../../backend/docs/modules/AUTH.md).
 
 ## 5. Not visible in the frontend
 
-- **Password and enrollment-key reveal are mutations, not queries**, even though they're reads —
-  the server audit-logs every call, so React Query must never cache, retry, or background-refetch
-  them. `useDriverPassword`/`useDriverEnrollmentKey` are deliberately `useMutation`, fired only on
-  an explicit "Show" click.
-- **Per-row pending state for the shared reveal mutation is tracked locally, not derived from the
-  mutation object.** `useDriverEnrollmentKey()` returns one mutation instance shared by every row
-  in the driver table; its own `isPending`/`variables` reflect only the most recent call. Clicking
-  "Show key" on driver A, then driver B before A resolves, would make A's row silently drop its
-  loading state if pending were read off the mutation directly. `ManagerAccountsPage` instead
-  keeps a `revealingIds` map (`driverId -> boolean`), set before `mutateAsync` and cleared in a
-  `finally`, so each row's pending state is independent of what any other row is doing (issue #68).
+- **The password reveal is a mutation, not a query** — the server audit-logs every call
+  (`DRIVER_PASSWORD_VIEWED`), so `useDriverPassword` is deliberately `useMutation`, fired only on
+  an explicit "Show" click and never cached, retried, or background-refetched.
+- **The enrollment-key reveal *is* a query** (`useDriverEnrollmentKey(driverId, { enabled })`,
+  keyed `qk.drivers.enrollmentKey(id)`). This GET is **not** audit-logged, so caching it is safe —
+  and it is what lets a key the manager already opened stay readable through a brief disconnect
+  (Offline & Caching Audit chunk 2). `staleTime: Infinity`, short `gcTime`, `enabled` only after
+  the row's "Show key" click. The key is a credential, so it is kept **out of the localStorage
+  persister** — `isCredentialQueryKey` in `src/lib/queryClient.js` excludes any key segment
+  `'enrollment-key'` from `shouldDehydrateQuery`; the plaintext key lives in the in-memory cache
+  only, for the session.
+- **Rotate / revert stay mutations** (real POSTs), and their `onSuccess` writes the new key
+  straight into `qk.drivers.enrollmentKey(id)` via `setQueryData`, so the row updates without a
+  refetch and a later offline read gets the current key.
+- **Per-row reveal state lives in the cell.** `<EnrollmentKeyCell>` owns a private `shown` toggle
+  over its own `useDriverEnrollmentKey` instance — there is no shared mutation and no
+  `revealingIds` map any more, so two rows' reveals are structurally independent (issue #68). The
+  cell bubbles `canRevert` up (`onKeyState`) so the row's action menu can offer "Restore previous
+  key".
 - **Disabling a driver asks first; enabling does not** — disabling revokes sign-in immediately, so
   it routes through `ConfirmDialog`; re-enabling is one click since it's reversible.
 - Deleting a manager cascades to unassigning their vehicles client-side (query invalidation), but
@@ -94,17 +102,41 @@ model in [`AUTH.md`](../../../backend/docs/modules/AUTH.md).
   the other's page would still be a bug worth its own test.
 - `ManagerAccountsPage`'s enrollment-key `ConfirmDialog` (rotate) is destructive-styled and always
   requires confirmation; the reveal ("Show key") action is not, since it's non-destructive.
-- The password-reveal endpoint returns the plaintext password — do not add caching, prefetch-on-
-  hover, or any path that calls it without a direct user action.
+- The password-reveal endpoint returns the plaintext password and **is** audit-logged — do not add
+  caching, prefetch-on-hover, or any path that calls it without a direct user action. (The
+  enrollment-key reveal is different: not audit-logged, and cached in memory on purpose — but
+  still never written to disk.)
 
 ## 7. Tests covering this module
 
 | Layer | File | What it locks |
 |---|---|---|
 | Unit | `src/pages/__tests__/ManagersPage.test.jsx` | manager directory CRUD, button migration (issue #49-ui), persistent row-scoped status-toggle error + inline delete-failure error (issue #43), required-field asterisk + `aria-required` on Name/Email/(create-mode) Password/Confirm — not on the edit dialog's optional password-reset fields (issue #11); 409 duplicate-email conflict shows the server's specific message, not a generic one (issue #26). |
-| Unit | `src/pages/__tests__/ManagerAccountsPage.test.jsx` | driver directory, create-driver validation, enrollment-key rotate/revert/reveal, per-row reveal pending independence (issue #68), disable-driver confirmation (issue #50). |
+| Unit | `src/pages/__tests__/ManagerAccountsPage.test.jsx` | driver directory, create-driver validation, enrollment-key rotate/revert/reveal, per-row reveal independence (issue #68), **enrollment-key offline: "Show key" disabled offline for an uncached key with the "haven't viewed yet" tooltip; a key cached from an earlier reveal opens offline and re-opens after Hide (Offline & Caching Audit chunk 2)**, disable-driver confirmation (issue #50). |
+| Unit | `src/hooks/__tests__/use-drivers.test.jsx` | `useDriverEnrollmentKey` is a query — fires only when `enabled`, serves cached data without a refetch (`staleTime: Infinity`), keeps a per-driver cache entry; `useRotateDriverEnrollmentKey` / `useRevertDriverEnrollmentKey` write their result into `qk.drivers.enrollmentKey(id)` on success. |
+| Unit | `src/lib/__tests__/queryClient.test.js` | `isCredentialQueryKey` flags `qk.drivers.enrollmentKey(id)`; `shouldDehydrateQuery` excludes it; the walk over every key factory asserts only the live key and the credential key are kept off disk. |
 | Unit | `src/components/shared/__tests__/confirm-dialog.test.jsx` | shared confirm/reject-with-reason modal behavior reused by disable-driver here. |
 | e2e (Playwright) | `e2e/cross-role-onboarding.spec.ts` | a super-admin creates a manager via the real Add Manager dialog, then that manager does a real click-through sign-in (not seeded) and creates their first vehicle — the "set up a new customer" journey spanning both roles in one flow (issue #28). |
+
+## 7a. Offline behaviour (Offline & Caching Audit §7)
+
+`useManagers` / `useManagerDrivers` persist to disk. Offline:
+
+- The `DataTable` shows cached rows under an amber "Offline — showing saved information" strip, or a
+  calm `OfflineCard` if nothing is cached — never the red `ErrorState`. A `StaleChip` sits by the
+  table, and the stat cards render `stale`/`asOf`.
+- Every mutating control gates on `!isOnline` with an "Unavailable offline" tooltip: ManagersPage's
+  Add / Edit / Activate-Deactivate / Delete and the FormDialog/ConfirmDialog submits;
+  ManagerAccountsPage's Add Driver and the whole row action menu (edit, replace/restore key, view /
+  reset password, enable/disable, delete).
+- **Enrollment keys the manager has opened this session stay readable offline** (Offline & Caching
+  Audit chunk 2). `useDriverEnrollmentKey` is now a cached `useQuery` (this GET is not
+  audit-logged, so caching is safe), so a key revealed while online survives a disconnect and
+  re-opens instantly after Hide. "Show key" is still disabled offline for a key **not** yet opened
+  this session — the tooltip says "Reconnect to open a key you haven't viewed yet". The plaintext
+  key is never written to disk: `isCredentialQueryKey` keeps it out of the persister, so the audit
+  §7.10 goal is met without leaving a credential at rest on a shared admin machine. A cold offline
+  start still cannot open a never-viewed key — the correct trade for a credential.
 
 ## 8. Change protocol
 

@@ -2,10 +2,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/api';
 import { qk } from '@/lib/queryKeys';
 
+// The route catalogue changes a few times a month, not every 30 seconds. A
+// long staleTime stops every page visit triggering a background refetch; the
+// mutations below still invalidate it the instant a route actually changes.
+export const ROUTES_STALE_TIME = 15 * 60 * 1000;
+
 export function useSystemRoutes(params = {}) {
   return useQuery({
     queryKey: qk.systemRoutes.list(params),
     queryFn: () => adminApi.getSystemRoutes(params),
+    staleTime: ROUTES_STALE_TIME,
   });
 }
 
