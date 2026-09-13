@@ -51,7 +51,7 @@ const DESCRIPTION = {
 const formatWhen = (value) => {
   if (!value) return '-';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString();
 };
 
 // The backend labels and orders these against the organization's own enrolment
