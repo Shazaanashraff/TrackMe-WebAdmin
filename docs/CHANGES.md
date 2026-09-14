@@ -22,6 +22,23 @@ Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASI
 
 ---
 
+## 2026-09-14 — Root path (`/`) redirects to the dashboard instead of 404
+
+- **Branch:** main
+- **Modules touched:** none dedicated — routing lives in `src/App.jsx`
+- **What changed:**
+  - `ProtectedShell`'s super-admin route tree now has a `/` route that redirects to
+    `/dashboard`.
+  - `ProtectedShell`'s manager route tree now has a `/` route that redirects to
+    `/manager/dashboard`.
+  - Previously `/` fell through to the `*` wildcard and rendered `NotFoundPage`.
+- **Why:** visiting the portal's root URL showed a 404 instead of the dashboard.
+- **Contract impact:** none
+- **Tests:** `src/__tests__/App.test.jsx` — added root-redirect cases for both super-admin and
+  manager roles (covered by the existing "App role gating" TESTING_GUIDE row)
+- **Docs updated:** n/a
+- **Follow-ups / known issues:** none
+
 ## 2026-08-28 — Gate the Vehicles page's assignable-routes fetch behind dialog-open (issue #18)
 
 - **Branch:** claude/peaceful-archimedes-8fmga3
