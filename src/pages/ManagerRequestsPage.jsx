@@ -289,6 +289,101 @@ export function ManagerRequestsPage() {
     return base;
   }, [isDeciding, status, isOnline]);
 
+  // Below md the 8-column queue renders a card per row. Nothing is dropped:
+  // there is no row-detail view, so the organization answers a rider gave at
+  // enrollment exist nowhere else in the portal.
+  const renderMobileCard = (request) => {
+    const passenger = request.passenger;
+    const managed = passenger?.isManagedProfile
+      ? ['Managed profile', passenger.relation].filter(Boolean).join(' · ')
+      : '';
+    const email = passenger?.email || passenger?.account?.email;
+    const phone = passenger?.account?.phoneNumber;
+    const details = organizationDetails(passenger);
+    const when = status === 'PENDING'
+      ? formatWhen(request.requestedAt)
+      : formatWhen(request.decidedAt || request.requestedAt);
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <span className="font-medium truncate">{passenger?.name || 'Unknown'}</span>
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{when}</span>
+        </div>
+
+        {passenger?.riderCode && (
+          <p className="font-mono text-xs text-muted-foreground">{passenger.riderCode}</p>
+        )}
+        {managed && <p className="text-xs text-muted-foreground">{managed}</p>}
+
+        {(email || phone) && (
+          <div className="text-xs break-words">
+            {email && <p>{email}</p>}
+            {phone && <p className="text-muted-foreground">{phone}</p>}
+          </div>
+        )}
+
+        <p className="text-xs">
+          <span className="text-muted-foreground">Driver: </span>
+          {request.driver?.name || 'Unknown'}
+          {request.driver?.driverCode && (
+            <span className="font-mono text-muted-foreground"> · {request.driver.driverCode}</span>
+          )}
+        </p>
+
+        {details.length > 0 && (
+          <dl className="space-y-0.5 text-xs">
+            {details.map((detail) => (
+              <div key={detail.key} className="flex justify-between gap-3">
+                <dt className="text-muted-foreground shrink-0">{detail.label}</dt>
+                <dd className="text-right break-words">{detail.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
+        {status === 'PENDING' && (
+          <div className="flex gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isDeciding || !isOnline}
+              title={isOnline ? undefined : 'Unavailable offline'}
+              onClick={() => setPendingDecision({ request, action: 'reject' })}
+            >
+              <X className="mr-1.5 h-4 w-4" />
+              Decline
+            </Button>
+            <Button
+              size="sm"
+              disabled={isDeciding || !isOnline}
+              title={isOnline ? undefined : 'Unavailable offline'}
+              onClick={() => setPendingDecision({ request, action: 'approve' })}
+            >
+              <Check className="mr-1.5 h-4 w-4" />
+              Approve
+            </Button>
+          </div>
+        )}
+
+        {status === 'ACTIVE' && (
+          <div className="flex pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isDeciding || !isOnline}
+              title={isOnline ? undefined : 'Unavailable offline'}
+              onClick={() => setPendingDecision({ request, action: 'remove' })}
+            >
+              <UserMinus className="mr-1.5 h-4 w-4" />
+              Remove
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const target = pendingDecision?.request;
   const action = pendingDecision?.action;
   const targetDriver = target?.driver?.name || 'this driver';
@@ -335,8 +430,8 @@ export function ManagerRequestsPage() {
       )}
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Tabs value={status} onValueChange={setStatus}>
-          <TabsList>
+        <Tabs value={status} onValueChange={setStatus} className="min-w-0 max-w-full">
+          <TabsList className="max-w-full overflow-x-auto">
             {TABS.map((tab) => (
               <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
             ))}
@@ -367,6 +462,7 @@ export function ManagerRequestsPage() {
         onRetry={requestsQ.refetch}
         emptyTitle={EMPTY_STATE[status].title}
         emptyDescription={EMPTY_STATE[status].description}
+        renderMobileCard={renderMobileCard}
       />
 
       <ConfirmDialog
