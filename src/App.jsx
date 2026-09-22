@@ -76,7 +76,6 @@ function ProtectedShell({
         <Route path="/manager/tracking" element={<ManagerTrackingPage />} />
         <Route path="/manager/accounts" element={<ManagerAccountsPage />} />
         <Route path="/manager/requests" element={<ManagerRequestsPage />} />
-        <Route path="/manager/enrollment-form" element={<EnrollmentFormPage />} />
         <Route path="/manager/settings" element={<ManagerSettingsPage />} />
         <Route path="*" element={<NotFoundPage role="admin" />} />
       </Route>

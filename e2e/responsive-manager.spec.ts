@@ -28,7 +28,6 @@ const ROUTES: ReadonlyArray<readonly [string, string]> = [
   ['tracking', '/manager/tracking'],
   ['drivers', '/manager/accounts'],
   ['enrollments', '/manager/requests'],
-  ['enrollment-form', '/manager/enrollment-form'],
   ['settings', '/manager/settings'],
 ];
 

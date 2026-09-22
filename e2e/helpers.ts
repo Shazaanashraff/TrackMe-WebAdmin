@@ -585,3 +585,47 @@ export async function failOnUnmockedApi(page: Page) {
     );
   });
 }
+
+/**
+ * Mocks what the super-admin Enrollment form page fetches: the organization
+ * list it picks from, and that organization's enrollment schema.
+ *
+ * Separate from `mockManagerPortalData` because the super-admin reads the
+ * schema per organization (`/api/super-admin/organizations/:id/...`) while a
+ * manager reads their own (`/api/manager/organization/...`). The super-admin
+ * shell skips the pending-enrolment badge entirely (`AppShell.jsx:163`,
+ * `enabled: !isSuperAdmin`), so no shell mock is needed here.
+ */
+export async function mockSuperAdminEnrollmentSchema(page: Page) {
+  await page.route('**/api/super-admin/organizations', (route) => route.fulfill(json({
+    success: true,
+    data: [{ _id: 'org-1', name: 'Royal Institute of Technology', serviceType: 'UNIVERSITY' }],
+  })));
+
+  await page.route(/\/api\/super-admin\/organizations\/[^/]+\/enrollment-schema$/, (route) => {
+    if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() as { fields?: unknown[] };
+      route.fulfill(json({
+        success: true,
+        data: {
+          organization: { _id: 'org-1', name: 'Royal Institute of Technology', serviceType: 'UNIVERSITY' },
+          schemaVersion: 4,
+          fields: body?.fields || [],
+        },
+      }));
+      return;
+    }
+    route.fulfill(json({
+      success: true,
+      data: {
+        organization: { _id: 'org-1', name: 'Royal Institute of Technology', serviceType: 'UNIVERSITY' },
+        schemaVersion: 3,
+        fields: [
+          { key: 'studentNumber', label: 'Student ID', enabled: true, required: true, order: 0 },
+          { key: 'faculty', label: 'Faculty', enabled: true, required: false, order: 1 },
+          { key: 'batch', label: 'Batch', enabled: false, required: false, order: 2 },
+        ],
+      },
+    }));
+  });
+}

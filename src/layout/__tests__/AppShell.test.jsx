@@ -71,6 +71,20 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Enrollments' })).toBeInTheDocument();
   });
 
+  // The Enrollment form configures an organization's rider fields, and a
+  // manager's own `organization` is only ever set by a super-admin, so the page
+  // was unreachable for most managers. Removed 2026-09-23; it stays in
+  // SUPER_ADMIN_NAV.
+  it('does not offer the Enrollment form to a manager', () => {
+    renderShell({ role: 'admin', path: '/manager/dashboard' });
+    expect(screen.queryByRole('link', { name: /enrollment form/i })).toBeNull();
+  });
+
+  it('still offers the Enrollment form to a super-admin', () => {
+    renderShell({ role: 'super-admin', path: '/dashboard' });
+    expect(screen.getByRole('link', { name: 'Enrollment form' })).toBeInTheDocument();
+  });
+
   it('counts pending enrollment requests on the Enrollments link', () => {
     useEnrollmentRequestCount.mockReturnValue({ data: 3 });
     renderShell({ role: 'admin', path: '/manager/dashboard' });
