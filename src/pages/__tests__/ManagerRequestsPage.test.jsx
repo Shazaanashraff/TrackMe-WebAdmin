@@ -11,6 +11,10 @@ vi.mock('@/hooks/use-enrollment-requests', () => ({
   useRemoveEnrollment: vi.fn(),
 }));
 
+vi.mock('@/hooks/use-drivers', () => ({
+  useManagerDrivers: vi.fn(),
+}));
+
 vi.mock('sonner', () => ({ toast: vi.fn() }));
 
 import {
@@ -19,6 +23,7 @@ import {
   useRejectEnrollmentRequest,
   useRemoveEnrollment,
 } from '@/hooks/use-enrollment-requests';
+import { useManagerDrivers } from '@/hooks/use-drivers';
 
 const REQUESTS = [
   {
@@ -84,6 +89,11 @@ function makeMutation(overrides = {}) {
   return { mutate: vi.fn(), isPending: false, ...overrides };
 }
 
+const DRIVERS = [
+  { _id: 'd1', name: 'Kamal Perera', driverCode: 'DRV-4K7P-9XQ2', vehicle: { _id: 'v1', vehicleId: 'VEH-001', numberPlate: 'NB-1234' } },
+  { _id: 'd2', name: 'Nimali Fernando', driverCode: 'DRV-8M2Q-1TZ5', vehicle: null },
+];
+
 function setup({
   requests = REQUESTS,
   approveMut,
@@ -91,9 +101,18 @@ function setup({
   removeMut,
   isLoading = false,
   route = '/manager/requests',
+  drivers = DRIVERS,
+  driversLoading = false,
+  driversError = null,
 } = {}) {
   useEnrollmentRequests.mockReturnValue({
     data: { data: requests }, isLoading, error: null, refetch: vi.fn(),
+  });
+  useManagerDrivers.mockReturnValue({
+    data: drivers ? { data: drivers } : undefined,
+    isLoading: driversLoading,
+    error: driversError,
+    refetch: vi.fn(),
   });
   const approve = approveMut || makeMutation();
   const reject = rejectMut || makeMutation();
@@ -227,11 +246,62 @@ describe('ManagerRequestsPage', () => {
       expect(useEnrollmentRequests).toHaveBeenLastCalledWith('ACTIVE', '');
     });
 
-    it('narrows to one driver from the URL, and offers a way back out', () => {
+    it('narrows to one driver from the URL, and shows that in the picker', () => {
       setup({ requests: ENROLLED, route: '/manager/requests?status=ACTIVE&driver=d1' });
       expect(useEnrollmentRequests).toHaveBeenCalledWith('ACTIVE', 'd1');
-      expect(screen.getByText(/Showing one driver: Kamal Perera\./)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /show all drivers/i })).toBeInTheDocument();
+      // The picker states what is filtered, which is why the old
+      // "Showing one driver" caption and "Show all drivers" button are gone.
+      const picker = screen.getByRole('combobox', { name: /filter by driver or vehicle/i });
+      expect(picker).toHaveTextContent('Kamal Perera');
+      expect(picker).toHaveTextContent('NB-1234');
+      expect(screen.queryByRole('button', { name: /show all drivers/i })).toBeNull();
+    });
+
+    it('lists each driver with their vehicle plate, and one without', async () => {
+      const user = userEvent.setup();
+      setup({ requests: ENROLLED, route: '/manager/requests?status=ACTIVE' });
+
+      await user.click(screen.getByRole('combobox', { name: /filter by driver or vehicle/i }));
+
+      // A vehicle has exactly one driver, so a plate and a driver name select
+      // the same roster. Both are on the option so it is findable either way.
+      expect(await screen.findByRole('option', { name: /Kamal Perera · NB-1234/ })).toBeInTheDocument();
+      // A driver with no vehicle still has students, so they stay selectable.
+      expect(screen.getByRole('option', { name: /Nimali Fernando · No vehicle/ })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: 'All drivers' })).toBeInTheDocument();
+    });
+
+    it('refetches for the chosen driver and puts it in the URL', async () => {
+      const user = userEvent.setup();
+      setup({ requests: ENROLLED, route: '/manager/requests?status=ACTIVE' });
+
+      await user.click(screen.getByRole('combobox', { name: /filter by driver or vehicle/i }));
+      await user.click(await screen.findByRole('option', { name: /Kamal Perera · NB-1234/ }));
+
+      expect(useEnrollmentRequests).toHaveBeenLastCalledWith('ACTIVE', 'd1');
+    });
+
+    it('clears the filter when All drivers is chosen', async () => {
+      const user = userEvent.setup();
+      setup({ requests: ENROLLED, route: '/manager/requests?status=ACTIVE&driver=d1' });
+
+      await user.click(screen.getByRole('combobox', { name: /filter by driver or vehicle/i }));
+      await user.click(await screen.findByRole('option', { name: 'All drivers' }));
+
+      expect(useEnrollmentRequests).toHaveBeenLastCalledWith('ACTIVE', '');
+    });
+
+    it('disables the picker when the driver list fails, without losing the roster', () => {
+      setup({
+        requests: ENROLLED,
+        route: '/manager/requests?status=ACTIVE',
+        drivers: null,
+        driversError: new Error('offline'),
+      });
+
+      expect(screen.getByRole('combobox', { name: /filter by driver or vehicle/i })).toBeDisabled();
+      // The roster it was filtering is still readable.
+      expect(screen.getByText('Tharindu Silva')).toBeInTheDocument();
     });
 
     it('offers no approve or decline on someone already enrolled', () => {

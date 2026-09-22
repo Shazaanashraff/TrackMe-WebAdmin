@@ -8,7 +8,11 @@ import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { StaleChip } from '@/components/shared/stale-chip';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { useOnlineStatus } from '@/hooks/use-online-status';
+import { useManagerDrivers } from '@/hooks/use-drivers';
 import {
   useEnrollmentRequests,
   useApproveEnrollmentRequest,
@@ -72,6 +76,10 @@ const passengerLabel = (passenger) => {
 
 const isStatus = (value) => TABS.some((tab) => tab.value === value);
 
+// Radix Select has no empty-string value, so the unfiltered option needs a
+// sentinel. It never reaches the URL: picking it clears `?driver` entirely.
+const ALL_DRIVERS = 'ALL';
+
 export function ManagerRequestsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const isOnline = useOnlineStatus();
@@ -84,6 +92,7 @@ export function ManagerRequestsPage() {
   const driverId = searchParams.get('driver') || '';
 
   const requestsQ = useEnrollmentRequests(status, driverId);
+  const driversQ = useManagerDrivers();
   const approve = useApproveEnrollmentRequest();
   const reject = useRejectEnrollmentRequest();
   const remove = useRemoveEnrollment();
@@ -95,10 +104,20 @@ export function ManagerRequestsPage() {
   const requests = requestsQ.data?.data || [];
   const isDeciding = approve.isPending || reject.isPending || remove.isPending;
 
-  // Named from the rows themselves rather than a second request for the driver
-  // list. An empty roster has no row to read, so the filter still announces
-  // itself, just without the name.
-  const filteredDriverName = driverId ? requests[0]?.driver?.name || '' : '';
+  // One picker covers both "whose students" and "which vehicle's students",
+  // because they are the same question: a vehicle has one driver
+  // (Vehicle.js:51) and an enrollment points at the driver, never the vehicle.
+  // Each option carries the plate so it is findable either way.
+  const driverOptions = useMemo(() => (driversQ.data?.data || []).map((driver) => ({
+    id: String(driver._id),
+    label: driver.vehicle?.numberPlate
+      ? `${driver.name} · ${driver.vehicle.numberPlate}`
+      : `${driver.name} · No vehicle`,
+  })), [driversQ.data]);
+
+  // A failed driver list must not take the roster down with it, so the picker
+  // disables itself and the page carries on.
+  const canFilter = !driversQ.isLoading && !driversQ.error && driverOptions.length > 0;
 
   const setStatus = (next) => {
     const params = new URLSearchParams(searchParams);
@@ -106,9 +125,10 @@ export function ManagerRequestsPage() {
     setSearchParams(params, { replace: true });
   };
 
-  const clearDriver = () => {
+  const setDriver = (next) => {
     const params = new URLSearchParams(searchParams);
-    params.delete('driver');
+    if (next === ALL_DRIVERS) params.delete('driver');
+    else params.set('driver', next);
     setSearchParams(params, { replace: true });
   };
 
@@ -311,16 +331,22 @@ export function ManagerRequestsPage() {
           <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{when}</span>
         </div>
 
-        {passenger?.riderCode && (
-          <p className="font-mono text-xs text-muted-foreground">{passenger.riderCode}</p>
+        {/* Identity on one line rather than two: the rider code and the
+            managed-profile note are the same fact about who this is. */}
+        {(passenger?.riderCode || managed) && (
+          <p className="text-xs text-muted-foreground">
+            {passenger?.riderCode && <span className="font-mono">{passenger.riderCode}</span>}
+            {passenger?.riderCode && managed && <span> · </span>}
+            {managed}
+          </p>
         )}
-        {managed && <p className="text-xs text-muted-foreground">{managed}</p>}
 
         {(email || phone) && (
-          <div className="text-xs break-words">
-            {email && <p>{email}</p>}
-            {phone && <p className="text-muted-foreground">{phone}</p>}
-          </div>
+          <p className="text-xs break-words">
+            {email}
+            {email && phone && <span className="text-muted-foreground"> · </span>}
+            {phone && <span className="text-muted-foreground tabular-nums">{phone}</span>}
+          </p>
         )}
 
         <p className="text-xs">
@@ -331,12 +357,16 @@ export function ManagerRequestsPage() {
           )}
         </p>
 
+        {/* Inline, not a label/value row. justify-between stranded a short
+            answer at the far edge with nothing between it and its label
+            ("Grade" hard left, "7" hard right), which read as two unrelated
+            things rather than one answer. */}
         {details.length > 0 && (
           <dl className="space-y-0.5 text-xs">
             {details.map((detail) => (
-              <div key={detail.key} className="flex justify-between gap-3">
-                <dt className="text-muted-foreground shrink-0">{detail.label}</dt>
-                <dd className="text-right break-words">{detail.value}</dd>
+              <div key={detail.key} className="break-words">
+                <dt className="inline text-muted-foreground">{detail.label}: </dt>
+                <dd className="inline">{detail.value}</dd>
               </div>
             ))}
           </dl>
@@ -411,23 +441,47 @@ export function ManagerRequestsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Enrollments"
-        description={DESCRIPTION[status]}
-        actions={driverId ? (
-          <Button variant="outline" size="sm" onClick={clearDriver}>
-            Show all drivers
-          </Button>
-        ) : null}
-      />
+      <PageHeader title="Enrollments" description={DESCRIPTION[status]} />
 
-      {driverId && (
-        <p className="mb-4 text-sm text-muted-foreground">
-          {filteredDriverName
-            ? `Showing one driver: ${filteredDriverName}.`
-            : 'Showing one driver.'}
-        </p>
-      )}
+      {/* The picker states what is filtered and clears it, so the old
+          "Showing one driver: X" caption and "Show all drivers" button are
+          gone rather than saying the same thing a third time. The filter is
+          URL state, so it survives a tab switch, a reload and a share, and the
+          Drivers page's deep link arrives with it already selected. */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <Select
+          value={driverId || ALL_DRIVERS}
+          onValueChange={setDriver}
+          disabled={!canFilter}
+        >
+          <SelectTrigger
+            aria-label="Filter by driver or vehicle"
+            className="w-full sm:w-64"
+          >
+            <SelectValue placeholder="All drivers" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_DRIVERS}>All drivers</SelectItem>
+            {driverOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* self-start so the chip keeps its natural width: the row is a flex
+            column at base, where children stretch by default and a pill
+            spanning the full width reads as a banner. */}
+        {requests.length > 0 && (
+          <div className="self-start">
+            <StaleChip
+              updatedAt={requestsQ.dataUpdatedAt}
+              offline={!isOnline}
+              loud={status === 'PENDING'}
+              label={status === 'PENDING' ? 'Queue as of' : 'Updated'}
+            />
+          </div>
+        )}
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Tabs value={status} onValueChange={setStatus} className="min-w-0 max-w-full">
@@ -437,14 +491,6 @@ export function ManagerRequestsPage() {
             ))}
           </TabsList>
         </Tabs>
-        {requests.length > 0 && (
-          <StaleChip
-            updatedAt={requestsQ.dataUpdatedAt}
-            offline={!isOnline}
-            loud={status === 'PENDING'}
-            label={status === 'PENDING' ? 'Queue as of' : 'Updated'}
-          />
-        )}
       </div>
 
       {status === 'PENDING' && !isOnline && requests.length > 0 && (
