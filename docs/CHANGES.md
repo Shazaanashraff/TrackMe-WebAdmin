@@ -18,6 +18,43 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-09-22 — Touch targets for checkboxes, radios and switches
+- **Branch:** feature/manager-mobile-responsive
+- **Modules touched:** shared UI kit (`switch`, `dialog`, `password-input`, `data-table`),
+  [BUSES](modules/BUSES.md), [ACCOUNTS](modules/ACCOUNTS.md),
+  [ENROLLMENT_REQUESTS](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:**
+  - Checkbox labels (`EnrollmentFormPage`) get `coarse:min-h-11`; the `<label>` wraps the box
+    and its text, so it is the real target.
+  - Radio labels (`ManagerVehiclesPage` route mode) become `flex-1` + `coarse:min-h-11`, so
+    the whole row is tappable via `htmlFor`.
+  - `switch.jsx` grows an `::after` hit-area overlay instead of a taller pill — a 44px switch
+    reads as a slab. Hit area only, no layout change.
+  - `data-table.jsx` column-visibility rows get `coarse:min-h-11` with the label filling the
+    row; expanding each checkbox instead would make stacked neighbours overlap.
+  - Four more found by extending the spec: `dialog.jsx` close X (was 16x16),
+    `password-input.jsx` reveal (40px against a 44px field), the organization-mode segmented
+    control in `ManagerAccountsPage` (36px), and the enrollment form's reorder arrows (4px
+    apart).
+- **Why:** the 44px pass deliberately deferred these, and the note said the labels were the
+  open follow-up.
+- **Contract impact:** none — presentation only.
+- **Tests:** `e2e/touch-targets.spec.ts` extended (11 cases). Vitest **779 passed, 0 failed**.
+  Playwright **45 passed, 0 failed**. Lint 0 errors, 27 warnings.
+- **Docs updated:** this entry, [`TESTING_GUIDE.md`](TESTING_GUIDE.md).
+- **Follow-ups / known issues:**
+  - **Measuring touch targets is not just `getBoundingClientRect`.** The spec had to learn
+    four things, each of which had produced a false result: resolve `label[for=...]` as well
+    as a wrapping `<label>` (a Radix radio is a 16px glyph beside its label); fold in an
+    absolutely-positioned `::after` with negative insets (how the switch carries its hit
+    area); wait out the Radix dialog entrance animation (mid-flight its scale transform
+    reports a 44px control as 43px); and skip `aria-hidden` proxies (Radix mirrors Select and
+    Switch into a 1px native control for form submission). Anyone extending this spec should
+    keep those four in mind.
+  - Super-admin-only surfaces (`RoutesPage`'s switch, `DeveloperPage`, `StyleGuidePage`,
+    the MUI login page) were not audited — out of the manager scope for this branch. They do
+    inherit the shared-kit fixes.
+
 ## 2026-09-22 — 44px touch targets on a coarse pointer
 - **Branch:** feature/manager-mobile-responsive
 - **Modules touched:** shared UI kit (`button`, `input`, `select`, `tabs`, `breadcrumb` usage in
@@ -44,9 +81,10 @@ when source under `src/` changed. One entry per session/PR is enough.
     narrow desktop window and still miss a tablet. Consequence:
     `e2e/responsive-manager.spec.ts` runs on a desktop pointer, so it does **not** exercise
     any `coarse:` rule — only `e2e/touch-targets.spec.ts` does.
-  - **Checkbox, radio and switch glyphs stay 16-20px.** Each sits inside a `<label>`, so the
-    label is the real target; enlarging the glyphs would change the design language for no
-    accessibility gain. Giving those labels a `coarse:` min-height is the open follow-up.
+  - **Checkbox, radio and switch glyphs stay 16-20px** — deliberately. The target is the
+    label, not the glyph. **Done in the entry above**, along with four more offenders that
+    extending the spec uncovered (dialog close X, password reveal, organization-mode
+    buttons, reorder arrows).
   - **Input borders are still below the non-text contrast floor** (`--border` vs `--surface`
     is 1.23:1 light / 1.19:1 dark; WCAG 1.4.11 wants 3:1 for control boundaries). Not fixed
     here because it means touching the locked ATLAS palette. The contained option is a
