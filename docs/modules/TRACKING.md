@@ -154,3 +154,24 @@ is about the account.
 
 Socket names and payloads are a cross-repo contract. Any change here must update backend
 `REALTIME.md` and the rider/driver consumer docs in the same change.
+
+
+## Responsive behaviour (375px floor)
+
+Breakpoint contract for this page (Tailwind defaults, no custom screens):
+base = one column, nothing side by side; `sm` (640) = content reflow, form and stat grids
+regain columns; `md` (768) = structural, the sidebar becomes a Sheet and a `DataTable`
+becomes a card list; `lg` (1024) = density (3 and 4 column stat grids, the tracking split).
+
+Enforced by [`e2e/responsive-manager.spec.ts`](../../e2e/responsive-manager.spec.ts) at
+375x800 in light and dark. See [`CHANGES.md`](../CHANGES.md) 2026-09-22.
+
+Page specifics: the map/list split is `grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]`, so
+below `lg` the map stacks above the fleet list. The `560px` grid floor applies from `lg`
+only and the map's `420px` floor from `sm` only; at base the map keeps a `260px` floor,
+which it needs because `h-full` resolves to `auto` when the grid row has no definite height
+— do not remove it. The vehicle picker is `w-full sm:w-56`.
+
+The Speed/Heading two-column list and the truncated route value are deliberately left
+unprefixed: below `lg` the detail aside is full width (~325px), which is wider than the
+320px rail it already renders in at `lg`, so neither is a phone-width problem.

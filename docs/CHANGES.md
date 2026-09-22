@@ -18,6 +18,68 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-09-22 — Manager portal responsive at 375px
+- **Branch:** feature/manager-mobile-responsive
+- **Modules touched:** [DASHBOARD](modules/DASHBOARD.md), [BUSES](modules/BUSES.md),
+  [ACCOUNTS](modules/ACCOUNTS.md), [ENROLLMENT_REQUESTS](modules/ENROLLMENT_REQUESTS.md),
+  [TRACKING](modules/TRACKING.md) + the shared kit (`data-table`, `stat-card`, `page-header`)
+- **What changed:**
+  - `AppShell.jsx` canvas padding `p-2 sm:p-[14px]` and main `px-4 py-4 sm:px-6 sm:py-6`,
+    which reclaims 28px of a 375px viewport. Padding never reaches 0, so the tinted canvas
+    stays visible and the floating-shell idea in `redesign/01-DESIGN-LANGUAGE.md` holds.
+  - `stat-card.jsx` `p-4 sm:p-5`, smaller icon chip below `sm`, value
+    `text-2xl sm:text-3xl` with `break-words` + `leading-tight`. `page-header.jsx` stacks
+    below `sm`. Manager dashboard stat grid goes 1 → 2 → 4 columns, and Active Vehicles
+    stops concatenating count and percentage into one value (the percentage moves to the
+    existing `hint` slot).
+  - `data-table.jsx` now renders the card list **or** the table, never both. The old
+    CSS-only `md:hidden` / `hidden md:block` pair left both trees mounted, so every row's
+    values and buttons existed twice — a screen reader saw two "Edit" buttons per row, and
+    17 `ManagerVehiclesPage` assertions failed with "Found multiple elements" the moment a
+    page supplied `renderMobileCard`. Gated on a new `useIsMobile()` hook
+    (`matchMedia('(max-width: 767.98px)')`, strictly below Tailwind's `md`, the same
+    boundary where the sidebar becomes a Sheet). The Columns control hides in card mode.
+  - `renderMobileCard` wired on Vehicles (9 columns), Drivers (11) and Enrollments (8).
+    No field is dropped on any of them: none of these tables has a row-detail view or row
+    click, and the Drivers edit dialog exposes only the editable subset, so a field hidden
+    on a phone would be unreachable rather than deferred. Status keeps its label.
+  - Fixed-column form grids become mobile-first across the vehicle wizard, the edit and
+    add-driver dialogs, and `EnrollmentFormPage`'s three-track field row.
+  - Tracking: the 420px map floor and 560px grid floor now apply from `sm`/`lg`; the map
+    keeps a 260px floor at base because `h-full` resolves to `auto` with no definite row
+    height. Vehicle picker `w-full sm:w-56` instead of `max-w-[44vw]` (165px at 375px).
+  - New `e2e/responsive-manager.spec.ts` + `mockManagerPortalData` in `e2e/helpers.ts`.
+- **Why:** [`redesign/04-VERIFICATION-CHECKLIST.md`](redesign/04-VERIFICATION-CHECKLIST.md)
+  §E's "375px / 768px / 1280px: no horizontal scroll" item was signed off at CP 6.3
+  (`redesign/PROGRESS.md`) without being checked. The portal clipped content at 375px:
+  stat values overflowed and the tables had ~250px for 8 to 11 columns.
+- **Contract impact:** none — presentation only, no endpoint or payload change.
+- **Tests:** `e2e/responsive-manager.spec.ts` (new, 13 cases), `e2e/helpers.ts`
+  (`mockManagerPortalData`, additive), `src/components/shared/__tests__/data-table.test.jsx`
+  (matchMedia stubbing + 2 new cases for the table branch). Vitest **779 passed, 0 failed,
+  66 files** (baseline before this work: 772 passed / 5 failed — those 5 were flaky
+  `user-event` timeouts in auth and super-admin specs, not fixed here, they simply passed
+  this run). Playwright responsive spec: **12 passed, 2 skipped**. Lint 0 errors,
+  27 warnings (baseline 28).
+- **Docs updated:** this entry, [`TESTING_GUIDE.md`](TESTING_GUIDE.md),
+  [`redesign/04-VERIFICATION-CHECKLIST.md`](redesign/04-VERIFICATION-CHECKLIST.md),
+  [`redesign/PROGRESS.md`](redesign/PROGRESS.md), and the five module docs above.
+- **Follow-ups / known issues:**
+  - **`/manager/enrollment-form` crashes to the ErrorBoundary.** `EnrollmentFormPage.jsx:48`
+    calls `useBlocker`, but `main.jsx` mounts `BrowserRouter`, not a data router, so React
+    Router throws "useBlocker must be used within a data router". Pre-existing on `main`,
+    found by this spec, and the reason 2 of its cases are `test.fixme`. Needs either
+    `createBrowserRouter` + `RouterProvider` or a different unsaved-changes guard.
+  - Super-admin pages were not audited at 375px; only the shared components they inherit
+    changed, and every change is `sm:`-paired so their desktop rendering is untouched.
+  - `index.css`'s `overflow-x: hidden` on html/body/#root was deliberately left alone. It
+    is inert for authenticated pages (AppShell clips one level down) and still guards the
+    un-migrated MUI auth pages, so removing it carried risk with no in-scope benefit.
+  - `playwright.config.ts` still defines only Desktop Chrome; the responsive spec sets its
+    own 375x800 viewport via `test.use`.
+
+
+
 Feeds [`CHANGELOG.md`](../CHANGELOG.md) at release time — see [`guides/RELEASING.md`](guides/RELEASING.md).
 
 ---

@@ -147,3 +147,22 @@ Any change to this module must:
 5. Update **this doc** + the [`TESTING_GUIDE.md`](../TESTING_GUIDE.md) row, and append a
    [`CHANGES.md`](../CHANGES.md) entry before pushing. A passenger-shape change here is also a
    backend contract change — update `backend/docs/modules/ADMIN.md`/`PROFILES.md` in the same PR.
+
+
+## Responsive behaviour (375px floor)
+
+Breakpoint contract for this page (Tailwind defaults, no custom screens):
+base = one column, nothing side by side; `sm` (640) = content reflow, form and stat grids
+regain columns; `md` (768) = structural, the sidebar becomes a Sheet and a `DataTable`
+becomes a card list; `lg` (1024) = density (3 and 4 column stat grids, the tracking split).
+
+Enforced by [`e2e/responsive-manager.spec.ts`](../../e2e/responsive-manager.spec.ts) at
+375x800 in light and dark. See [`CHANGES.md`](../CHANGES.md) 2026-09-22.
+
+Page specifics: below `md` the 8-column queue renders a card per request — rider name with
+the request or decision date, rider code, managed-profile note, contact details, the driver
+and driver id, then the organization answers as a label/value list, then the same
+Approve/Decline pair (or Remove on the enrolled tab). **Nothing is dropped**: the
+organization answers a rider gave at enrollment appear nowhere else in the portal. No status
+badge is needed here because the active tab already carries the status. The `TabsList`
+scrolls horizontally so a fourth tab would not be clipped.

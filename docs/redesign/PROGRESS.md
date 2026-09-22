@@ -46,7 +46,13 @@ One checkpoint per run. Tests green before ticking.
 ## Phase 6 — Teardown & polish
 - [x] CP 6.1 Remove MUI/Emotion/framer-motion + theme.js; grep gates pass — done: 2026-07-17 (see Findings)
 - [x] CP 6.2 a11y + responsive pass — done: 2026-07-17
+      — correction 2026-09-22: the responsive half did not cover 375px. The checklist's
+      375/768/1280 item stayed unchecked, and the manager portal clipped content at phone
+      widths (stat values overflowed; the tables had ~250px for 8 to 11 columns). Closed
+      for the **manager** pages on 2026-09-22 — see `docs/CHANGES.md` and
+      `e2e/responsive-manager.spec.ts`. Super-admin pages remain unaudited at 375px.
 - [x] CP 6.3 Full 04-VERIFICATION-CHECKLIST run + final code review — done: 2026-07-17
+      — see the CP 6.2 correction: the 375px item was signed off here without being run.
 
 ## Findings / blocked log
 

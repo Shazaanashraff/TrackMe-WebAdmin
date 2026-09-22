@@ -142,3 +142,29 @@ model in [`AUTH.md`](../../../backend/docs/modules/AUTH.md).
 
 See [`_MODULE_TEMPLATE.md`](../guides/_MODULE_TEMPLATE.md). A role-scoping change needs a test
 proving the other role still cannot reach it.
+
+
+## Responsive behaviour (375px floor)
+
+Breakpoint contract for this page (Tailwind defaults, no custom screens):
+base = one column, nothing side by side; `sm` (640) = content reflow, form and stat grids
+regain columns; `md` (768) = structural, the sidebar becomes a Sheet and a `DataTable`
+becomes a card list; `lg` (1024) = density (3 and 4 column stat grids, the tracking split).
+
+Enforced by [`e2e/responsive-manager.spec.ts`](../../e2e/responsive-manager.spec.ts) at
+375x800 in light and dark. See [`CHANGES.md`](../CHANGES.md) 2026-09-22.
+
+Page specifics: below `md` the 11-column driver directory renders a card per driver —
+name and driver id, the status `Badge` and the actions `DropdownMenu`, then organization,
+phone and vehicle as a label/value list, the email on its own full-width line (it is one
+long unbreakable token), a labelled Riders and Location row, and the enrollment key under
+its own caption. The Riders and Location values are labelled in the card because they lost
+their column headers. **No column is dropped**: the edit dialog exposes only the editable
+subset (no enrollment key, rider count or live location), so a hidden field would be
+unreachable. `EnrollmentKeyCell`'s row is `flex-wrap` so Copy and Hide can drop to a second
+line, while the key itself keeps `whitespace-nowrap` — never break a key mid-token. The
+directory's `CardContent` is `px-3 sm:px-6`, since this is the only `DataTable` nested
+inside a `Card` and so starts 48px narrower than the others.
+
+The riders, location and actions cells are shared functions taking a driver, used by both
+the column definitions and the card. Keep them that way rather than duplicating.

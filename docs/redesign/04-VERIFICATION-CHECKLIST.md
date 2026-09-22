@@ -52,7 +52,13 @@ For EACH of the 12 pages:
 ## E. Both themes, all breakpoints
 
 - [ ] Every page audited in light AND dark (contrast, invisible-box class of bugs)
-- [ ] 375px / 768px / 1280px: no horizontal scroll; sidebar collapses; tables usable
+- [x] 375px / 768px / 1280px: no horizontal scroll; sidebar collapses; tables usable
+      — **manager pages only**, done 2026-09-22. Enforced by `e2e/responsive-manager.spec.ts`
+      (375x800, light + dark, every manager route). It measures `<main>` and sweeps each
+      element's bounding rect; `document.documentElement.scrollWidth` is useless as a check
+      here because `AppShell`'s `h-screen overflow-hidden` and `index.css`'s
+      `overflow-x: hidden` both clip instead of scrolling. Tables below `md` become card
+      lists via `DataTable`'s `renderMobileCard`. **Super-admin pages are not yet audited.**
 - [ ] Focus ring visible on every interactive element; dialogs trap focus; ESC closes
 - [ ] `prefers-reduced-motion`: no pulses/transitions
 

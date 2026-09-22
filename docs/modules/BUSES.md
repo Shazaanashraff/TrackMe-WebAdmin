@@ -131,3 +131,22 @@ Backend side: [`BUSES.md`](../../../backend/docs/modules/BUSES.md) (vehicle CRUD
 
 See [`_MODULE_TEMPLATE.md`](../guides/_MODULE_TEMPLATE.md). Role-scoped: any change needs a test
 proving a super-admin route/session cannot reach this page's manager-scoped data.
+
+
+## Responsive behaviour (375px floor)
+
+Breakpoint contract for this page (Tailwind defaults, no custom screens):
+base = one column, nothing side by side; `sm` (640) = content reflow, form and stat grids
+regain columns; `md` (768) = structural, the sidebar becomes a Sheet and a `DataTable`
+becomes a card list; `lg` (1024) = density (3 and 4 column stat grids, the tracking split).
+
+Enforced by [`e2e/responsive-manager.spec.ts`](../../e2e/responsive-manager.spec.ts) at
+375x800 in light and dark. See [`CHANGES.md`](../CHANGES.md) 2026-09-22.
+
+Page specifics: below `md` the 9-column fleet table renders as a card per vehicle via
+`DataTable`'s `renderMobileCard` — name and status, then plate and vehicle id on a monospace
+line, then driver, route, service and organization as a label/value list, then the same Edit
+and Delete Req buttons. **No column is dropped**: this table has no row click and no
+row-detail view, so a field hidden on a phone would be unreachable, not merely deferred. The
+create wizard's and edit dialog's form grids are `grid-cols-1 sm:grid-cols-2` (one is
+`sm:grid-cols-3`).

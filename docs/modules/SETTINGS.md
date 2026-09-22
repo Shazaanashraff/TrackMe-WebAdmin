@@ -108,3 +108,18 @@ See [`_MODULE_TEMPLATE.md`](../guides/_MODULE_TEMPLATE.md). If a real email-chan
 authenticated password-change endpoint is ever added on the backend, this doc's §4 contracts table
 and §1 scope note both need updating in the same change, and the corresponding placeholder note in
 §5 should be removed rather than left stale.
+
+
+## Responsive behaviour (375px floor)
+
+Breakpoint contract for this page (Tailwind defaults, no custom screens):
+base = one column, nothing side by side; `sm` (640) = content reflow, form and stat grids
+regain columns; `md` (768) = structural, the sidebar becomes a Sheet and a `DataTable`
+becomes a card list; `lg` (1024) = density (3 and 4 column stat grids, the tracking split).
+
+Enforced by [`e2e/responsive-manager.spec.ts`](../../e2e/responsive-manager.spec.ts) at
+375x800 in light and dark. See [`CHANGES.md`](../CHANGES.md) 2026-09-22.
+
+Page specifics: no responsive work was needed. The layout comes from
+`components/shared/account-settings-panel.jsx`, which is already
+`grid-cols-1 lg:grid-cols-2`.

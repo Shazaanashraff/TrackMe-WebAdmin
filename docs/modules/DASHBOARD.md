@@ -92,3 +92,20 @@ Both dashboards persist to disk (`gcTime` 24 h, non-live keys). Offline:
 See [`_MODULE_TEMPLATE.md`](../guides/_MODULE_TEMPLATE.md). If either dashboard endpoint ever
 starts returning real time-series data, replace the placeholder note with an actual chart in the
 same change that removes the "Not enough data yet" text — don't leave both.
+
+
+## Responsive behaviour (375px floor)
+
+Breakpoint contract for this page (Tailwind defaults, no custom screens):
+base = one column, nothing side by side; `sm` (640) = content reflow, form and stat grids
+regain columns; `md` (768) = structural, the sidebar becomes a Sheet and a `DataTable`
+becomes a card list; `lg` (1024) = density (3 and 4 column stat grids, the tracking split).
+
+Enforced by [`e2e/responsive-manager.spec.ts`](../../e2e/responsive-manager.spec.ts) at
+375x800 in light and dark. See [`CHANGES.md`](../CHANGES.md) 2026-09-22.
+
+Page specifics: the stat grid is `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`. The Active
+Vehicles card passes the count as `value` and the utilization percentage as `hint` — do not
+concatenate them back into one string, which produced an unreadable `6 (75%)` at phone
+widths. `StatCard` values are `text-2xl sm:text-3xl` with `break-words`, which is what keeps
+a long `Money` value (`LKR 1,284,500.50`) inside its box.
