@@ -167,9 +167,24 @@ These sit on top of the Phase 1/2/4 infra (persister, `gcTime` 24h, `AsyncSectio
 |---|---|---|---|---|
 | Manager portal at 375x800, both themes | e2e (Playwright) | e2e/responsive-manager.spec.ts | every manager route free of horizontal overflow at an exact 375x800 viewport in light and dark, plus a case that reveals every enrollment key (the portal's tightest row, which no page-level test expands). Measured on `<main>` — the real horizontal scroll container, since `overflow-y: auto` computes `overflow-x: auto` — plus a per-element bounding-rect and `scrollWidth` sweep. `document.documentElement.scrollWidth` is deliberately NOT the check: `AppShell`'s `h-screen overflow-hidden` and `index.css`'s `overflow-x: hidden` both clip rather than scroll, so a document-level assertion passes on a visibly broken page. Intentional clipping is excluded (containers opting into `overflow-x`, and text truncated with an ellipsis). `/manager/enrollment-form` is `test.fixme` pending the pre-existing `useBlocker`/`BrowserRouter` crash | a manager page adds a fixed-column grid, a width wider than ~290px, or a new table column |
 | DataTable card list vs. table | RTL (Vitest) | src/components/shared/__tests__/data-table.test.jsx | with `renderMobileCard` supplied, the card list renders **instead of** the `<table>` when `matchMedia('(max-width: 767.98px)')` matches, and the table renders when it does not; the table also stays below `md` when no card renderer is supplied. One tree at a time, so no row is ever duplicated in the DOM (the previous CSS-only `md:hidden` swap mounted both, giving every row two sets of action buttons) | `use-is-mobile.js`'s query or `DataTable`'s mobile gating changes |
+| Touch targets at 375x800 on a coarse pointer | e2e (Playwright) | e2e/touch-targets.spec.ts | every control across six manager routes is >=44px on both axes and >=8px from its neighbours, and no input is under 16px (iOS Safari zooms the viewport on a focused sub-16px input). Measures a control through its wrapping `<label>` where there is one, since the label is the real target. Sets `isMobile` + `hasTouch` so the browser reports `pointer: coarse` — the suite opens with a guard asserting that, because a run that silently measured the desktop rendering would pass while proving nothing | `button.jsx`/`input.jsx`/`select.jsx`/`tabs.jsx` sizing changes, or the `coarse:` variant in `tailwind.config.cjs` is renamed or removed |
 | Enrollment form unsaved-changes guard, on the real router | e2e (Playwright) | e2e/enrollment-form-guard.spec.ts | the page loads with no console error, a dirty form blocks in-app navigation with the "Leave without saving?" dialog, Cancel keeps the edit and stays put, Leave navigates away. This is the ONLY test that exercises `useBlocker` for real: `src/pages/__tests__/EnrollmentFormPage.test.jsx` mocks it away and renders the page with no router, which is exactly how the production crash ("useBlocker must be used within a data router", ErrorBoundary ate the shell) stayed invisible | `src/main.jsx`'s router type changes, or the unsaved-changes guard is reworked. **Never delete this without replacing the coverage** |
 | Manager 375px layout (shell, stat card, page header padding and grid stacking) | none — CSS-only, no new behavior to assert | n/a | base classes paired with `sm:`/`lg:` restores, so desktop rendering is unchanged; covered by the e2e spec above and by the full suite staying green | a layout regression appears at 375px |
 
+
+### Touch sizing is keyed to pointer type, not width
+
+Control sizing for touch uses the `coarse:` Tailwind variant
+(`@media (pointer: coarse)`, defined in `tailwind.config.cjs`) — never a width
+breakpoint. Width cannot distinguish a phone from a narrow desktop window, so a
+`sm:`-based rule would fatten controls for someone half-tiling their browser and
+still miss a tablet.
+
+Consequence for tests: `e2e/responsive-manager.spec.ts` runs on a **desktop**
+pointer at 375px (it checks the mouse layout at a narrow width), so it does not
+exercise any `coarse:` rule. Touch sizing is covered only by
+`e2e/touch-targets.spec.ts`, which sets `isMobile` + `hasTouch`. Adding a
+`coarse:` utility without a case there leaves it unverified.
 
 ### Mocking rule for any authenticated e2e spec
 

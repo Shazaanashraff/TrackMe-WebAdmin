@@ -18,6 +18,44 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-09-22 — 44px touch targets on a coarse pointer
+- **Branch:** feature/manager-mobile-responsive
+- **Modules touched:** shared UI kit (`button`, `input`, `select`, `tabs`, `breadcrumb` usage in
+  `Topbar`), [AUTH](modules/AUTH.md) (shell chrome)
+- **What changed:**
+  - New `coarse:` Tailwind variant (`@media (pointer: coarse)`) in `tailwind.config.cjs`.
+  - `button.jsx` default/sm -> `h-11`, `icon` -> 44x44, plus `shrink-0`; `input.jsx` and
+    `select.jsx` -> `h-11` + `text-base`; `tabs.jsx` gap `4px -> 8px` and trigger `min-h-11`;
+    `index.css` adds `touch-action: manipulation` on controls only.
+  - `Topbar.jsx`: root breadcrumb CSS-hidden below `sm`, list `flex-nowrap`, current page
+    truncates, root link gets its hit area from `py-3` + a matching negative margin.
+  - New `e2e/touch-targets.spec.ts`.
+- **Why:** a UI review measured every control in the portal under the 44px minimum at
+  375x800 — breadcrumb 60x20, topbar icons ~31x36, card buttons 32 tall, row actions 36x36,
+  tabs 4px apart, inputs 36 tall at 14px (which makes iOS Safari zoom on focus). The
+  `size="sm"` buttons added with the mobile card lists earlier this session were the densest
+  cluster.
+- **Contract impact:** none — presentation only.
+- **Tests:** `e2e/touch-targets.spec.ts` (new, 8 cases). Vitest **779 passed, 0 failed**.
+  Playwright **42 passed, 0 failed**. Lint 0 errors, 27 warnings.
+- **Docs updated:** this entry, [`TESTING_GUIDE.md`](TESTING_GUIDE.md).
+- **Follow-ups / known issues:**
+  - **Pointer type, not width.** A `sm:`-based rule would fatten controls for anyone with a
+    narrow desktop window and still miss a tablet. Consequence:
+    `e2e/responsive-manager.spec.ts` runs on a desktop pointer, so it does **not** exercise
+    any `coarse:` rule — only `e2e/touch-targets.spec.ts` does.
+  - **Checkbox, radio and switch glyphs stay 16-20px.** Each sits inside a `<label>`, so the
+    label is the real target; enlarging the glyphs would change the design language for no
+    accessibility gain. Giving those labels a `coarse:` min-height is the open follow-up.
+  - **Input borders are still below the non-text contrast floor** (`--border` vs `--surface`
+    is 1.23:1 light / 1.19:1 dark; WCAG 1.4.11 wants 3:1 for control boundaries). Not fixed
+    here because it means touching the locked ATLAS palette. The contained option is a
+    separate `--border-input` token used only by form controls. Card borders are decorative
+    and are fine as they are.
+  - **Heading hierarchy skips h1 -> h3** (`card.jsx` hardcodes `h3`). Left alone: fixing it
+    properly needs an `as` prop and an audit of every card in both roles, for marginal
+    screen-reader benefit on an internal tool.
+
 ## 2026-09-22 — E2E suite green: fixed 3 long-failing specs
 - **Branch:** feature/manager-mobile-responsive
 - **Modules touched:** test harness only (`e2e/`), no `src/` change
