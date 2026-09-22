@@ -80,19 +80,27 @@ export function Topbar({ user, navItems, onLogout, onRefresh, onMobileMenuOpen }
         <Menu className="h-5 w-5" />
       </Button>
 
-      {/* Breadcrumb */}
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
+      {/* Breadcrumb. The root crumb is CSS-hidden on a phone, not unmounted:
+          the touch-sized icon buttons leave too little room for both crumbs
+          and BreadcrumbList would wrap out of the h-14 header, and Topbar's
+          tests assert both labels are present in the DOM. */}
+      <Breadcrumb className="min-w-0">
+        <BreadcrumbList className="flex-nowrap">
+          <BreadcrumbItem className="hidden sm:inline-flex">
             <BreadcrumbLink asChild>
-              <Link to={rootHref} className="text-muted-foreground hover:text-foreground transition-colors">
+              {/* py-3 with a matching negative margin gives the link a 44px
+                  hit area without making the header row any taller. */}
+              <Link
+                to={rootHref}
+                className="inline-flex items-center coarse:py-3 coarse:-my-3 text-muted-foreground hover:text-foreground transition-colors"
+              >
                 {rootLabel}
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{currentLabel}</BreadcrumbPage>
+          <BreadcrumbSeparator className="hidden sm:inline-flex" />
+          <BreadcrumbItem className="min-w-0">
+            <BreadcrumbPage className="truncate">{currentLabel}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>

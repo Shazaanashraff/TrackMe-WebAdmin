@@ -16,11 +16,13 @@ const buttonVariants = cva(
         ghost: 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
       },
+      // `coarse:` heights lift every control to the 44px touch minimum on a
+      // touch device and change nothing for a mouse. `lg` is already 44px.
       size: {
-        default: 'h-9 px-4 py-2',
-        sm: 'h-8 rounded-md px-3 text-xs',
+        default: 'h-9 coarse:h-11 px-4 py-2',
+        sm: 'h-8 coarse:h-11 rounded-md px-3 text-xs',
         lg: 'h-11 rounded-md px-8',
-        icon: 'h-9 w-9',
+        icon: 'h-9 w-9 coarse:h-11 coarse:w-11 shrink-0',
       },
     },
     defaultVariants: {

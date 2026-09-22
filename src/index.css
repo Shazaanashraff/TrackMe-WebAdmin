@@ -162,6 +162,22 @@ body,
   outline-offset: 2px;
 }
 
+/* Drops the legacy 300ms "wait and see if it's a double-tap" delay browsers
+   apply to taps. Scoped to controls rather than set globally, so pinch-zoom
+   stays available on the page itself (never disable zoom). */
+button,
+a,
+input,
+select,
+textarea,
+label,
+[role='button'],
+[role='tab'],
+[role='checkbox'],
+[role='radio'] {
+  touch-action: manipulation;
+}
+
 /* Tabular numerals for money / IDs / data columns */
 .tabular-nums {
   font-variant-numeric: tabular-nums;

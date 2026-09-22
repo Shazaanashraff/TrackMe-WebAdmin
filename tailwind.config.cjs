@@ -1,3 +1,5 @@
+const plugin = require('tailwindcss/plugin');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
@@ -57,5 +59,15 @@ module.exports = {
       // Atlas scale (lg 8px controls · xl 12px panels · 2xl 16px shell cards).
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [
+    require('tailwindcss-animate'),
+    // `coarse:` — a touch pointer (finger), not a mouse. Controls sized for a
+    // cursor are too small for a fingertip (Apple 44pt / Material 48dp), but a
+    // WIDTH breakpoint is the wrong test: it fattens controls for anyone with
+    // a narrow desktop window and leaves a tablet untouched. Pointer type asks
+    // the actual question. Use it to grow hit areas, never to change layout.
+    plugin(({ addVariant }) => {
+      addVariant('coarse', '@media (pointer: coarse)');
+    }),
+  ],
 };

@@ -7,7 +7,8 @@ const Tabs = TabsPrimitive.Root;
 const TabsList = React.forwardRef(({ className, ...props }, ref) => (
   <TabsPrimitive.List
     ref={ref}
-    className={cn('inline-flex h-9 items-center justify-center gap-1 border-b border-border', className)}
+    // gap-1 is 4px, under the 8px minimum between touch targets.
+    className={cn('inline-flex h-9 coarse:h-auto items-center justify-center gap-1 coarse:gap-2 border-b border-border', className)}
     {...props}
   />
 ));
@@ -17,7 +18,7 @@ const TabsTrigger = React.forwardRef(({ className, ...props }, ref) => (
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      'inline-flex items-center justify-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-sm font-medium text-muted-foreground transition-colors',
+      'inline-flex items-center justify-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-3 py-2 coarse:min-h-11 text-sm font-medium text-muted-foreground transition-colors',
       'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
       'data-[state=active]:border-primary data-[state=active]:text-primary',
       className
