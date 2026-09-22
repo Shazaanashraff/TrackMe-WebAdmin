@@ -24,6 +24,7 @@ import { EmptyState } from './empty-state';
 import { OfflineCard } from './offline-card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useOnlineStatus } from '@/hooks/use-online-status';
+import { useIsMobile } from '@/hooks/use-is-mobile';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 10;
@@ -49,6 +50,7 @@ export function DataTable({
   totalCount,
 }) {
   const isOnline = useOnlineStatus();
+  const isMobile = useIsMobile();
   const [sorting, setSorting] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: PAGE_SIZE });
@@ -66,6 +68,10 @@ export function DataTable({
   });
 
   if (isLoading) return <TableSkeleton rows={skeletonRows} cols={columns.length} />;
+
+  // A page only gets the card list if it supplied a card renderer; the rest
+  // keep the table and its own horizontal scroll at every width.
+  const showCards = Boolean(renderMobileCard) && isMobile;
 
   const hasRows = data.length > 0;
 
@@ -154,9 +160,12 @@ export function DataTable({
         </div>
       )}
 
-      {/* Mobile card list */}
-      {renderMobileCard && (
-        <div className="md:hidden divide-y divide-border rounded-xl border border-border overflow-hidden">
+      {/* Mobile card list. Gated in JS, not with `md:hidden`, so only one of
+          the two trees is ever in the DOM — a CSS-only swap leaves both,
+          which duplicates every row's buttons and labels for assistive tech
+          and doubles the per-row render work. */}
+      {showCards && (
+        <div className="divide-y divide-border rounded-xl border border-border overflow-hidden">
           {table.getRowModel().rows.map((row) => (
             <div
               key={row.id}
@@ -170,12 +179,8 @@ export function DataTable({
       )}
 
       {/* Desktop table */}
-      <div
-        className={cn(
-          'rounded-xl border border-border overflow-x-auto',
-          renderMobileCard && 'hidden md:block',
-        )}
-      >
+      {!showCards && (
+      <div className="rounded-xl border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
@@ -242,6 +247,7 @@ export function DataTable({
           </TableBody>
         </Table>
       </div>
+      )}
 
       {/* Pagination footer */}
       {pageCount > 1 && (

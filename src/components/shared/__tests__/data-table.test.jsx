@@ -353,7 +353,29 @@ describe('DataTable — offline', () => {
 // ── mobile card rendering ─────────────────────────────────────────────────────
 
 describe('DataTable — mobile card', () => {
-  it('renders mobile card content when renderMobileCard provided', () => {
+  // The card list and the table are mutually exclusive: only one is in the DOM
+  // at a time. A CSS-only `md:hidden` swap would leave both mounted, so every
+  // row's buttons and labels would exist twice for assistive tech and for
+  // queries. jsdom has no layout, so the breakpoint is driven by matchMedia.
+  const mockViewport = (isMobile) => {
+    vi.stubGlobal('matchMedia', vi.fn((query) => ({
+      matches: isMobile,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      onchange: null,
+      dispatchEvent: vi.fn(),
+    })));
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('renders mobile card content instead of the table below md', () => {
+    mockViewport(true);
     render(
       <DataTable
         columns={COLS}
@@ -364,5 +386,26 @@ describe('DataTable — mobile card', () => {
     const cards = screen.getAllByTestId('mc');
     expect(cards).toHaveLength(2);
     expect(cards[0]).toHaveTextContent('Person 1');
+    // The table must not also be mounted, or each row would be present twice.
+    expect(screen.queryByRole('table')).toBeNull();
+  });
+
+  it('renders the table instead of cards at md and above', () => {
+    mockViewport(false);
+    render(
+      <DataTable
+        columns={COLS}
+        data={makeRows(2)}
+        renderMobileCard={(row) => <span data-testid="mc">{row.name}</span>}
+      />,
+    );
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.queryAllByTestId('mc')).toHaveLength(0);
+  });
+
+  it('keeps the table below md when no card renderer is supplied', () => {
+    mockViewport(true);
+    render(<DataTable columns={COLS} data={makeRows(2)} />);
+    expect(screen.getByRole('table')).toBeInTheDocument();
   });
 });
