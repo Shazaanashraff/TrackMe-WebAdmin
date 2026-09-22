@@ -6,7 +6,9 @@ const Switch = React.forwardRef(({ className, ...props }, ref) => (
   <SwitchPrimitive.Root
     ref={ref}
     className={cn(
-      'peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors',
+      'peer relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors',
+      // Hit area only: no layout change, so the pill stays its designed size.
+      "coarse:after:absolute coarse:after:-inset-3 coarse:after:content-['']",
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       'disabled:cursor-not-allowed disabled:opacity-50',
       'data-[state=checked]:bg-primary data-[state=unchecked]:bg-surface-muted',

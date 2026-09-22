@@ -119,16 +119,16 @@ export function EnrollmentFormPage() {
                   <div className="text-xs text-muted-foreground font-mono break-all">{field.key}</div>
                 </div>
                 <div className="flex items-center gap-5">
-                  <label className="flex items-center gap-2 text-sm">
+                  <label className="flex items-center gap-2 coarse:min-h-11 text-sm">
                     <Checkbox checked={field.enabled} onCheckedChange={(checked) => update(field.key, { enabled: Boolean(checked), required: checked ? field.required : false })} />
                     Include
                   </label>
-                  <label className="flex items-center gap-2 text-sm">
+                  <label className="flex items-center gap-2 coarse:min-h-11 text-sm">
                     <Checkbox disabled={!field.enabled} checked={field.required} onCheckedChange={(checked) => update(field.key, { required: Boolean(checked) })} />
                     Required
                   </label>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 coarse:gap-2">
                   <Button variant="ghost" size="icon" aria-label={`Move ${field.label} up`} disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" aria-label={`Move ${field.label} down`} disabled={index === fields.length - 1} onClick={() => move(index, 1)}><ArrowDown className="h-4 w-4" /></Button>
                 </div>

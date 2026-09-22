@@ -957,7 +957,7 @@ export function ManagerAccountsPage() {
                         organizationId: '',
                         organizationName: '',
                       }))}
-                      className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
+                      className={`rounded-full px-5 py-2 coarse:min-h-11 text-sm font-medium transition-colors ${
                         form.organizationMode === option.value
                           ? 'bg-foreground text-background'
                           : 'text-muted-foreground hover:text-foreground'

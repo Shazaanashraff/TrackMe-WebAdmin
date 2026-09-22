@@ -142,7 +142,7 @@ export function DataTable({
             </PopoverTrigger>
             <PopoverContent align="end" className="w-48 p-2">
               {hideableCols.map((col) => (
-                <div key={col.id} className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-surface-muted">
+                <div key={col.id} className="flex items-center gap-2 rounded px-2 py-1.5 coarse:min-h-11 hover:bg-surface-muted">
                   <Checkbox
                     id={`col-vis-${col.id}`}
                     checked={col.getIsVisible()}
@@ -150,7 +150,7 @@ export function DataTable({
                   />
                   <label
                     htmlFor={`col-vis-${col.id}`}
-                    className="text-sm cursor-pointer leading-none select-none"
+                    className="flex-1 text-sm cursor-pointer leading-none select-none"
                   >
                     {colLabel(col)}
                   </label>

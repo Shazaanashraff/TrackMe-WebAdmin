@@ -538,11 +538,11 @@ export function ManagerVehiclesPage() {
                 >
                   <div className="flex items-center gap-2">
                     <RadioGroupItem value="EXISTING" id="rm-existing" />
-                    <Label htmlFor="rm-existing" className="font-normal cursor-pointer">Existing route</Label>
+                    <Label htmlFor="rm-existing" className="flex-1 inline-flex items-center coarse:min-h-11 font-normal cursor-pointer">Existing route</Label>
                   </div>
                   <div className="flex items-center gap-2">
                     <RadioGroupItem value="CUSTOM" id="rm-custom" />
-                    <Label htmlFor="rm-custom" className="font-normal cursor-pointer">Custom route (driver records)</Label>
+                    <Label htmlFor="rm-custom" className="flex-1 inline-flex items-center coarse:min-h-11 font-normal cursor-pointer">Custom route (driver records)</Label>
                   </div>
                 </RadioGroup>
               </div>

@@ -23,7 +23,7 @@ export function PasswordInput({ className, ...props }) {
         aria-pressed={visible}
         tabIndex={-1}
         className={cn(
-          'absolute inset-y-0 right-0 flex w-10 items-center justify-center',
+          'absolute inset-y-0 right-0 flex w-10 coarse:w-11 items-center justify-center',
           'text-muted-foreground transition-colors hover:text-foreground',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-r-md'
         )}
