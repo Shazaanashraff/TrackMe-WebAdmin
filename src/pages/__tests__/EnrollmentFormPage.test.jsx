@@ -2,6 +2,13 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+// `useBlocker` is stubbed because this spec renders the page bare, with no
+// router at all. Be aware of what that costs: the stub means this file CANNOT
+// catch a router-level regression, and it hid a real one — the app mounted a
+// plain BrowserRouter, so the live page threw "useBlocker must be used within
+// a data router" and the ErrorBoundary ate the whole shell while these tests
+// stayed green. The real router path is covered by
+// e2e/enrollment-form-guard.spec.ts; keep that spec alive.
 vi.mock('react-router-dom', async (importActual) => ({
   ...(await importActual()),
   useOutletContext: () => ({ user: { role: 'manager' } }),

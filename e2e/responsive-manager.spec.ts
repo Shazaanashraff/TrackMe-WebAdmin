@@ -82,14 +82,6 @@ async function overflowOffenders(page: Page): Promise<string[]> {
 for (const theme of ['light', 'dark'] as const) {
   for (const [name, path] of ROUTES) {
     test(`${name} has no horizontal overflow at 375x800 (${theme})`, async ({ page }) => {
-      // Pre-existing bug, not a layout one: EnrollmentFormPage calls
-      // useBlocker (src/pages/EnrollmentFormPage.jsx:48) but main.jsx mounts a
-      // BrowserRouter, not a data router, so the page throws
-      // "useBlocker must be used within a data router" and the ErrorBoundary
-      // replaces the whole shell. There is no <main> to measure until that is
-      // fixed. Present on main, unrelated to the responsive pass.
-      test.fixme(name === 'enrollment-form', 'blocked by useBlocker/BrowserRouter crash');
-
       const consoleErrors: string[] = [];
       page.on('console', (msg) => {
         if (msg.type() === 'error') consoleErrors.push(msg.text());

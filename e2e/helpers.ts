@@ -517,6 +517,8 @@ export async function mockManagerPortalData(page: Page) {
   await page.route('**/api/manager/organization/enrollment-schema', (route) => route.fulfill(json({
     success: true,
     data: {
+      organization: { _id: 'org-1', name: 'Royal Institute of Technology', serviceType: 'UNIVERSITY' },
+      schemaVersion: 3,
       fields: [
         { key: 'studentId', label: 'Student / employee ID', enabled: true, required: true },
         { key: 'department', label: 'Department or faculty', enabled: true, required: false },
