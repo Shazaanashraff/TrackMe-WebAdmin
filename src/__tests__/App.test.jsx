@@ -238,6 +238,22 @@ describe('App — ProtectedShell role scoping', () => {
 
     expect(await screen.findByText('manager-tracking-stub')).toBeInTheDocument();
   });
+
+  it('redirects an authenticated super-admin from the root path to their dashboard', async () => {
+    writeStoredAuth({ token: 'sa-token', user: { role: 'super-admin' } }, true);
+
+    renderApp('/');
+
+    expect(await screen.findByText('dashboard-stub')).toBeInTheDocument();
+  });
+
+  it('redirects an authenticated manager from the root path to their dashboard', async () => {
+    writeStoredAuth({ token: 'mgr-token', user: { role: 'admin' } }, true);
+
+    renderApp('/');
+
+    expect(await screen.findByText('manager-dashboard-stub')).toBeInTheDocument();
+  });
 });
 
 describe('App — session hydration on load', () => {

@@ -55,6 +55,7 @@ function ProtectedShell({
     return (
       <Routes>
         <Route element={shell}>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/managers" element={<ManagersPage />} />
           <Route path="/operations" element={<OperationsPage />} />
@@ -71,6 +72,7 @@ function ProtectedShell({
   return (
     <Routes>
       <Route element={shell}>
+        <Route path="/" element={<Navigate to="/manager/dashboard" replace />} />
         <Route path="/manager/dashboard" element={<ManagerDashboardPage />} />
         <Route path="/manager/vehicles" element={<ManagerVehiclesPage />} />
         <Route path="/manager/tracking" element={<ManagerTrackingPage />} />
