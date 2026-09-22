@@ -9,6 +9,7 @@ import { StaleChip } from '@/components/shared/stale-chip';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { useOnlineStatus } from '@/hooks/use-online-status';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -333,6 +334,68 @@ export function ManagerVehiclesPage() {
     },
   ], [pendingDeleteVehicleIds, isOnline]);
 
+  // Below md the 9-column table cannot fit, so each row renders as a card.
+  // Nothing is dropped: a card list has no width limit to fight, and this
+  // table has no row-detail view, so a hidden field would be unreachable.
+  // Not memoized: `openEdit` is recreated each render anyway, so a useCallback
+  // here would never hit, and DataTable does not memo on this prop.
+  const renderMobileCard = (vehicle) => {
+    const driverName = vehicle.driverId?.name;
+    const orgName = vehicle.organization?.name;
+    const routeLabel = vehicle.routeId
+      ? (vehicle.routeName ? `${vehicle.routeName} (${vehicle.routeId})` : vehicle.routeId)
+      : 'Not set';
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <span className="font-medium truncate">{vehicle.vehicleName || vehicle.numberPlate}</span>
+          <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0">
+            <StatusBadge status={vehicle.isActive !== false ? 'active' : 'inactive'} />
+            {pendingDeleteVehicleIds.has(vehicle.vehicleId) ? (
+              <StatusBadge status="pending" label="Deletion pending" />
+            ) : null}
+          </div>
+        </div>
+
+        <p className="font-mono text-xs tabular-nums text-muted-foreground">
+          {vehicle.numberPlate}
+          {vehicle.vehicleId ? ` · ${vehicle.vehicleId}` : ''}
+        </p>
+
+        <dl className="space-y-1 text-xs">
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Driver</dt>
+            <dd className={cn('text-right', !driverName && 'text-muted-foreground')}>
+              {driverName || 'Unassigned'}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground shrink-0">Route</dt>
+            <dd className={cn('text-right break-words', !vehicle.routeId && 'text-muted-foreground')}>
+              {routeLabel}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Service</dt>
+            <dd className="text-right">{vehicle.serviceType}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Organization</dt>
+            <dd className={cn('text-right', !orgName && 'text-muted-foreground')}>
+              {orgName || 'None'}
+            </dd>
+          </div>
+        </dl>
+
+        <div className="flex gap-2 pt-1">
+          <Button size="sm" variant="outline" disabled={!isOnline} title={isOnline ? undefined : 'Unavailable offline'} onClick={() => openEdit(vehicle)}>Edit</Button>
+          <Button size="sm" variant="ghost" className="text-destructive" disabled={!isOnline} title={isOnline ? undefined : 'Unavailable offline'} onClick={() => { setDeleteError(null); setDeleteTarget(vehicle); }}>Delete Req</Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -346,7 +409,7 @@ export function ManagerVehiclesPage() {
         }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <StatCard label="Total Vehicles" value={summary.total} icon={VehicleIcon} isLoading={vehiclesQ.isLoading} stale={!isOnline} asOf={vehiclesQ.dataUpdatedAt} />
         <StatCard label="Active Fleet" value={summary.active} icon={CheckCircle} isLoading={vehiclesQ.isLoading} stale={!isOnline} asOf={vehiclesQ.dataUpdatedAt} />
         <StatCard label="Inactive Fleet" value={summary.inactive} icon={XCircle} isLoading={vehiclesQ.isLoading} stale={!isOnline} asOf={vehiclesQ.dataUpdatedAt} />
@@ -366,6 +429,7 @@ export function ManagerVehiclesPage() {
         onRetry={vehiclesQ.refetch}
         emptyTitle="No vehicles yet"
         emptyDescription="Add your first vehicle to get started."
+        renderMobileCard={renderMobileCard}
       />
 
       {/* Multi-step create dialog */}
