@@ -321,7 +321,7 @@ export function ManagerTrackingPage() {
         description={pageDescription}
         actions={fleet.length ? (
           <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
-            <SelectTrigger aria-label="Select vehicle" className="w-56 max-w-[44vw]">
+            <SelectTrigger aria-label="Select vehicle" className="w-full sm:w-56">
               <SelectValue placeholder="Select vehicle" />
             </SelectTrigger>
             <SelectContent>
@@ -351,7 +351,7 @@ export function ManagerTrackingPage() {
         <Card>
           <div
             data-testid="fleet-map-offline"
-            className="flex min-h-[420px] flex-col items-center justify-center gap-2 bg-surface-muted px-6 text-center"
+            className="flex min-h-[260px] sm:min-h-[420px] flex-col items-center justify-center gap-2 bg-surface-muted px-6 text-center"
           >
             <WifiOff aria-hidden className="size-8 text-status-warning" />
             <p className="font-semibold text-foreground">Live tracking unavailable — you&rsquo;re offline</p>
@@ -384,16 +384,16 @@ export function ManagerTrackingPage() {
 
       {!tracking.isLoading && isOnline && !tracking.error && fleet.length > 0 ? (
         <Card className="overflow-hidden">
-          <div className="grid min-h-[560px] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid grid-cols-1 lg:min-h-[560px] lg:grid-cols-[minmax(0,1fr)_320px]">
             <div
               role="region"
               aria-label="Fleet location map"
-              className="relative min-h-[420px] overflow-hidden border-b border-border lg:border-b-0 lg:border-r"
+              className="relative min-h-[260px] sm:min-h-[420px] overflow-hidden border-b border-border lg:border-b-0 lg:border-r"
             >
               {plotted.length === 0 ? (
                 <div
                   data-testid="fleet-map-idle"
-                  className="flex h-full min-h-[420px] flex-col items-center justify-center gap-2 bg-surface-muted px-6 text-center"
+                  className="flex h-full min-h-[260px] sm:min-h-[420px] flex-col items-center justify-center gap-2 bg-surface-muted px-6 text-center"
                 >
                   <VehicleIcon aria-hidden className="size-8 text-muted-foreground" />
                   <p className="font-semibold text-foreground">
@@ -415,7 +415,7 @@ export function ManagerTrackingPage() {
                     gestureHandling="greedy"
                     disableDefaultUI
                     clickableIcons={false}
-                    className="h-full min-h-[420px] w-full"
+                    className="h-full min-h-[260px] sm:min-h-[420px] w-full"
                   >
                     <MapViewport selectedPoint={selectedPoint} fleetPoints={fleetPoints} />
                     <FleetMarkers
@@ -428,7 +428,7 @@ export function ManagerTrackingPage() {
               ) : (
                 <div
                   data-testid="google-map-unavailable"
-                  className="flex h-full min-h-[420px] flex-col items-center justify-center gap-2 bg-surface-muted px-6 text-center"
+                  className="flex h-full min-h-[260px] sm:min-h-[420px] flex-col items-center justify-center gap-2 bg-surface-muted px-6 text-center"
                 >
                   <MapPin aria-hidden className="size-8 text-muted-foreground" />
                   <p className="font-semibold text-foreground">Google Maps unavailable</p>

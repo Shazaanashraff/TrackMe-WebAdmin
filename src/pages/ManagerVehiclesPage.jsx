@@ -451,7 +451,7 @@ export function ManagerVehiclesPage() {
           {/* Step 0: Vehicle Details */}
           {createStep === 0 && (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-vehicleid" required>Vehicle ID</Label>
                   <Input id="cb-vehicleid" aria-required="true" value={createForm.vehicleId} onChange={setCreate('vehicleId')} placeholder="VEHICLE-001" />
@@ -479,7 +479,7 @@ export function ManagerVehiclesPage() {
               </div>
 
               {/* The same organization the vehicle's drivers belong to. */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-org-category">Organization category (optional)</Label>
                   <Select
@@ -573,7 +573,7 @@ export function ManagerVehiclesPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-vehicletype">Vehicle Type</Label>
                   <Select value={createForm.vehicleType} onValueChange={(v) => setCreateForm((p) => ({ ...p, vehicleType: v }))}>
@@ -601,7 +601,7 @@ export function ManagerVehiclesPage() {
                   add one on the Drivers page with this vehicle number.
                 </AlertDescription>
               </Alert>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="cb-dname">Driver Name</Label>
                   <Input id="cb-dname" value={createForm.driverName} onChange={setCreate('driverName')} />
@@ -716,7 +716,7 @@ export function ManagerVehiclesPage() {
         error={editError}
       >
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="eb-name">Vehicle Name</Label>
               <Input id="eb-name" value={editForm.vehicleName || ''} onChange={(e) => setEditForm((p) => ({ ...p, vehicleName: e.target.value }))} />
@@ -755,7 +755,7 @@ export function ManagerVehiclesPage() {
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="eb-vehicletype">Vehicle Type</Label>
               <Select value={editForm.vehicleType || 'AC'} onValueChange={(v) => setEditForm((p) => ({ ...p, vehicleType: v }))}>

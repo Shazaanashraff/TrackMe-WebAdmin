@@ -111,10 +111,12 @@ export function EnrollmentFormPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {fields.map((field, index) => (
-              <div key={field.key} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 rounded-xl border border-border px-4 py-3">
+              // The three tracks need roughly 430px together, so below sm the
+              // label sits on its own line with the controls beneath it.
+              <div key={field.key} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center sm:gap-4 rounded-xl border border-border px-3 py-3 sm:px-4">
                 <div>
                   <div className="font-medium text-sm">{field.label}</div>
-                  <div className="text-xs text-muted-foreground font-mono">{field.key}</div>
+                  <div className="text-xs text-muted-foreground font-mono break-all">{field.key}</div>
                 </div>
                 <div className="flex items-center gap-5">
                   <label className="flex items-center gap-2 text-sm">
