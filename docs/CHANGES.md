@@ -18,6 +18,66 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-09-23 — Manager portal: dead surfaces removed, roster filterable
+- **Branch:** feature/manager-mobile-responsive
+- **Modules touched:** [DASHBOARD](modules/DASHBOARD.md),
+  [ENROLLMENT_REQUESTS](modules/ENROLLMENT_REQUESTS.md), [AUTH](modules/AUTH.md) (nav/routing)
+- **What changed:**
+  - **Manager dashboard:** removed Total Revenue, Booking Summary and Booking Trend. Stat
+    grid is now 1 → 2 → 3 columns; the page description no longer claims to cover bookings.
+    `AsyncSection` now wraps the stat grid (see below).
+  - **Manager Enrollment form route removed** (`App.jsx`, `MANAGER_NAV`, breadcrumb label).
+    `EnrollmentFormPage` stays mounted for super-admin at `/enrollment-form`.
+  - **Enrollments roster filter:** one `Select` listing `driver · plate`, writing the
+    existing `?driver=`. Replaces the "Showing one driver" caption and the "Show all
+    drivers" button, both now redundant.
+  - **Enrollments card:** organization answers render inline (`Grade: 7`) instead of
+    `justify-between` rows; rider code + managed-profile note collapsed to one line, as
+    were email + phone.
+  - `e2e/enrollment-form-guard.spec.ts` retargeted to super-admin;
+    `mockSuperAdminEnrollmentSchema` added; `mockManagerPortalData` now carries
+    production-shaped `organizationDetails`.
+- **Why:**
+  - The booking metrics could only ever read zero. Nothing creates a booking: the passenger
+    app's booking stack is not wired into its navigation (stated in
+    `backend/docs/modules/BOOKINGS.md`), and only `seed-sandbox.js` writes bookings, into
+    the sandbox DB. Booking controls were already stripped from the Vehicles page, and seat
+    booking contradicts the shuttle model.
+  - The Enrollment form reads `req.user.organization`, which **only a super-admin ever
+    writes** (`superAdminController.js:118/152/342`). Adding a driver with "Create new" sets
+    `driver.organization`, not the manager's. So the page told most managers "No
+    organization is assigned to this manager" with no action available to them.
+  - The roster filter existed but had no picker; the only way in was the Drivers page.
+- **Contract impact:** none. No endpoint, payload or model changed.
+  `normalizedEnrollmentConfig` falls back to per-type defaults
+  (`utils/enrollmentSchema.js:95-98`), so rider enrollment and the Enrollments labels are
+  unaffected, and organizations with a saved config keep it.
+- **Tests:** Vitest **782 passed, 0 failed** (66 files). Playwright **42 passed, 0 failed**.
+  Lint 0 errors, 27 warnings. New cases: dashboard renders no revenue/booking content;
+  manager nav does not offer the Enrollment form while super-admin still does; four roster
+  filter cases.
+- **Docs updated:** this entry, `modules/DASHBOARD.md`, `modules/ENROLLMENT_REQUESTS.md`,
+  [`TESTING_GUIDE.md`](TESTING_GUIDE.md).
+- **Follow-ups / known issues:**
+  - **Deleting `AsyncSection` from the dashboard was a mistake caught by its tests.** It was
+    carrying the loading skeleton's `role="status"`, the error state, the offline-versus-
+    failure distinction and the retry. Putting `isError` on each card instead made three
+    cards announce "Failed to load" at once. It now wraps the stat grid. Do not remove it
+    again on the grounds that a stat card has its own `isLoading`.
+  - **The super-admin dashboard still shows the same dead booking metrics.** Out of scope
+    here; it is the same argument.
+  - **`manager.organization` is now read by nothing but a dashboard label**
+    (`managerController.js:96-97`). Either the enrollment form should resolve an
+    organization from the manager's drivers, or the field should be retired. Nothing in the
+    manager flow sets it, so no manager can self-provision; this removal routes around that
+    gap rather than closing it.
+  - **The passenger booking stack is unreachable dead code.** Wire it up or delete it.
+  - `vehicleByDriver` (`managerDriversController.js:202`) is keyed by `driverId`, and
+    `driverId` has a non-unique index (`Vehicle.js:126`). If a driver ever holds two
+    vehicles the last one silently wins, and the roster picker would show only that plate.
+  - If a manager's driver list grows long the `Select` should become a searchable combobox;
+    `components/ui/command.jsx` already exists for ⌘K and is the path.
+
 ## 2026-09-22 — Touch targets for checkboxes, radios and switches
 - **Branch:** feature/manager-mobile-responsive
 - **Modules touched:** shared UI kit (`switch`, `dialog`, `password-input`, `data-table`),

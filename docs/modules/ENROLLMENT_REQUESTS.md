@@ -166,3 +166,38 @@ Approve/Decline pair (or Remove on the enrolled tab). **Nothing is dropped**: th
 organization answers a rider gave at enrollment appear nowhere else in the portal. No status
 badge is needed here because the active tab already carries the status. The `TabsList`
 scrolls horizontally so a fourth tab would not be clipped.
+## Filtering the roster (2026-09-23)
+
+The page carries **one** picker, listing `driver name · number plate`, writing the existing
+`?driver=` search param that `useEnrollmentRequests(status, driverId)` already consumed.
+
+**Vehicle and driver are not separable, by design of the data model.** A `DriverEnrollment`
+points at a **driver**; no vehicle is stored on it. A `Vehicle` points at one driver
+(`Vehicle.js:51`). So "NB-1234's students" and "that driver's students" are the same query,
+and filtering by vehicle can only ever mean "by that vehicle's driver". Two dropdowns would
+be two doors into one piece of state that could appear to disagree, which is why there is
+one control carrying both identifiers. Separating them would mean recording the vehicle on
+the enrollment: a model change, not a UI change.
+
+A driver with no vehicle reads `· No vehicle` and stays selectable, because they still have
+students.
+
+The selection lives in the URL, so it survives a tab switch, a reload and a shared link, and
+the Drivers page's riders-count deep link arrives with it already applied. If the driver
+list fails to load, or the manager is offline, the picker disables itself and the roster
+still renders.
+
+## Form configuration is super-admin only (2026-09-23)
+
+The manager's `/manager/enrollment-form` route was removed. Which organization-specific
+fields a rider is asked is now configured only at `/enrollment-form` (super-admin).
+
+`req.user.organization` is written **only** by a super-admin
+(`superAdminController.js:118/152/342`). A manager adding a driver with "Create new" sets
+`driver.organization`, never their own, so a manager could own a fleet belonging to an
+organization while their own field stayed null — and the page told them "No organization is
+assigned to this manager" with nothing they could do about it.
+
+Nothing about rider enrollment changed: `normalizedEnrollmentConfig`
+(`utils/enrollmentSchema.js:95-98`) falls back to the per-type default catalogue when an
+organization has no saved config, and organizations that had one keep it.

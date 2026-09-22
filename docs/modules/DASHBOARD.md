@@ -109,3 +109,32 @@ Vehicles card passes the count as `value` and the utilization percentage as `hin
 concatenate them back into one string, which produced an unreadable `6 (75%)` at phone
 widths. `StatCard` values are `text-2xl sm:text-3xl` with `break-words`, which is what keeps
 a long `Money` value (`LKR 1,284,500.50`) inside its box.
+## No booking metrics on the manager dashboard (2026-09-23)
+
+The manager dashboard shows **three** stats: Total Vehicles, Active Vehicles (with a
+utilization hint) and Pending Requests. Total Revenue, Booking Summary and Booking Trend
+were removed, and they should not come back without the reason below changing first.
+
+`GET /api/manager/dashboard` still returns a `bookings` aggregate, and it is real code:
+`managerController.js:80` sums `totalPrice` over CONFIRMED bookings scoped to this
+manager's vehicles. Nothing can feed it. The passenger app holds a complete booking stack
+(`services/api/bookings.ts`, `BookingsScreen`, `BookingDetailScreen`) that **is not wired
+into its navigation** — see `backend/docs/modules/BOOKINGS.md`, which states it outright.
+The only writer of `Booking` documents is `seed-sandbox.js`, into the separate sandbox
+database. Seat booking also contradicts the shuttle model, where a rider enrols with a
+driver by key.
+
+`ManagerDashboardPage.test.jsx` has a case asserting no revenue or booking content renders,
+so a re-add is caught rather than merely noticed.
+
+**The super-admin dashboard still shows these metrics.** Same argument applies; it was left
+out of that change deliberately.
+
+### Why AsyncSection wraps the stat grid
+
+Not decoration, and not removable because `StatCard` has its own `isLoading`. `AsyncSection`
+is what supplies the loading skeleton's `role="status"`, the error state and its retry, the
+distinction between "offline" and "actually failed", and the rule that a background refetch
+failing keeps the last-known numbers on screen rather than discarding them. Moving the error
+state onto each card instead makes three cards announce "Failed to load" simultaneously and
+loses the offline wording.
