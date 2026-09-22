@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { loginAsManager, loginAsSuperAdmin, mockAuthBackend } from './helpers';
+import {
+  loginAsManager, loginAsSuperAdmin, mockAuthBackend, mockManagerShellBackend,
+} from './helpers';
 
 // Issue #6: both settings pages used to be static "under development"
 // placeholders with zero real functionality. This covers the minimal
@@ -10,6 +12,10 @@ test.describe('Manager settings', () => {
   test('updates the manager\'s own name and can reach the password-reset flow', async ({ page }) => {
     await loginAsManager(page);
     await mockAuthBackend(page);
+    // AppShell's pending-enrollment badge fires on every manager page. Left
+    // unmocked it 401s, and api.js sends the browser to
+    // /login?reason=session_expired before this page can be read.
+    await mockManagerShellBackend(page);
 
     await page.goto('/manager/settings');
 

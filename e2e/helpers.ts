@@ -255,6 +255,23 @@ export interface MockManagerVehicle {
  * in the assignable-routes dropdown) and for vehicles (so creating one shows
  * up in the fleet table) — without needing a live backend/DB.
  */
+/**
+ * Mocks the endpoints `AppShell` fires on EVERY manager page, independent of
+ * which page is open — right now the sidebar's pending-enrollment badge.
+ *
+ * Any manager spec must register these. `src/api.js:24` sends the browser to
+ * `/login?reason=session_expired` on a 401, so a single unmocked manager
+ * endpoint tears down the session mid-test and the failure surfaces as an
+ * unrelated "element not found" wherever the spec happened to be looking.
+ *
+ * Called by `mockManagerBackend`, so page-level specs get it for free. Specs
+ * that only need the shell (e.g. settings) can call this on its own.
+ */
+export async function mockManagerShellBackend(page: Page) {
+  await page.route('**/api/manager/enrollment-requests/count', (route) =>
+    route.fulfill(json({ success: true, data: { count: 0 } })));
+}
+
 export async function mockManagerBackend(
   page: Page,
   opts: {
@@ -263,6 +280,8 @@ export async function mockManagerBackend(
     vehicles?: MockManagerVehicle[];
   } = {}
 ) {
+  await mockManagerShellBackend(page);
+
   const publicRoutes: MockRoute[] = [
     { routeId: 'PUB-1', routeName: 'Public Route 1', visibility: 'PUBLIC' },
   ];
@@ -270,6 +289,9 @@ export async function mockManagerBackend(
   const changeRequests: MockChangeRequest[] = opts.changeRequests ? [...opts.changeRequests] : [];
   const vehicles: MockManagerVehicle[] = opts.vehicles ? [...opts.vehicles] : [];
   const createRequests: unknown[] = [];
+  // Every body POSTed to /api/manager/vehicle-accounts, so a spec can assert
+  // what the create wizard actually submitted (e.g. routeMode: 'CUSTOM').
+  const vehicleRequests: unknown[] = [];
 
   await page.route('**/api/manager/dashboard', (route) => route.fulfill(json({ success: true, data: {} })));
   await page.route('**/api/manager/buses', (route) => route.fulfill(json({ success: true, data: [] })));
@@ -285,6 +307,7 @@ export async function mockManagerBackend(
   // approval instead (mirrors the backend's real branching, see src/api.js).
   await page.route('**/api/manager/vehicle-accounts', async (route) => {
     const body = route.request().postDataJSON() as Partial<MockManagerVehicle> & { driverName?: string };
+    vehicleRequests.push(body);
     const created: MockManagerVehicle = {
       vehicleId: body.vehicleId as string,
       vehicleName: body.vehicleName || body.numberPlate,
@@ -358,7 +381,7 @@ export async function mockManagerBackend(
     route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from([]) })
   );
 
-  return { createRequests, customRoutes, changeRequests, vehicles };
+  return { createRequests, vehicleRequests, customRoutes, changeRequests, vehicles };
 }
 
 /**
@@ -533,4 +556,32 @@ export async function mockManagerPortalData(page: Page) {
   })));
 
   return { drivers, enrollmentRequests };
+}
+
+/**
+ * Fails the test loudly on the FIRST unmocked `/api/` request instead of
+ * letting it reach a real backend.
+ *
+ * This exists because of how the settings, custom-routes and cross-role specs
+ * broke: `AppShell` gained a pending-enrollment badge query, no spec mocked
+ * the new endpoint, and `src/api.js:24` turns any 401 into
+ * `window.location.assign('/login?reason=session_expired')`. The session was
+ * torn down mid-test and the failure surfaced as "element not found" at
+ * whatever line the spec had reached, pointing nowhere near the cause. Three
+ * specs failed that way and stayed failing.
+ *
+ * Register it LAST, after every other mock, so it only catches what nothing
+ * else claimed. Opt-in: an existing spec that deliberately lets a call through
+ * should not start failing because this was added.
+ */
+export async function failOnUnmockedApi(page: Page) {
+  await page.route('**/api/**', (route) => {
+    const request = route.request();
+    throw new Error(
+      `Unmocked API call: ${request.method()} ${request.url()}\n`
+      + 'Add it to the spec\'s mocks. Left unmocked it reaches a real backend, and a '
+      + '401 there sends the app to /login?reason=session_expired, which will surface '
+      + 'as an unrelated "element not found" later in the test.'
+    );
+  });
 }
