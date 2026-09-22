@@ -11,6 +11,7 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { PasswordInput } from '@/components/shared/password-input';
 import { useOnlineStatus } from '@/hooks/use-online-status';
+import { cn } from '@/lib/utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -213,7 +214,9 @@ function EnrollmentKeyCell({ driver, isOnline, shown, onToggle, onKeyState }) {
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    // The row wraps so Copy and Hide drop to a second line at phone widths;
+    // the key itself never breaks (see below).
+    <div className="flex flex-wrap items-center gap-1.5">
       {lock}
       {/* The key is one token, and wrapping it mid-code makes it unreadable and
           hard to transcribe over the phone. */}
@@ -508,6 +511,123 @@ export function ManagerAccountsPage() {
     }
   };
 
+  // The riders, location and actions cells are shared verbatim between the
+  // desktop table and the below-md card list, so they take a driver rather
+  // than a TanStack cell context and both call sites use the same code.
+  const renderRidersCell = (driver) => {
+    const active = driver.riders?.active || 0;
+    const pending = driver.riders?.pending || 0;
+
+    // Nobody enrolled is not a destination: the roster would open empty, so
+    // the cell says so rather than offering a click that shows nothing.
+    if (!active && !pending) return <span className="text-muted-foreground">None</span>;
+
+    return (
+      <div className="flex items-center gap-2">
+        {active > 0 && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="gap-1.5 px-2 tabular-nums"
+            aria-label={`See the ${active} rider${active === 1 ? '' : 's'} enrolled with ${driver.name}`}
+            title={`See who rides with ${driver.name}`}
+            onClick={() => navigate(
+              `/manager/requests?status=ACTIVE&driver=${encodeURIComponent(driver._id)}`,
+            )}
+          >
+            <Users className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            {active}
+          </Button>
+        )}
+        {pending > 0 && (
+          <Badge variant="outline" className="tabular-nums">{pending} pending</Badge>
+        )}
+      </div>
+    );
+  };
+
+  const renderLocationCell = (driver) => {
+    if (!driver.vehicle) {
+      return <span className="text-muted-foreground">No vehicle</span>;
+    }
+
+    const record = liveByDriverId.get(String(driver._id));
+    const state = record ? trackingState(record) : 'offline';
+    // Offline is not a destination: there is no position to open, so the
+    // cell states it rather than offering a click that shows nothing.
+    if (state === 'offline') {
+      return (
+        <span title={fleetQ.isLoading ? 'Loading current positions…' : 'Not sharing a location right now'}>
+          <LiveIndicator state="offline" />
+        </span>
+      );
+    }
+
+    return (
+      <Button
+        size="sm"
+        variant="ghost"
+        className="gap-2 px-2"
+        aria-label={`Track ${driver.name} on the live map`}
+        title={`Track ${driver.name} on the live map`}
+        onClick={() => navigate(
+          `/manager/tracking?vehicle=${encodeURIComponent(record.vehicleId)}`,
+        )}
+      >
+        <LiveIndicator state={state} />
+        <MapPin className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+      </Button>
+    );
+  };
+
+  const renderActionsCell = (driver) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="icon" variant="ghost" aria-label={`Actions for ${driver.name}`}>
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        {!isOnline && (
+          <DropdownMenuItem disabled>Unavailable offline</DropdownMenuItem>
+        )}
+        <DropdownMenuItem disabled={!isOnline} onSelect={() => openEdit(driver)}>Edit driver</DropdownMenuItem>
+        {/* "Rotate" is our word, not the manager's. The label says what
+            happens to the key they hand out; the endpoint keeps the
+            rotate name. */}
+        <DropdownMenuItem disabled={!isOnline} onSelect={() => setRotateTarget(driver)}>
+          Replace enrollment key
+        </DropdownMenuItem>
+        {revertable[driver._id] && (
+          <DropdownMenuItem disabled={!isOnline} onSelect={() => handleRevertKey(driver)}>
+            Restore previous key
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem disabled={!isOnline} onSelect={() => handleViewPassword(driver)}>
+          View password
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={!isOnline} onSelect={() => setResetTarget(driver)}>
+          Reset password
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={!isOnline}
+          onSelect={() => (driver.isActive === false
+            ? handleToggleActive(driver)
+            : setDisableTarget(driver))}
+        >
+          {driver.isActive === false ? 'Enable driver' : 'Disable driver'}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={!isOnline}
+          className="text-destructive focus:text-destructive"
+          onSelect={() => setDeleteTarget(driver)}
+        >
+          Delete driver
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   const columns = useMemo(() => [
     {
       id: 'name',
@@ -577,38 +697,7 @@ export function ManagerAccountsPage() {
       header: 'Riders',
       accessorKey: '_id',
       enableSorting: false,
-      cell: (info) => {
-        const driver = info.row.original;
-        const active = driver.riders?.active || 0;
-        const pending = driver.riders?.pending || 0;
-
-        // Nobody enrolled is not a destination: the roster would open empty, so
-        // the cell says so rather than offering a click that shows nothing.
-        if (!active && !pending) return <span className="text-muted-foreground">None</span>;
-
-        return (
-          <div className="flex items-center gap-2">
-            {active > 0 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="gap-1.5 px-2 tabular-nums"
-                aria-label={`See the ${active} rider${active === 1 ? '' : 's'} enrolled with ${driver.name}`}
-                title={`See who rides with ${driver.name}`}
-                onClick={() => navigate(
-                  `/manager/requests?status=ACTIVE&driver=${encodeURIComponent(driver._id)}`,
-                )}
-              >
-                <Users className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-                {active}
-              </Button>
-            )}
-            {pending > 0 && (
-              <Badge variant="outline" className="tabular-nums">{pending} pending</Badge>
-            )}
-          </div>
-        );
-      },
+      cell: (info) => renderRidersCell(info.row.original),
     },
     {
       // Whether this driver is broadcasting right now, and a way straight to
@@ -618,40 +707,7 @@ export function ManagerAccountsPage() {
       header: 'Location',
       accessorKey: '_id',
       enableSorting: false,
-      cell: (info) => {
-        const driver = info.row.original;
-        if (!driver.vehicle) {
-          return <span className="text-muted-foreground">No vehicle</span>;
-        }
-
-        const record = liveByDriverId.get(String(driver._id));
-        const state = record ? trackingState(record) : 'offline';
-        // Offline is not a destination: there is no position to open, so the
-        // cell states it rather than offering a click that shows nothing.
-        if (state === 'offline') {
-          return (
-            <span title={fleetQ.isLoading ? 'Loading current positions…' : 'Not sharing a location right now'}>
-              <LiveIndicator state="offline" />
-            </span>
-          );
-        }
-
-        return (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="gap-2 px-2"
-            aria-label={`Track ${driver.name} on the live map`}
-            title={`Track ${driver.name} on the live map`}
-            onClick={() => navigate(
-              `/manager/tracking?vehicle=${encodeURIComponent(record.vehicleId)}`,
-            )}
-          >
-            <LiveIndicator state={state} />
-            <MapPin className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-          </Button>
-        );
-      },
+      cell: (info) => renderLocationCell(info.row.original),
     },
     {
       id: 'enrollmentKey',
@@ -682,58 +738,89 @@ export function ManagerAccountsPage() {
       header: '',
       accessorKey: '_id',
       enableSorting: false,
-      cell: (info) => {
-        const driver = info.row.original;
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" aria-label={`Actions for ${driver.name}`}>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              {!isOnline && (
-                <DropdownMenuItem disabled>Unavailable offline</DropdownMenuItem>
-              )}
-              <DropdownMenuItem disabled={!isOnline} onSelect={() => openEdit(driver)}>Edit driver</DropdownMenuItem>
-              {/* "Rotate" is our word, not the manager's. The label says what
-                  happens to the key they hand out; the endpoint keeps the
-                  rotate name. */}
-              <DropdownMenuItem disabled={!isOnline} onSelect={() => setRotateTarget(driver)}>
-                Replace enrollment key
-              </DropdownMenuItem>
-              {revertable[driver._id] && (
-                <DropdownMenuItem disabled={!isOnline} onSelect={() => handleRevertKey(driver)}>
-                  Restore previous key
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem disabled={!isOnline} onSelect={() => handleViewPassword(driver)}>
-                View password
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled={!isOnline} onSelect={() => setResetTarget(driver)}>
-                Reset password
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={!isOnline}
-                onSelect={() => (driver.isActive === false
-                  ? handleToggleActive(driver)
-                  : setDisableTarget(driver))}
-              >
-                {driver.isActive === false ? 'Enable driver' : 'Disable driver'}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={!isOnline}
-                className="text-destructive focus:text-destructive"
-                onSelect={() => setDeleteTarget(driver)}
-              >
-                Delete driver
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
+      cell: (info) => renderActionsCell(info.row.original),
     },
+    // The dep list is the set of *values* the three render helpers close over,
+    // which is what it was before they were extracted from these cells. The
+    // helpers themselves are new identities each render, so listing them would
+    // give TanStack a new `columns` array every time and cost it its internal
+    // state; the array must stay stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [revertable, shownKeys, toggleKeyShown, liveByDriverId, fleetQ.isLoading, navigate, isOnline, rememberRevertable]);
+
+  // Below md the 11-column directory renders a card per row. Nothing is
+  // dropped: there is no row-detail view, and the edit dialog exposes only the
+  // editable subset (no enrollment key, rider count or live location), so a
+  // hidden field here would be unreachable rather than deferred.
+  const renderMobileCard = (driver) => {
+    const organization = driver.organization;
+    const { variant, label } = driverStatus(driver);
+
+    return (
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="font-medium text-foreground truncate">{driver.name}</p>
+            {driver.driverCode
+              ? <code className="text-xs text-muted-foreground">{driver.driverCode}</code>
+              : <span className="text-xs text-muted-foreground">Not issued</span>}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Badge variant={variant}>{label}</Badge>
+            {renderActionsCell(driver)}
+          </div>
+        </div>
+
+        <dl className="space-y-1 text-xs">
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground shrink-0">Organization</dt>
+            <dd className={cn('text-right break-words', !organization && 'text-muted-foreground')}>
+              {organization
+                ? `${organization.name} · ${categoryLabel(organization.serviceType)}`
+                : 'None'}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground">Phone</dt>
+            <dd className="text-right tabular-nums">{driver.phoneNumber || 'None'}</dd>
+          </div>
+          <div className="flex justify-between gap-3">
+            <dt className="text-muted-foreground shrink-0">Vehicle</dt>
+            <dd className={cn('text-right tabular-nums', !driver.vehicle && 'text-muted-foreground')}>
+              {driver.vehicle
+                ? (driver.vehicle.numberPlate || driver.vehicle.vehicleId)
+                : 'Unassigned'}
+            </dd>
+          </div>
+        </dl>
+
+        {/* An email is one long unbreakable token at this width, so it gets its
+            own full-width line rather than a right-aligned label/value row. */}
+        <p className="text-xs break-words">
+          <span className="text-muted-foreground">Email: </span>
+          {driver.email || 'None'}
+        </p>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {renderRidersCell(driver)}
+          {renderLocationCell(driver)}
+        </div>
+
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+            Enrollment key
+          </p>
+          <EnrollmentKeyCell
+            driver={driver}
+            isOnline={isOnline}
+            shown={Boolean(shownKeys[driver._id])}
+            onToggle={toggleKeyShown}
+            onKeyState={rememberRevertable}
+          />
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -1076,7 +1163,7 @@ export function ManagerAccountsPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <StatCard label="Total Drivers" value={stats.total} icon={Users} isLoading={driversQ.isLoading} stale={!isOnline} asOf={driversQ.dataUpdatedAt} />
         <StatCard label="Active" value={stats.active} icon={UserCheck} isLoading={driversQ.isLoading} stale={!isOnline} asOf={driversQ.dataUpdatedAt} />
         <StatCard label="Setup Required" value={stats.needsSetup} icon={UserX} isLoading={driversQ.isLoading} stale={!isOnline} asOf={driversQ.dataUpdatedAt} />
@@ -1092,7 +1179,9 @@ export function ManagerAccountsPage() {
           </div>
           <StaleChip updatedAt={driversQ.dataUpdatedAt} offline={!isOnline} />
         </CardHeader>
-        <CardContent>
+        {/* Tighter side padding on a phone: this DataTable is the only one
+            nested inside a Card, so it starts 48px narrower than the others. */}
+        <CardContent className="px-3 sm:px-6">
           <DataTable
             columns={columns}
             data={drivers}
@@ -1102,6 +1191,7 @@ export function ManagerAccountsPage() {
             emptyTitle="No drivers yet"
             emptyDescription="Add your first driver to get started."
             totalCount={drivers.length}
+            renderMobileCard={renderMobileCard}
           />
         </CardContent>
       </Card>
