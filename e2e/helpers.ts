@@ -360,3 +360,175 @@ export async function mockManagerBackend(
 
   return { createRequests, customRoutes, changeRequests, vehicles };
 }
+
+/**
+ * Populates every manager surface with enough data to actually render its
+ * lists, on top of `mockManagerBackend`'s route table.
+ *
+ * `mockManagerBackend` deliberately returns an empty dashboard, no drivers and
+ * no enrollment requests, which is right for the flow specs but means a
+ * layout test would only ever see empty states. Register this afterwards so
+ * its handlers take precedence, and the responsive spec exercises the real
+ * card lists and stat values.
+ *
+ * Values are chosen to be the awkward cases: money wide enough to overflow a
+ * narrow stat card, a long organization name, a full-length enrollment key.
+ */
+export async function mockManagerPortalData(page: Page) {
+  const drivers = [
+    {
+      _id: 'drv-1',
+      name: 'Anushka Wickramasinghe',
+      driverCode: 'TMD-4821',
+      email: 'anushka.wickramasinghe@example.com',
+      phoneNumber: '0771234567',
+      isActive: true,
+      setupComplete: true,
+      organization: { _id: 'org-1', name: 'Royal Institute of Technology', serviceType: 'UNIVERSITY' },
+      vehicle: { vehicleId: 'VEH-001', numberPlate: 'NB-1234' },
+      riders: { active: 12, pending: 3 },
+    },
+    {
+      _id: 'drv-2',
+      name: 'Kamal Perera',
+      driverCode: 'TMD-4822',
+      email: null,
+      phoneNumber: null,
+      isActive: true,
+      setupComplete: false,
+      organization: null,
+      vehicle: null,
+      riders: { active: 0, pending: 0 },
+    },
+    {
+      _id: 'drv-3',
+      name: 'Nimali Fernando',
+      driverCode: 'TMD-4823',
+      email: 'nimali@example.com',
+      phoneNumber: '0719876543',
+      isActive: false,
+      setupComplete: true,
+      organization: { _id: 'org-1', name: 'Royal Institute of Technology', serviceType: 'UNIVERSITY' },
+      vehicle: { vehicleId: 'VEH-002', numberPlate: 'NC-5678' },
+      riders: { active: 4, pending: 0 },
+    },
+  ];
+
+  const enrollmentRequests = [
+    {
+      _id: 'enr-1',
+      requestedAt: '2026-09-20T04:30:00.000Z',
+      decidedAt: null,
+      passenger: {
+        _id: 'psg-1',
+        name: 'Sanduni Jayawardena',
+        riderCode: 'TMR-WYFE-QFDE',
+        email: 'sanduni.jayawardena@example.com',
+        isManagedProfile: false,
+        account: { email: 'sanduni.jayawardena@example.com', phoneNumber: '0761112233' },
+        organizationValues: { studentId: 'IT21234567', department: 'Computing', year: '3' },
+      },
+      driver: { _id: 'drv-1', name: 'Anushka Wickramasinghe', driverCode: 'TMD-4821' },
+    },
+    {
+      _id: 'enr-2',
+      requestedAt: '2026-09-21T02:15:00.000Z',
+      decidedAt: null,
+      passenger: {
+        _id: 'psg-2',
+        name: 'Ruwan Silva',
+        riderCode: 'TMR-KH6L-Y9TP',
+        isManagedProfile: true,
+        relation: 'Son',
+        account: { email: 'parent.silva@example.com', phoneNumber: '0704445566' },
+        organizationValues: { studentId: 'IT21998877', department: 'Engineering', year: '1' },
+      },
+      driver: { _id: 'drv-3', name: 'Nimali Fernando', driverCode: 'TMD-4823' },
+    },
+  ];
+
+  await page.route('**/api/manager/dashboard', (route) => route.fulfill(json({
+    success: true,
+    data: {
+      fleet: { totalVehicles: 8, activeVehicles: 6 },
+      bookings: { totalRevenue: 1284500.5, confirmedBookings: 214, cancelledBookings: 9 },
+      pendingRequests: 2,
+    },
+  })));
+
+  await page.route('**/api/manager/drivers', (route) => route.fulfill(json({ success: true, data: drivers })));
+
+  await page.route('**/api/manager/vehicles', (route) => route.fulfill(json({
+    success: true,
+    data: [
+      {
+        _id: 'veh-1',
+        vehicleId: 'VEH-001',
+        vehicleName: 'Morning Shuttle A',
+        numberPlate: 'NB-1234',
+        routeId: 'PUB-1',
+        routeName: 'Malabe to Colombo Fort',
+        vehicleType: 'AC',
+        serviceType: 'UNIVERSITY',
+        isActive: true,
+        driverId: { name: 'Anushka Wickramasinghe' },
+        organization: { name: 'Royal Institute of Technology' },
+      },
+      {
+        _id: 'veh-2',
+        vehicleId: 'VEH-002',
+        vehicleName: 'Evening Shuttle B',
+        numberPlate: 'NC-5678',
+        routeId: null,
+        vehicleType: 'NON-AC',
+        serviceType: 'PUBLIC',
+        isActive: false,
+        driverId: null,
+        organization: null,
+      },
+    ],
+  })));
+
+  await page.route(/\/api\/manager\/drivers\/[^/]+\/enrollment-key$/, (route) => route.fulfill(json({
+    success: true,
+    data: { enrollmentKey: 'TMD-AAAA-BBBB-CCCC', canRevert: false },
+  })));
+
+  await page.route('**/api/manager/vehicles/live', (route) => route.fulfill(json({
+    success: true,
+    data: [{
+      vehicleId: 'VEH-001',
+      driver: { _id: 'drv-1', name: 'Anushka Wickramasinghe' },
+      vehicle: { vehicleId: 'VEH-001', numberPlate: 'NB-1234', routeId: 'PUB-1' },
+      location: { latitude: 6.9271, longitude: 79.8612, speed: 32.5, heading: 145, updatedAt: new Date().toISOString() },
+      updatedAt: new Date().toISOString(),
+    }],
+  })));
+
+  await page.route(/\/api\/manager\/enrollment-requests\?status=/, (route) => {
+    const status = new URL(route.request().url()).searchParams.get('status');
+    const data = status === 'PENDING' ? enrollmentRequests : [];
+    route.fulfill(json({ success: true, data }));
+  });
+
+  await page.route('**/api/manager/enrollment-requests/count', (route) =>
+    route.fulfill(json({ success: true, data: { count: enrollmentRequests.length } })));
+
+  await page.route('**/api/manager/organization/enrollment-schema', (route) => route.fulfill(json({
+    success: true,
+    data: {
+      fields: [
+        { key: 'studentId', label: 'Student / employee ID', enabled: true, required: true },
+        { key: 'department', label: 'Department or faculty', enabled: true, required: false },
+        { key: 'year', label: 'Year of study', enabled: false, required: false },
+      ],
+    },
+  })));
+
+  await page.route('**/api/manager/organizations*', (route) => route.fulfill(json({
+    success: true,
+    data: [{ _id: 'org-1', name: 'Royal Institute of Technology', serviceType: 'UNIVERSITY' }],
+  })));
+
+  return { drivers, enrollmentRequests };
+}

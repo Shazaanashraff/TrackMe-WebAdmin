@@ -801,9 +801,18 @@ export function ManagerAccountsPage() {
           {driver.email || 'None'}
         </p>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {renderRidersCell(driver)}
-          {renderLocationCell(driver)}
+        {/* These two carried column headers in the table. Without them
+            "None / No vehicle" reads as a stray sentence, so the card
+            labels them. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          <span className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">Riders</span>
+            {renderRidersCell(driver)}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">Location</span>
+            {renderLocationCell(driver)}
+          </span>
         </div>
 
         <div>

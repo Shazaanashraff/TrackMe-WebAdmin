@@ -129,8 +129,9 @@ export function DataTable({
         </Alert>
       )}
 
-      {/* Column visibility toolbar */}
-      {hideableCols.length > 0 && (
+      {/* Column visibility toolbar. Hidden alongside the table it controls:
+          in card mode there are no columns to show or hide. */}
+      {hideableCols.length > 0 && !showCards && (
         <div className="flex justify-end">
           <Popover>
             <PopoverTrigger asChild>
