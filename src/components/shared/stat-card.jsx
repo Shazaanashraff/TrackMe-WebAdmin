@@ -30,10 +30,10 @@ export function StatCard({
 }) {
   if (isLoading) {
     return (
-      <div className="rounded-xl border border-border bg-surface p-5 space-y-3">
+      <div className="rounded-xl border border-border bg-surface p-4 sm:p-5 space-y-3">
         <div className="flex items-center justify-between">
           <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-9 w-9 rounded-lg" />
+          <Skeleton className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg" />
         </div>
         <Skeleton className="h-8 w-20" />
         <Skeleton className="h-3 w-28" />
@@ -42,21 +42,23 @@ export function StatCard({
   }
 
   const body = (
-    <div className="rounded-xl border border-border bg-surface p-5">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs uppercase tracking-wide font-medium text-muted-foreground">
+    <div className="rounded-xl border border-border bg-surface p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <span className="text-xs uppercase tracking-wide font-medium text-muted-foreground min-w-0">
           {label}
         </span>
         {Icon && (
-          <div className="h-9 w-9 rounded-lg bg-surface-muted flex items-center justify-center shrink-0">
-            <Icon className="h-5 w-5 text-muted-foreground" aria-hidden />
+          <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-surface-muted flex items-center justify-center shrink-0">
+            <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" aria-hidden />
           </div>
         )}
       </div>
       <div className="space-y-1">
         <span
           className={cn(
-            'block text-3xl font-bold font-mono tabular-nums leading-none',
+            // leading-tight rather than leading-none: once a long value (money)
+            // is allowed to wrap, two lines at leading-none collide.
+            'block text-2xl sm:text-3xl font-bold font-mono tabular-nums leading-tight break-words',
             isError ? 'text-status-danger' : stale ? 'text-muted-foreground' : 'text-foreground',
           )}
         >

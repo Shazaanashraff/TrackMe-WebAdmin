@@ -173,7 +173,10 @@ export function AppShell({
 
   return (
     <TooltipProvider>
-      <div className="flex h-screen overflow-hidden bg-background p-[14px] gap-3">
+      {/* Canvas padding shrinks on a phone but never reaches 0: the tinted
+          canvas staying visible on all four sides is what keeps the two shell
+          cards reading as inset floating cards (docs/redesign/01-DESIGN-LANGUAGE.md). */}
+      <div className="flex h-screen overflow-hidden bg-background p-2 sm:p-[14px] gap-2 sm:gap-3">
 
         {/* Desktop sidebar card */}
         <aside
@@ -250,7 +253,7 @@ export function AppShell({
           />
 
           <main className="flex-1 overflow-y-auto">
-            <div className="max-w-screen-2xl mx-auto px-6 py-6">
+            <div className="max-w-screen-2xl mx-auto px-4 py-4 sm:px-6 sm:py-6">
               <Outlet context={{ user, onUserUpdate }} />
             </div>
           </main>

@@ -36,7 +36,7 @@ export function ManagerDashboardPage() {
       />
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           label="Total Vehicles"
           value={fleet.totalVehicles ?? 'None'}
@@ -47,11 +47,10 @@ export function ManagerDashboardPage() {
         />
         <StatCard
           label="Active Vehicles"
-          value={
-            utilizationPct != null
-              ? `${fleet.activeVehicles} (${utilizationPct}%)`
-              : (fleet.activeVehicles ?? 'None')
-          }
+          // The count is the stat; the utilization percentage is the caption.
+          // Concatenating them made one unreadable value at phone widths.
+          value={fleet.activeVehicles ?? 'None'}
+          hint={utilizationPct != null ? `${utilizationPct}% of fleet active` : undefined}
           icon={VehicleIcon}
           isLoading={dashQ.isLoading}
           stale={dashStale}
@@ -77,7 +76,7 @@ export function ManagerDashboardPage() {
 
       {/* Booking summary */}
       <Card>
-        <CardHeader className="flex-row items-start justify-between gap-3">
+        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:justify-between sm:gap-3">
           <div>
             <CardTitle className="text-base">Booking Summary</CardTitle>
             <CardDescription>Confirmed and cancelled journeys across all your vehicles</CardDescription>
@@ -111,7 +110,7 @@ export function ManagerDashboardPage() {
           (issue #15): a full-height empty card for a feature that doesn't exist yet
           dominated the dashboard's visible space. */}
       <Card>
-        <CardContent className="py-3 flex items-center gap-2.5">
+        <CardContent className="py-3 flex flex-wrap items-center gap-x-2.5 gap-y-1">
           <span className="text-sm font-medium text-foreground">Booking Trend</span>
           <span className="text-xs text-muted-foreground">Not enough data yet</span>
         </CardContent>
