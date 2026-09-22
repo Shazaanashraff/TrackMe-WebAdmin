@@ -12,7 +12,6 @@ import { useManagerDashboard } from '@/hooks/use-dashboard';
 const DASHBOARD = {
   fleet: { totalVehicles: 8, activeVehicles: 6 },
   pendingRequests: 2,
-  bookings: { confirmedBookings: 40, cancelledBookings: 3, totalRevenue: 12000 },
 };
 
 function defaultHooks({ data = DASHBOARD, loading = false, error = null } = {}) {
@@ -53,7 +52,6 @@ describe('ManagerDashboardPage', () => {
     expect(screen.getByText('Total Vehicles')).toBeInTheDocument();
     expect(screen.getByText('Active Vehicles')).toBeInTheDocument();
     expect(screen.getByText('Pending Requests')).toBeInTheDocument();
-    expect(screen.getByText('Total Revenue')).toBeInTheDocument();
 
     // Total = 8, utilization = 75%
     expect(screen.getAllByText('8').length).toBeGreaterThan(0);
@@ -65,35 +63,15 @@ describe('ManagerDashboardPage', () => {
     expect(screen.queryByText(/peaking/i)).toBeNull();
   });
 
-  it('renders revenue without wrong currency symbols', () => {
+  // The backend still aggregates revenue and booking counts, but nothing in the
+  // product creates a booking (the passenger app's booking screens are not in
+  // its navigation), so they read zero forever. Removed 2026-09-23; this case
+  // exists so they cannot quietly come back.
+  it('shows no revenue or booking metrics', () => {
     setup();
-    expect(screen.getByText('Total Revenue')).toBeInTheDocument();
-    expect(document.body.textContent).not.toMatch(/₹/);
-    expect(document.body.textContent).not.toMatch(/\$\d/);
-  });
-
-  it('shows confirmed and cancelled booking counts', () => {
-    setup();
-    expect(screen.getByText('Confirmed Bookings')).toBeInTheDocument();
-    expect(screen.getByText('Cancelled Bookings')).toBeInTheDocument();
-    expect(screen.getAllByText('40').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('3').length).toBeGreaterThan(0);
-  });
-
-  it('shows analytics placeholder without fabricated time-series', () => {
-    setup();
-    expect(screen.getByText('Not enough data yet')).toBeInTheDocument();
-  });
-
-  it('keeps the booking-trend placeholder compact, not a full-height empty card (issue #15)', () => {
-    setup();
-    const placeholder = screen.getByText('Not enough data yet');
-    // The old placeholder centered "Not enough data yet" in a py-12 block; issue #15 asked
-    // for this to stop dominating the page. A slim single-row treatment has no "py-12"
-    // ancestor between the text and its Card.
-    const card = placeholder.closest('.py-3');
-    expect(card).toBeInTheDocument();
-    expect(placeholder.closest('.py-12')).toBeNull();
+    expect(screen.queryByText(/revenue/i)).toBeNull();
+    expect(screen.queryByText(/booking/i)).toBeNull();
+    expect(document.body.textContent).not.toMatch(/LKR/);
   });
 
   it('shows pending request count in stat card', () => {

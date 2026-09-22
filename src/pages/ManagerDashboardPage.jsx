@@ -1,15 +1,21 @@
 import { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Bus as VehicleIcon, BookOpen, Hourglass, Wallet } from 'lucide-react';
+import { Bus as VehicleIcon, Hourglass } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
 import { StatCard } from '@/components/shared/stat-card';
 import { AsyncSection } from '@/components/shared/async-section';
-import { Money } from '@/components/shared/money';
-import { StaleChip } from '@/components/shared/stale-chip';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardSkeleton } from '@/components/shared/card-skeleton';
 import { useManagerDashboard } from '@/hooks/use-dashboard';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 
+const STAT_GRID = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4';
+
+// No booking metrics here, deliberately. The backend still aggregates revenue
+// and confirmed/cancelled counts, but nothing can feed them: the passenger
+// app's booking screens are not mounted in its navigation, so no booking is
+// ever created outside the sandbox seed. They read zero forever on live data,
+// and they contradict the shuttle model, where riders enrol with a driver by
+// key rather than booking a seat. See docs/CHANGES.md 2026-09-23.
 export function ManagerDashboardPage() {
   const { user } = useOutletContext() ?? {};
   const isOnline = useOnlineStatus();
@@ -18,7 +24,6 @@ export function ManagerDashboardPage() {
   const dashStale = !isOnline && Boolean(d);
 
   const fleet = d?.fleet || {};
-  const bookings = d?.bookings || {};
   const pending = d?.pendingRequests ?? 0;
 
   const utilizationPct = useMemo(() => {
@@ -32,89 +37,57 @@ export function ManagerDashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title={user?.name || user?.email || 'Manager Dashboard'}
-        description="Live overview of your fleet, bookings, and pending requests."
+        description="Live overview of your fleet and pending requests."
       />
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <StatCard
-          label="Total Vehicles"
-          value={fleet.totalVehicles ?? 'None'}
-          icon={VehicleIcon}
-          isLoading={dashQ.isLoading}
-          stale={dashStale}
-          asOf={dashQ.dataUpdatedAt}
-        />
-        <StatCard
-          label="Active Vehicles"
-          // The count is the stat; the utilization percentage is the caption.
-          // Concatenating them made one unreadable value at phone widths.
-          value={fleet.activeVehicles ?? 'None'}
-          hint={utilizationPct != null ? `${utilizationPct}% of fleet active` : undefined}
-          icon={VehicleIcon}
-          isLoading={dashQ.isLoading}
-          stale={dashStale}
-          asOf={dashQ.dataUpdatedAt}
-        />
-        <StatCard
-          label="Pending Requests"
-          value={pending}
-          icon={Hourglass}
-          isLoading={dashQ.isLoading}
-          stale={dashStale}
-          asOf={dashQ.dataUpdatedAt}
-        />
-        <StatCard
-          label="Total Revenue"
-          value={dashQ.isLoading ? undefined : <Money amount={bookings.totalRevenue} />}
-          icon={Wallet}
-          isLoading={dashQ.isLoading}
-          stale={dashStale}
-          asOf={dashQ.dataUpdatedAt}
-        />
-      </div>
-
-      {/* Booking summary */}
-      <Card>
-        <CardHeader className="flex-col items-start gap-2 sm:flex-row sm:justify-between sm:gap-3">
-          <div>
-            <CardTitle className="text-base">Booking Summary</CardTitle>
-            <CardDescription>Confirmed and cancelled journeys across all your vehicles</CardDescription>
+      {/* The stat grid is wrapped rather than each card handling its own states.
+          AsyncSection is what tells a dropped connection apart from a real
+          failure, keeps the last-known numbers on screen when a background
+          refetch fails, and offers the retry. Three cards each announcing
+          "Failed to load" would say the same thing three times and lose the
+          offline wording. */}
+      <AsyncSection
+        isLoading={dashQ.isLoading}
+        error={dashQ.error}
+        data={d}
+        onRetry={dashQ.refetch}
+        emptyTitle="No fleet data yet"
+        emptyDescription="Add your first vehicle and this fills in."
+        loadingFallback={(
+          <div className={STAT_GRID}>
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
           </div>
-          <StaleChip updatedAt={dashQ.dataUpdatedAt} offline={!isOnline} />
-        </CardHeader>
-        <CardContent>
-          <AsyncSection
-            isLoading={dashQ.isLoading}
-            error={dashQ.error}
-            data={d}
-            onRetry={dashQ.refetch}
-            emptyTitle="No booking data yet"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[
-                { label: 'Confirmed Bookings', value: bookings.confirmedBookings ?? 0, icon: BookOpen },
-                { label: 'Cancelled Bookings', value: bookings.cancelledBookings ?? 0, icon: BookOpen },
-              ].map(({ label, value }) => (
-                <div key={label} className="rounded-lg border border-border bg-surface-muted px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
-                  <p className="text-2xl font-bold font-heading mt-1 tabular-nums">{value}</p>
-                </div>
-              ))}
-            </div>
-          </AsyncSection>
-        </CardContent>
-      </Card>
-
-      {/* Analytics placeholder: no time-series data available yet. Kept compact
-          (issue #15): a full-height empty card for a feature that doesn't exist yet
-          dominated the dashboard's visible space. */}
-      <Card>
-        <CardContent className="py-3 flex flex-wrap items-center gap-x-2.5 gap-y-1">
-          <span className="text-sm font-medium text-foreground">Booking Trend</span>
-          <span className="text-xs text-muted-foreground">Not enough data yet</span>
-        </CardContent>
-      </Card>
+        )}
+      >
+        <div className={STAT_GRID}>
+          <StatCard
+            label="Total Vehicles"
+            value={fleet.totalVehicles ?? 'None'}
+            icon={VehicleIcon}
+            stale={dashStale}
+            asOf={dashQ.dataUpdatedAt}
+          />
+          <StatCard
+            label="Active Vehicles"
+            // The count is the stat; the utilization percentage is the caption.
+            // Concatenating them made one unreadable value at phone widths.
+            value={fleet.activeVehicles ?? 'None'}
+            hint={utilizationPct != null ? `${utilizationPct}% of fleet active` : undefined}
+            icon={VehicleIcon}
+            stale={dashStale}
+            asOf={dashQ.dataUpdatedAt}
+          />
+          <StatCard
+            label="Pending Requests"
+            value={pending}
+            icon={Hourglass}
+            stale={dashStale}
+            asOf={dashQ.dataUpdatedAt}
+          />
+        </div>
+      </AsyncSection>
     </div>
   );
 }
