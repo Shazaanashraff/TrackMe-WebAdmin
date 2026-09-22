@@ -133,3 +133,28 @@ real result (including "email already taken" / an expired token).
 See [`_MODULE_TEMPLATE.md`](../guides/_MODULE_TEMPLATE.md). Any change to `request()`'s
 error/retry behavior needs a test proving the exempt-paths list and the single-flight refresh
 still hold — a regression here breaks every page in the app, not just one.
+## Router type (data router, since 2026-09-22)
+
+`src/main.jsx` mounts a **data router**:
+
+```jsx
+const router = createBrowserRouter([{ path: '*', element: <App /> }])
+<RouterProvider router={router} />
+```
+
+`App` still declares its own `<Routes>`/`<Route>` tree as a *descendant* of that one splat
+route. The splat route exists purely to provide the data-router context, which
+`useBlocker` requires — `EnrollmentFormPage` uses it to guard unsaved edits, and under the
+previous plain `BrowserRouter` that page threw "useBlocker must be used within a data
+router" and the `ErrorBoundary` replaced the whole shell.
+
+Two consequences to keep in mind:
+
+- **Do not swap this back to `BrowserRouter`.** It breaks `/manager/enrollment-form`.
+  `e2e/enrollment-form-guard.spec.ts` is the regression guard; the Vitest spec for that
+  page mocks `useBlocker` away and cannot catch it.
+- Because the routes are descendant routes rather than route objects, the data-router
+  *features* (`loader`, `action`, `useNavigation`, `useFetcher`) are **not** available.
+  Only the context-dependent hooks like `useBlocker` work. Wiring loaders up means
+  converting `App`'s role-conditional routing into route objects, which would also mean
+  moving every test wrapper from `MemoryRouter` to `createMemoryRouter`.

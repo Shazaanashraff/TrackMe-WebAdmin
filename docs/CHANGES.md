@@ -18,6 +18,40 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-09-22 — Data router: /manager/enrollment-form no longer crashes
+- **Branch:** feature/manager-mobile-responsive
+- **Modules touched:** [AUTH](modules/AUTH.md) (routing shell), [ENROLLMENT_REQUESTS](modules/ENROLLMENT_REQUESTS.md)
+- **What changed:**
+  - `src/main.jsx` mounts `createBrowserRouter([{ path: '*', element: <App /> }])` +
+    `RouterProvider` instead of `BrowserRouter`. `App` keeps its own `<Routes>` tree as a
+    descendant; the splat route exists only to put the data-router context above it.
+  - New `e2e/enrollment-form-guard.spec.ts`: the page loads with no console errors, a dirty
+    form blocks in-app navigation, Cancel preserves the edit, Leave navigates away.
+  - `e2e/helpers.ts`: the enrollment-schema mock gained `organization` and `schemaVersion`,
+    which the real response carries and the page reads.
+  - `/manager/enrollment-form` is no longer `test.fixme` in `e2e/responsive-manager.spec.ts`.
+- **Why:** `EnrollmentFormPage.jsx:48` guards unsaved edits with `useBlocker`, which only
+  works under a data router. Under `BrowserRouter` React Router threw "useBlocker must be
+  used within a data router" on every render, so the ErrorBoundary replaced the entire shell
+  and the page was unreachable in production. Reported by the user after clicking it.
+- **Contract impact:** none.
+- **Tests:** `e2e/enrollment-form-guard.spec.ts` (new, 3 cases). Vitest **779 passed, 0
+  failed, 66 files**. Playwright responsive + guard specs: **18 passed, 0 skipped**. Lint 0
+  errors, 27 warnings.
+- **Docs updated:** this entry, `docs/modules/AUTH.md`, and the follow-up list on the
+  2026-09-22 responsive entry below.
+- **Follow-ups / known issues:**
+  - **Why no test caught it:** `src/pages/__tests__/EnrollmentFormPage.test.jsx` mocks
+    `useBlocker` away and renders the page with no router, so it cannot catch a
+    router-level regression. A note now says so in that file. Treat a page that stubs a
+    router hook as untested for routing.
+  - `e2e/cross-role-onboarding.spec.ts`, `e2e/custom-routes.spec.ts` and
+    `e2e/settings.spec.ts` fail. **Pre-existing** — verified identical with `BrowserRouter`
+    and with the data router, so not a regression from this change. Not investigated.
+  - The rest of the app still uses descendant `<Routes>`, so loaders, actions and
+    `useNavigation` are not available. Converting App's role-conditional routing into route
+    objects is the follow-up if those are ever wanted.
+
 ## 2026-09-22 — Manager portal responsive at 375px
 - **Branch:** feature/manager-mobile-responsive
 - **Modules touched:** [DASHBOARD](modules/DASHBOARD.md), [BUSES](modules/BUSES.md),
@@ -65,11 +99,13 @@ when source under `src/` changed. One entry per session/PR is enough.
   [`redesign/04-VERIFICATION-CHECKLIST.md`](redesign/04-VERIFICATION-CHECKLIST.md),
   [`redesign/PROGRESS.md`](redesign/PROGRESS.md), and the five module docs above.
 - **Follow-ups / known issues:**
-  - **`/manager/enrollment-form` crashes to the ErrorBoundary.** `EnrollmentFormPage.jsx:48`
-    calls `useBlocker`, but `main.jsx` mounts `BrowserRouter`, not a data router, so React
-    Router throws "useBlocker must be used within a data router". Pre-existing on `main`,
-    found by this spec, and the reason 2 of its cases are `test.fixme`. Needs either
-    `createBrowserRouter` + `RouterProvider` or a different unsaved-changes guard.
+  - **Fixed in this session:** `/manager/enrollment-form` crashed to the ErrorBoundary.
+    `EnrollmentFormPage.jsx:48` calls `useBlocker`, which needs a data router, but
+    `main.jsx` mounted `BrowserRouter`. `main.jsx` now mounts `createBrowserRouter` with a
+    single splat route around `<App />`, so App's existing `<Routes>` tree and every
+    `MemoryRouter`-based test are untouched. `EnrollmentFormPage.test.jsx` mocks
+    `useBlocker` away and so could never catch this; `e2e/enrollment-form-guard.spec.ts`
+    now drives the real router. See the 2026-09-22 router entry above.
   - Super-admin pages were not audited at 375px; only the shared components they inherit
     changed, and every change is `sm:`-paired so their desktop rendering is untouched.
   - `index.css`'s `overflow-x: hidden` on html/body/#root was deliberately left alone. It
