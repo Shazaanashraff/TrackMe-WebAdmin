@@ -18,6 +18,42 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-09-22 — E2E suite green: fixed 3 long-failing specs
+- **Branch:** feature/manager-mobile-responsive
+- **Modules touched:** test harness only (`e2e/`), no `src/` change
+- **What changed:**
+  - `e2e/helpers.ts`: new `mockManagerShellBackend()` for the endpoints `AppShell` fires on
+    every manager page (currently the pending-enrollment badge count). `mockManagerBackend`
+    calls it, so page-level specs inherit it.
+  - `e2e/helpers.ts`: `mockManagerBackend` now records each POST body to
+    `/api/manager/vehicle-accounts` as `vehicleRequests`; only `bus-accounts` was captured
+    before, so no spec could assert what the vehicle wizard submitted.
+  - `e2e/helpers.ts`: new opt-in `failOnUnmockedApi()` — register it last and the test fails
+    on the first unmocked `/api/` call, naming the URL.
+  - `e2e/settings.spec.ts`: registers the shell mock.
+  - `e2e/custom-routes.spec.ts`: retargeted from the removed `/manager/buses` + "Add bus
+    request" to `/manager/vehicles` and the current 3-step wizard, and it now asserts the
+    submitted payload (`routeMode: 'CUSTOM'`, no `routeId` leaking through) instead of only
+    that a request was made.
+- **Why:** three specs had been failing. Two shared one cause: `AppShell` gained a
+  pending-enrollment badge query that nothing mocked, so it hit a real backend, returned
+  401, and `src/api.js:24` ran `window.location.assign('/login?reason=session_expired')`.
+  The session died mid-test and the failure surfaced as "element not found" wherever the
+  spec happened to be looking — never pointing at the cause. The third was simply stale
+  against a renamed page.
+- **Contract impact:** none — test harness only.
+- **Tests:** full Playwright suite **34 passed, 0 failed** (was 31 passed / 3 failed).
+  Vitest **779 passed, 0 failed**. Lint 0 errors, 27 warnings.
+- **Docs updated:** this entry, [`TESTING_GUIDE.md`](TESTING_GUIDE.md).
+- **Follow-ups / known issues:**
+  - `failOnUnmockedApi` is opt-in, so it guards nothing yet. Worth adding to each manager
+    spec as they are next touched; it was left opt-in so adding it could not itself break a
+    spec that deliberately lets a call through.
+  - The lesson worth keeping: a new query in `AppShell` or `Topbar` affects **every**
+    authenticated spec, and because a 401 redirects rather than erroring, the resulting
+    failure names the wrong line. Add the endpoint to `mockManagerShellBackend` in the same
+    change.
+
 ## 2026-09-22 — Data router: /manager/enrollment-form no longer crashes
 - **Branch:** feature/manager-mobile-responsive
 - **Modules touched:** [AUTH](modules/AUTH.md) (routing shell), [ENROLLMENT_REQUESTS](modules/ENROLLMENT_REQUESTS.md)
@@ -46,8 +82,9 @@ when source under `src/` changed. One entry per session/PR is enough.
     router-level regression. A note now says so in that file. Treat a page that stubs a
     router hook as untested for routing.
   - `e2e/cross-role-onboarding.spec.ts`, `e2e/custom-routes.spec.ts` and
-    `e2e/settings.spec.ts` fail. **Pre-existing** — verified identical with `BrowserRouter`
-    and with the data router, so not a regression from this change. Not investigated.
+    `e2e/settings.spec.ts` were failing (pre-existing, verified identical with
+    `BrowserRouter` and with the data router). **Fixed in the entry above** — the whole e2e
+    suite is now green.
   - The rest of the app still uses descendant `<Routes>`, so loaders, actions and
     `useNavigation` are not available. Converting App's role-conditional routing into route
     objects is the follow-up if those are ever wanted.

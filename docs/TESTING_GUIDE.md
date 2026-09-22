@@ -171,6 +171,21 @@ These sit on top of the Phase 1/2/4 infra (persister, `gcTime` 24h, `AsyncSectio
 | Manager 375px layout (shell, stat card, page header padding and grid stacking) | none — CSS-only, no new behavior to assert | n/a | base classes paired with `sm:`/`lg:` restores, so desktop rendering is unchanged; covered by the e2e spec above and by the full suite staying green | a layout regression appears at 375px |
 
 
+### Mocking rule for any authenticated e2e spec
+
+`src/api.js:24` turns **any** 401 into `window.location.assign('/login?reason=session_expired')`.
+So a single unmocked endpoint does not fail where it happens — it silently destroys the
+session, and the spec then fails with "element not found" at whatever line it had reached.
+Three specs rotted this way (see `CHANGES.md`, 2026-09-22).
+
+Two habits avoid it:
+
+- Endpoints that `AppShell` or `Topbar` fire on **every** manager page belong in
+  `mockManagerShellBackend()` (`e2e/helpers.ts`), not in one spec. Adding a query to the
+  shell means adding it there in the same change.
+- While writing or debugging a spec, register `failOnUnmockedApi(page)` **last**, after all
+  other mocks. It fails on the first unmocked `/api/` call and names the URL.
+
 Setup: `npm run test` (Vitest, jsdom) and `npm run test:e2e` (Playwright, mocks all `/api/manager/*` calls — no live backend/DB needed). Run `npx playwright install chromium` once before the first `test:e2e` run.
 
 Regenerate the auto-generated catalog (`npm run devkit:catalog` from the repo root) whenever a
