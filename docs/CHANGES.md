@@ -18,6 +18,38 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-10-03 — Public landing page at `/`, TrackMe branding
+- **Branch:** feature/landing-page
+- **Modules touched:** [LANDING](modules/LANDING.md) (new), [AUTH](modules/AUTH.md) (root route)
+- **What changed:**
+  - New public landing page, lazy-loaded at `/`: animated hero (video slot + route-map fallback),
+    "What is TrackMe" bento, a sticky scroll story where the phone swaps sides across three rider
+    steps then becomes a laptop showing the manager portal, and a rider-or-driver section (app
+    download buttons + driver email form). Dark-only, built on the Atlas tokens.
+  - `/` now shows the landing page to a signed-out visitor. A signed-in manager or super-admin is
+    still redirected to their dashboard (`LandingGate` in `App.jsx`).
+  - Branding: `index.html` title "Vite + React" -> "TrackMe", new `public/favicon.svg` (the sidebar's
+    petrol "T" tile), theme colour and meta description; the unused `public/vite.svg` is removed.
+  - New `useMediaQuery` hook; `public/landing/portal-*.jpg` captures of the manager portal.
+- **Why:** the product had no public front door: `/` redirected straight to `/login`. Brief from the
+  team lead: hero with video, what-it-is, a scrolling how-it-works with a phone that alternates sides
+  and ends on a laptop, then a rider/driver section.
+- **Contract impact:** none. The page makes no API calls. **No backend endpoint exists for the driver
+  email form**, so it validates and then says nothing was sent; see
+  [LANDING §4](modules/LANDING.md).
+- **Tests:** `src/pages/landing/__tests__/{story,LeadForm,LandingPage}` (new), `src/__tests__/App.test.jsx`
+  (+2 root-route cases), `e2e/landing.spec.ts` (new, 9 cases).
+- **Docs updated:** this entry, `modules/LANDING.md`, `TESTING_GUIDE.md`, `docs/README.md`, `CLAUDE.md`.
+- **Follow-ups / known issues:**
+  - **Hero video not chosen yet** (`HERO_VIDEO` is `null`). Candidates are royalty-free Mixkit
+    night-city/traffic clips; a download needs approval and the licence checked.
+  - **Store URLs** (`APP_LINKS`) are `null`, so the buttons read "Coming soon".
+  - **Driver email capture needs a backend endpoint** (and a sandbox fixture, per `CLAUDE.md`).
+  - The portal's `overflow-x: hidden` on `#root` breaks `position: sticky`; `landing.css` overrides
+    it only when `.landing` is present. See LANDING §5.
+  - `ProtectedShell`'s own `path="/"` redirects are now unreachable (the public route matches first).
+    Left in place to keep this change small.
+
 ## 2026-09-23 — Manager portal: dead surfaces removed, roster filterable
 - **Branch:** feature/manager-mobile-responsive
 - **Modules touched:** [DASHBOARD](modules/DASHBOARD.md),

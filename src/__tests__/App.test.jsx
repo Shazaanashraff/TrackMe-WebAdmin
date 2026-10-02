@@ -67,6 +67,31 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+// The landing page is a lazy chunk; under a full parallel run its first import
+// can outlast findBy's default 1s, so these wait for it explicitly.
+const LANDING_WAIT = { timeout: 10000 };
+
+describe('App — the root path', () => {
+  it('shows the public landing page to a signed-out visitor', async () => {
+    renderApp('/');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /every shuttle/i }, LANDING_WAIT)
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^sign in$/i })).not.toBeInTheDocument();
+  });
+
+  it('keeps a stored session whose role this portal does not serve on the landing page', async () => {
+    writeStoredAuth({ token: 'x-token', user: { role: 'passenger' } }, true);
+
+    renderApp('/');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /every shuttle/i }, LANDING_WAIT)
+    ).toBeInTheDocument();
+  });
+}, 20000);
+
 describe('App — unauthenticated', () => {
   it('shows the login form when there is no stored session', async () => {
     renderApp('/dashboard');

@@ -154,6 +154,15 @@ These sit on top of the Phase 1/2/4 infra (persister, `gcTime` 24h, `AsyncSectio
 | SettingsPage / ManagerSettingsPage (issue #6) | RTL (Vitest) | src/pages/__tests__/SettingsPage.test.jsx, src/pages/__tests__/ManagerSettingsPage.test.jsx | both pages read `user`/`onUserUpdate` from `useOutletContext()` (set by `AppShell`'s `<Outlet context={{ user, onUserUpdate }} />`) and render `AccountSettingsPanel`; the former "under development" copy is gone; not-yet-built items are labeled "Coming soon" instead of implying real functionality | either page's layout or its still-unbuilt sections change |
 | Full settings flow, both roles (issue #6) | e2e (Playwright) | e2e/settings.spec.ts | a manager and a super-admin each edit and save their own name, see the "Profile updated" toast, and (manager) reach `/forgot-password` via "Change password" — `/api/auth/profile` mocked in `e2e/helpers.ts`'s `mockAuthBackend` | the settings page markup or the profile-update contract changes |
 
+## Landing page (`/`)
+| Item (fn / flow) | Test type | Test file | Cases covered | Update when |
+|---|---|---|---|---|
+| landing/story.js | unit (Vitest) | src/pages/landing/__tests__/story.test.js | step bands split progress evenly; last step holds at full progress; out-of-range clamped; zero-travel section never divides by zero; device alternates left/right | the story's step count or scroll maths changes |
+| LeadForm + isValidEmail | RTL (Vitest) | src/pages/landing/__tests__/LeadForm.test.jsx | valid/invalid addresses; bad input flags the field and never submits; error clears on edit; trimmed submit then thank-you; failure keeps the form usable; with no endpoint wired it says nothing was sent instead of faking success | the form's states, validation, or the driver-signup endpoint is connected |
+| LandingPage | RTL (Vitest) | src/pages/landing/__tests__/LandingPage.test.jsx | hero headline + rider/driver CTAs; manager sign-in links to /login in nav and footer; section order top/what/how-it-works/join; all four story steps present; laptop step shows the portal capture; store buttons disabled while no URL is configured; document title set and restored; no invented stats or ratings | any section, copy block, or `config.js` link changes |
+| `/` route gate in App | RTL (Vitest) | src/__tests__/App.test.jsx | signed-out visitor sees the landing page; a stored session with a role this portal does not serve stays on it; signed-in manager/super-admin redirect (existing cases) | `LandingGate` or the root route changes |
+| Landing flow (mocked backend) | e2e (Playwright) | e2e/landing.spec.ts | renders with no console errors; sticky stage stays pinned and the phone goes left, right, left, right across the four steps; no horizontal overflow at 1440 and 375; nav anchors; manager sign-in navigation; driver form validation and honest unconnected state; manager and super-admin at `/` land on their dashboards | the story layout, sticky behaviour, or any public-route redirect changes |
+
 ## Developer Mode
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
 |---|---|---|---|---|
