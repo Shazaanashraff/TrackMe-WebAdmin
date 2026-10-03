@@ -57,7 +57,8 @@ flowchart TD
 | Kind | Name | Notes |
 |---|---|---|
 | REST | **none yet** | `LeadForm` takes an `onSubmit(email)` prop. `LandingPage` accepts `onDriverSubmit` and passes it down; nothing is wired. **No backend endpoint exists for driver email capture**, so the form validates, then says plainly that nothing was sent. When an endpoint exists, add the call to `src/api.js` (never `fetch` from the page), wire it where `LandingGate` renders `LandingPage`, and add the backend doc + sandbox fixture per `CLAUDE.md`. |
-| External | `APP_LINKS.ios` / `.android` | `null` today, so the buttons render disabled with "Coming soon". |
+| REST | `GET /api/app-releases/latest` | The rider/driver store buttons in `JoinSection.jsx` now fetch live download links via `useAppDownloadLinks.js` — see [`APP_RELEASES.md`](APP_RELEASES.md) for the full contract; this file does not duplicate it. |
+| External | `APP_LINKS.ios` / `.android` | `null` today — the static fallback `useAppDownloadLinks()` uses until a real release exists, at which point the buttons render disabled with "Coming soon". |
 | External | `PRIVACY_URL` | The published `trackme-privacy` GitHub Pages site. |
 
 ## 5. Not visible in the frontend

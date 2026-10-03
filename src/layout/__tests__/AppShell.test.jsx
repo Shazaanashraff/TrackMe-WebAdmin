@@ -59,7 +59,13 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Managers' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Operations' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Routes' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Releases' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument();
+  });
+
+  it('does not offer Releases to a manager', () => {
+    renderShell({ role: 'admin', path: '/manager/dashboard' });
+    expect(screen.queryByRole('link', { name: 'Releases' })).toBeNull();
   });
 
   it('renders manager nav links', () => {

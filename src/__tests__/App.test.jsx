@@ -30,6 +30,7 @@ vi.mock('../pages/DashboardPage', () => ({ DashboardPage: () => <div>dashboard-s
 vi.mock('../pages/ManagersPage', () => ({ ManagersPage: () => <div>managers-stub</div> }));
 vi.mock('../pages/OperationsPage', () => ({ OperationsPage: () => <div>operations-stub</div> }));
 vi.mock('../pages/RoutesPage', () => ({ RoutesPage: () => <div>routes-stub</div> }));
+vi.mock('../pages/releases/AppReleasesPage', () => ({ AppReleasesPage: () => <div>releases-stub</div> }));
 vi.mock('../pages/SettingsPage', () => ({ SettingsPage: () => <div>settings-stub</div> }));
 vi.mock('../pages/ManagerDashboardPage', () => ({
   ManagerDashboardPage: () => <div>manager-dashboard-stub</div>
@@ -246,6 +247,23 @@ describe('App — ProtectedShell role scoping', () => {
 
     expect(await screen.findByText('Page not found')).toBeInTheDocument();
     expect(screen.queryByText('manager-dashboard-stub')).not.toBeInTheDocument();
+  });
+
+  it('a super-admin can reach the app releases route', async () => {
+    writeStoredAuth({ token: 'sa-token', user: { role: 'super-admin' } }, true);
+
+    renderApp('/releases');
+
+    expect(await screen.findByText('releases-stub')).toBeInTheDocument();
+  });
+
+  it('a manager cannot reach the app releases route — sees NotFound instead', async () => {
+    writeStoredAuth({ token: 'mgr-token', user: { role: 'admin' } }, true);
+
+    renderApp('/releases');
+
+    expect(await screen.findByText('Page not found')).toBeInTheDocument();
+    expect(screen.queryByText('releases-stub')).not.toBeInTheDocument();
   });
 
   it('a manager sees their own dashboard at their own route', async () => {

@@ -23,6 +23,7 @@ import { ManagerTrackingPage } from './pages/ManagerTrackingPage';
 import { ManagerAccountsPage } from './pages/ManagerAccountsPage';
 import { ManagerRequestsPage } from './pages/ManagerRequestsPage';
 import { ManagerSettingsPage } from './pages/ManagerSettingsPage';
+import { AppReleasesPage } from './pages/releases/AppReleasesPage';
 import { adminApi } from './api';
 import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
 import { clearPersistedQueryCache } from './lib/queryClient';
@@ -77,6 +78,7 @@ function ProtectedShell({
           <Route path="/managers" element={<ManagersPage />} />
           <Route path="/operations" element={<OperationsPage />} />
           <Route path="/routes" element={<RoutesPage />} />
+          <Route path="/releases" element={<AppReleasesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/enrollment-form" element={<EnrollmentFormPage />} />
           {import.meta.env.DEV && <Route path="/developer" element={<DeveloperPage />} />}

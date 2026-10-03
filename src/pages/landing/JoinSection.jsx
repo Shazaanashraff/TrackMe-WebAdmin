@@ -2,7 +2,7 @@ import { Car, Download, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Reveal } from './Reveal';
 import { LeadForm } from './LeadForm';
-import { APP_LINKS } from './config';
+import { useAppDownloadLinks } from './useAppDownloadLinks';
 
 function StoreButton({ href, label, sub }) {
   const body = (
@@ -42,6 +42,8 @@ function StoreButton({ href, label, sub }) {
 }
 
 export function JoinSection({ onDriverSubmit }) {
+  const { riderAndroid, riderIos, driverAndroid } = useAppDownloadLinks();
+
   return (
     <section id="join" aria-labelledby="join-heading" className="relative px-4 py-28 sm:px-8 sm:py-40">
       <div
@@ -73,8 +75,8 @@ export function JoinSection({ onDriverSubmit }) {
               Download the TrackMe app, enter your driver&apos;s key, and watch your shuttle on the map.
             </p>
             <div className="mt-auto flex flex-col gap-3 pt-10 sm:flex-row">
-              <StoreButton href={APP_LINKS.ios} sub="Download on the" label="App Store" />
-              <StoreButton href={APP_LINKS.android} sub="Get it on" label="Google Play" />
+              <StoreButton href={riderIos} sub="Download on the" label="App Store" />
+              <StoreButton href={riderAndroid} sub="Get it on" label="Google Play" />
             </div>
           </Reveal>
 
@@ -88,6 +90,14 @@ export function JoinSection({ onDriverSubmit }) {
             </p>
             <div className="mt-auto pt-10">
               <LeadForm onSubmit={onDriverSubmit} />
+              {driverAndroid && (
+                <p className="mt-4 text-xs text-white/50">
+                  Already approved by a manager?{' '}
+                  <a href={driverAndroid} className="font-medium text-teal-300 underline-offset-2 hover:underline">
+                    Download the driver app directly
+                  </a>
+                </p>
+              )}
             </div>
           </Reveal>
         </div>

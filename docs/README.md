@@ -7,6 +7,9 @@ The documentation map for web-admin. [`../CLAUDE.md`](../CLAUDE.md) routes you h
 > Every module doc must state **which role** (manager / super-admin) the feature serves.
 
 ## Modules (per page/feature)
+- **[modules/APP_RELEASES.md](modules/APP_RELEASES.md)** — super-admin registry of driver/rider
+  app builds at `/releases`, and the public `GET /api/app-releases/latest` endpoint the landing
+  page reads for live download links.
 - **[modules/DEVELOPER_MODE.md](modules/DEVELOPER_MODE.md)** — sandbox toggle, test catalog, local
   runner. Super-admin only, dev-only build.
 - **[modules/ENROLLMENT_REQUESTS.md](modules/ENROLLMENT_REQUESTS.md)** — manager's approval queue

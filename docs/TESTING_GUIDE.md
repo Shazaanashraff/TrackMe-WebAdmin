@@ -163,6 +163,15 @@ These sit on top of the Phase 1/2/4 infra (persister, `gcTime` 24h, `AsyncSectio
 | `/` route gate in App | RTL (Vitest) | src/__tests__/App.test.jsx | signed-out visitor sees the landing page; a stored session with a role this portal does not serve stays on it; signed-in manager/super-admin redirect (existing cases) | `LandingGate` or the root route changes |
 | Landing flow (mocked backend) | e2e (Playwright) | e2e/landing.spec.ts | renders with no console errors; sticky stage stays pinned and the phone goes left, right, left, right across the four steps; no horizontal overflow at 1440 and 375; nav anchors; manager sign-in navigation; driver form validation and honest unconnected state; manager and super-admin at `/` land on their dashboards | the story layout, sticky behaviour, or any public-route redirect changes |
 
+## App Releases (`/releases`)
+| Item (fn / flow) | Test type | Test file | Cases covered | Update when |
+|---|---|---|---|---|
+| AppReleasesPage create/history/toggle flow | RTL (Vitest) | src/pages/releases/__tests__/AppReleasesPage.test.jsx | create-release form validates required fields and submits the correct payload (`app`, `platform`, `version`, `versionCode`, `downloadUrl`, `releaseNotes`, `mandatory`) via `useCreateAppRelease`; history table renders both apps' releases; "Retract"/"Reactivate" call `useUpdateAppReleaseStatus` with the flipped `isActive`; a failed create shows its server message inline | the form fields, the create/update payload shape, or the history table columns change |
+| useAppDownloadLinks | unit (Vitest) | src/pages/landing/__tests__/useAppDownloadLinks.test.js | falls back to `config.js`'s static `APP_LINKS` when `GET /api/app-releases/latest` 404s or the fetch itself throws; picks up real `downloadUrl` values once the API returns a release for rider/driver android; `driverAndroid` stays `null` when the API returns no driver release | the hook's fallback rule, or the `/api/app-releases/latest` contract, changes |
+| JoinSection store buttons + driver direct-download line | RTL (Vitest) | src/pages/landing/__tests__/JoinSection.test.jsx | rider App Store/Google Play buttons render disabled "Coming soon" with no release, and as real `<a>` links once `useAppDownloadLinks()` returns URLs; the driver panel's "Download the driver app directly" line renders only when `driverAndroid` is set, and the `LeadForm` CTA is unaffected either way | `JoinSection`'s store-button or driver-panel markup changes |
+| `/releases` route gating | RTL (Vitest) | src/__tests__/App.test.jsx | a super-admin reaches `/releases`; a manager sees `NotFound` instead | the route's role gating changes |
+| "Releases" nav entry | RTL (Vitest) | src/layout/__tests__/AppShell.test.jsx, src/layout/__tests__/Topbar.test.jsx | `SUPER_ADMIN_NAV` offers "Releases" and `MANAGER_NAV` does not; the `/releases` breadcrumb label reads "Releases" | `SUPER_ADMIN_NAV`/`ROUTE_LABELS` entries for `/releases` change |
+
 ## Developer Mode
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
 |---|---|---|---|---|
