@@ -61,8 +61,8 @@ describe('LandingPage', () => {
     renderPage();
 
     const join = document.getElementById('join');
-    expect(within(join).getByRole('button', { name: /app store/i })).toBeDisabled();
-    expect(within(join).getByRole('button', { name: /google play/i })).toBeDisabled();
+    expect(within(join).getByRole('button', { name: /iphone/i })).toBeDisabled();
+    expect(within(join).getByRole('button', { name: /android/i })).toBeDisabled();
     expect(within(join).getAllByText(/coming soon/i)).toHaveLength(2);
   });
 

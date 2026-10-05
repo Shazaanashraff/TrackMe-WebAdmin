@@ -13,7 +13,7 @@ const ICONS = {
 
 export function WhatSection() {
   return (
-    <section id="what" aria-labelledby="what-heading" className="relative px-4 py-28 sm:px-8 sm:py-40">
+    <section id="what" aria-labelledby="what-heading" className="relative px-4 py-20 sm:px-8 sm:py-40">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-0 h-[520px] w-[880px] -translate-x-1/2 rounded-full bg-teal-500/10 blur-[140px]"
@@ -54,6 +54,9 @@ export function WhatSection() {
                 </span>
                 <h3 className="font-display mt-10 text-2xl font-semibold text-white">{pillar.title}</h3>
                 <p className="mt-3 max-w-sm leading-relaxed text-white/55">{pillar.body}</p>
+                {pillar.key === 'live' || pillar.key === 'routes' ? (
+                  <MiniRoute className="pointer-events-none absolute right-5 top-6 h-16 w-24 opacity-80 sm:hidden" />
+                ) : null}
                 {pillar.key === 'live' ? (
                   <MiniRoute className="pointer-events-none absolute bottom-6 right-6 hidden h-36 w-48 opacity-90 sm:block" />
                 ) : null}

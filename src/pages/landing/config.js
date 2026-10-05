@@ -10,6 +10,12 @@ export const HERO_VIDEO = null;
 // rather than a link that goes nowhere.
 export const APP_LINKS = { ios: null, android: null };
 
+// Where the driver email form POSTs, relative to the API base URL (e.g.
+// '/api/leads/driver'). `null` = no backend endpoint exists yet, so the form
+// validates and then says plainly that nothing was sent. The request shape is
+// { email, source: 'landing' } -- the backend must match it (see driverInterest.js).
+export const DRIVER_INTEREST_ENDPOINT = null;
+
 export const PRIVACY_URL = 'https://shazaanashraff.github.io/trackme-privacy/';
 
 export const NAV_LINKS = [

@@ -29,6 +29,17 @@ export default function ProfilesScreen() {
       <div className="mt-3 rounded-2xl border border-dashed border-white/15 py-2.5 text-center text-[10px] text-white/55">
         + Add a rider
       </div>
+
+      <div className="mt-auto rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+        <p className="text-[9px] uppercase tracking-wider text-white/45">Nimal&apos;s shuttle</p>
+        <div className="mt-1 flex items-end justify-between">
+          <p className="font-display text-xl font-semibold">6 min</p>
+          <span className="text-[9px] text-teal-300">On time</span>
+        </div>
+        <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
+          <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-sky-300 to-teal-300" />
+        </div>
+      </div>
     </div>
   );
 }

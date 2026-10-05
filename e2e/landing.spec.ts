@@ -129,6 +129,99 @@ test.describe('Landing page — phone', () => {
   });
 });
 
+test.describe('Landing page — the route rail', () => {
+  const rail = (page: Page) => page.locator('[data-progress]');
+
+  async function jumpTo(page: Page, id: string) {
+    await page.locator('#' + id).waitFor();
+    await page.evaluate((target) => {
+      const top = document.getElementById(target)!.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo(0, top);
+    }, id);
+  }
+
+  test('the shuttle follows the scroll and lights each stop as it arrives', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await expect(rail(page)).toHaveAttribute('data-stop', '0');
+
+    const seen: string[] = [];
+    for (const id of ['what', 'how-it-works', 'join']) {
+      await jumpTo(page, id);
+      await expect.poll(async () => Number(await rail(page).getAttribute('data-stop'))).toBeGreaterThan(seen.length);
+      seen.push((await rail(page).getAttribute('data-stop')) as string);
+    }
+    // Strictly advancing: what -> how it works -> join.
+    expect(seen.map(Number)).toEqual([...seen.map(Number)].sort((a, b) => a - b));
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(async () => Number(await rail(page).getAttribute('data-progress'))).toBeGreaterThan(0.98);
+    await expect(page.locator('[data-reached="true"]')).toHaveCount(3);
+  });
+
+  test('is invisible at the top of the page and never blocks a tap', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await expect(rail(page)).toHaveCSS('opacity', '0');
+    await expect(rail(page)).toHaveCSS('pointer-events', 'none');
+  });
+
+  test('stays inside the left gutter on a phone and adds no horizontal scroll', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await page.goto('/');
+    await jumpTo(page, 'how-it-works');
+    await expect(rail(page)).toHaveCSS('opacity', '1');
+
+    const box = await rail(page).boundingBox();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(16); // content starts at 16px (px-4)
+
+    const [scroll, client] = await page.evaluate(() => [
+      document.documentElement.scrollWidth,
+      document.documentElement.clientWidth,
+    ]);
+    expect(scroll).toBeLessThanOrEqual(client);
+  });
+});
+
+test.describe('Landing page — small phone', () => {
+  test.use({ viewport: { width: 360, height: 740 } });
+
+  test('has no horizontal overflow at 360px', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#join').waitFor();
+    const height = await page.evaluate(() => document.documentElement.scrollHeight);
+    for (let y = 0; y < height; y += 600) {
+      await page.evaluate((v) => window.scrollTo(0, v), y);
+    }
+    const [scroll, client] = await page.evaluate(() => [
+      document.documentElement.scrollWidth,
+      document.documentElement.clientWidth,
+    ]);
+    expect(scroll).toBeLessThanOrEqual(client);
+  });
+
+  test('the driver email field and button are full width and tap-sized', async ({ page }) => {
+    await page.goto('/#join');
+    // Regression: `flex-1` inside a column flex container collapsed the input to ~20px tall.
+    const input = page.getByLabel('Your email');
+    const button = page.getByRole('button', { name: /get driver access/i });
+    await expect(input).toBeVisible();
+
+    const [inputBox, buttonBox] = await Promise.all([input.boundingBox(), button.boundingBox()]);
+    expect(inputBox!.height).toBeGreaterThanOrEqual(44);
+    expect(buttonBox!.height).toBeGreaterThanOrEqual(44);
+    expect(Math.abs(inputBox!.width - buttonBox!.width)).toBeLessThan(2);
+  });
+
+  test('the rider buttons say what they are: direct Android download, iPhone not ready', async ({ page }) => {
+    await page.goto('/#join');
+    await expect(page.getByRole('button', { name: /android \(apk\)/i })).toBeDisabled();
+    await expect(page.getByRole('button', { name: /iphone \(ios\)/i })).toBeDisabled();
+    await expect(page.getByText(/google play|app store/i)).toHaveCount(0);
+  });
+});
+
 test.describe('Landing page — signed-in visitors', () => {
   test('a manager at / goes straight to their dashboard', async ({ page }) => {
     await loginAsManager(page);

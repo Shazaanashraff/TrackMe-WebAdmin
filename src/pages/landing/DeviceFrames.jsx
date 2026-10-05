@@ -5,7 +5,7 @@ export function PhoneFrame({ children, className }) {
   return (
     <div
       className={cn(
-        'relative aspect-[9/18.5] w-[min(300px,72vw)] rounded-[2.8rem] border border-white/20 bg-[#02080a] p-[9px]',
+        'relative aspect-[9/18.5] w-[min(300px,76vw)] rounded-[2.8rem] border border-white/20 bg-[#02080a] p-[9px]',
         'shadow-[0_40px_90px_-30px_rgb(45_212_191/0.45),0_0_0_1px_rgb(255_255_255/0.04),inset_0_0_0_1px_rgb(255_255_255/0.06)]',
         className,
       )}

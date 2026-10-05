@@ -15,6 +15,24 @@ const MARQUEE_ITEMS = [
   'Schools', 'Universities', 'Offices', 'Public routes', 'Custom routes', 'Live tracking', 'Approved riders',
 ];
 
+function EtaCard({ className }) {
+  return (
+    <div className={`l-glass rounded-2xl p-4 ${className || ''}`}>
+      <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-white/50">
+        <span>Morning Shuttle A</span>
+        <span className="flex items-center gap-1 text-teal-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-teal-300" /> Live
+        </span>
+      </div>
+      <p className="font-display mt-3 text-4xl font-semibold text-white">4 min</p>
+      <p className="mt-0.5 text-xs text-white/55">to your stop · 2 stops away</p>
+      <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/10">
+        <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-teal-300 to-sky-300" />
+      </div>
+    </div>
+  );
+}
+
 function Marquee() {
   return (
     <div
@@ -102,7 +120,7 @@ export function Hero() {
           Live shuttle tracking for Sri Lanka
         </p>
 
-        <h1 className="font-display text-[clamp(3rem,10vw,8.5rem)] font-semibold leading-[0.95] text-white">
+        <h1 className="font-display text-[clamp(3.3rem,10vw,8.5rem)] font-semibold leading-[0.95] text-white">
           <span className="block">
             <Word delay={250}>Every</Word>
             {' '}
@@ -142,27 +160,24 @@ export function Hero() {
             I&apos;m a driver
           </a>
         </div>
+
+        {/* On a phone the card sits in the flow, under the buttons. */}
+        <div
+          className="l-fade-in mt-10 w-full max-w-[17rem] lg:hidden"
+          style={{ '--d': '1400ms' }}
+          aria-hidden="true"
+        >
+          <EtaCard />
+        </div>
       </div>
 
-      {/* A floating glass card: the product, glimpsed, over the hero. */}
+      {/* The same card, floating over the hero on large screens. */}
       <div
         className="l-fade-in absolute bottom-28 right-6 z-10 hidden w-64 lg:block xl:right-16"
         style={{ '--d': '1500ms' }}
         aria-hidden="true"
       >
-      <div className="l-float l-glass rounded-2xl p-4">
-        <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-white/50">
-          <span>Morning Shuttle A</span>
-          <span className="flex items-center gap-1 text-teal-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-teal-300" /> Live
-          </span>
-        </div>
-        <p className="font-display mt-3 text-4xl font-semibold text-white">4 min</p>
-        <p className="mt-0.5 text-xs text-white/55">to your stop · 2 stops away</p>
-        <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-teal-300 to-sky-300" />
-        </div>
-      </div>
+        <EtaCard className="l-float" />
       </div>
 
       <Marquee />
