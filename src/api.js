@@ -453,5 +453,22 @@ export const adminApi = {
     request(`/api/super-admin/organizations/${organizationId}/enrollment-schema`, {
       method: 'PUT',
       body: JSON.stringify({ fields })
+    }),
+
+  // Registered driver/rider app builds (APK/TestFlight links) a super-admin
+  // manages from the Releases page. The public landing page's own fetch for
+  // `/api/app-releases/latest` deliberately bypasses this object — see
+  // src/pages/landing/useAppDownloadLinks.js.
+  getAppReleases: () => request('/api/app-releases'),
+  getAppReleaseHistory: (app) => request(`/api/app-releases/history?app=${encodeURIComponent(app)}`),
+  createAppRelease: (payload) =>
+    request('/api/app-releases', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    }),
+  updateAppReleaseStatus: (id, isActive) =>
+    request(`/api/app-releases/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive })
     })
 };

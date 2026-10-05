@@ -43,6 +43,7 @@ git config core.hooksPath .githooks
 | Buses & drivers | [`docs/modules/BUSES.md`](docs/modules/BUSES.md) |
 | Routes catalogue | [`docs/modules/ROUTES.md`](docs/modules/ROUTES.md) |
 | Live tracking map | [`docs/modules/TRACKING.md`](docs/modules/TRACKING.md) |
+| Public landing page (`/`) | [`docs/modules/LANDING.md`](docs/modules/LANDING.md) |
 | Operations page | [`docs/modules/OPERATIONS.md`](docs/modules/OPERATIONS.md) |
 | Settings | [`docs/modules/SETTINGS.md`](docs/modules/SETTINGS.md) |
 | Design tokens / styleguide / the "Atlas" redesign | [`docs/DESIGN_TOKENS.md`](docs/DESIGN_TOKENS.md) · [`docs/redesign/`](docs/redesign/README.md) |
@@ -55,7 +56,7 @@ git config core.hooksPath .githooks
 ```
 src/
   api.js            The single HTTP layer (adminApi). Every request goes through it.
-  pages/            One file per route: Dashboard, ManagerDashboard, Managers,
+  pages/            One file per route (plus landing/, the public page at `/`): Dashboard, ManagerDashboard, Managers,
                     ManagerAccounts, ManagerVehicles, ManagerTracking, ManagerRequests,
                     ManagerSettings,
                     Routes, Operations, Settings, StyleGuide, Login, ForgotPassword*

@@ -18,6 +18,82 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-10-03 — App release registration + live download links on the landing page
+- **Branch:** feature/app-release-version-control
+- **Modules touched:** [APP_RELEASES](modules/APP_RELEASES.md) (new), [LANDING](modules/LANDING.md)
+  (one-line cross-reference only — the redesigned landing page itself is untouched)
+- **What changed:**
+  - New super-admin page at `/releases` (flat route, matching this branch's `/dashboard`-style
+    routing): register a driver/rider app build (platform, version, versionCode, downloadUrl,
+    release notes, mandatory flag) and Retract/Reactivate a registered build. New
+    `src/hooks/use-app-releases.js`, `qk.appReleases` in `src/lib/queryKeys.js`, and four new
+    `adminApi` functions in `src/api.js`.
+  - "Releases" added to `SUPER_ADMIN_NAV` (`AppShell.jsx`) and `ROUTE_LABELS` (`Topbar.jsx`); not
+    offered to managers.
+  - The public landing page's rider store buttons (`JoinSection.jsx`) now resolve real download
+    links from `GET /api/app-releases/latest` via a new `useAppDownloadLinks.js` hook, falling
+    back to the existing static `APP_LINKS`/"Coming soon" state on any failure. A new one-line
+    direct-download link appears in the driver panel (below the unchanged `LeadForm` CTA) once a
+    driver android build exists. This hook deliberately calls `fetch` directly instead of going
+    through `adminApi`, since it runs on the signed-out public page against a public endpoint —
+    see `APP_RELEASES.md` §4.
+  - **The landing page's visual design, layout and all other content are untouched** — this work
+    was additive only, on top of the `feature/landing-page` redesign already on `main`.
+  - `public/downloads/driver-app-1.0.0.apk` and `public/downloads/rider-app-1.0.0.apk` committed
+    as the first real binaries (not yet registered via the new page).
+- **Why:** the backend's app-release-registry endpoints (see `APP_RELEASES.md` §4) needed a
+  super-admin UI to register builds, and the landing page needed to show real download links
+  instead of a permanent "Coming soon" placeholder.
+- **Contract impact:** `GET /api/app-releases`, `GET /api/app-releases/latest`,
+  `GET /api/app-releases/history`, `POST /api/app-releases`, `PATCH /api/app-releases/:id` — all
+  assumed to exist per the brief; being built in the backend repo.
+- **Tests:** `src/pages/releases/__tests__/AppReleasesPage.test.jsx` (new),
+  `src/pages/landing/__tests__/useAppDownloadLinks.test.js` (new),
+  `src/pages/landing/__tests__/JoinSection.test.jsx` (new), `src/__tests__/App.test.jsx` (+2
+  `/releases` role-gating cases), `src/layout/__tests__/AppShell.test.jsx` (+1 nav case),
+  `src/layout/__tests__/Topbar.test.jsx` (+1 breadcrumb case).
+- **Docs updated:** this entry, `modules/APP_RELEASES.md` (new), `modules/LANDING.md`
+  (cross-reference only), `docs/README.md`, `TESTING_GUIDE.md`.
+- **Follow-ups / known issues:**
+  - Neither the driver-1.0.0 nor rider-1.0.0 APK is registered yet via `/releases` — the backend
+    contract is assumed, not yet verified against a live server.
+  - No iOS driver flow exists on the landing page, so only the android driver/rider lookups are
+    wired; `riderIos` stays on the static `APP_LINKS.ios` placeholder.
+  - A visitor already on `/` when a release is retracted keeps the old link until they reload —
+    no client-side invalidation on the public page.
+
+## 2026-10-03 — Public landing page at `/`, TrackMe branding
+- **Branch:** feature/landing-page
+- **Modules touched:** [LANDING](modules/LANDING.md) (new), [AUTH](modules/AUTH.md) (root route)
+- **What changed:**
+  - New public landing page, lazy-loaded at `/`: animated hero (video slot + route-map fallback),
+    "What is TrackMe" bento, a sticky scroll story where the phone swaps sides across three rider
+    steps then becomes a laptop showing the manager portal, and a rider-or-driver section (app
+    download buttons + driver email form). Dark-only, built on the Atlas tokens.
+  - `/` now shows the landing page to a signed-out visitor. A signed-in manager or super-admin is
+    still redirected to their dashboard (`LandingGate` in `App.jsx`).
+  - Branding: `index.html` title "Vite + React" -> "TrackMe", new `public/favicon.svg` (the sidebar's
+    petrol "T" tile), theme colour and meta description; the unused `public/vite.svg` is removed.
+  - New `useMediaQuery` hook; `public/landing/portal-*.jpg` captures of the manager portal.
+- **Why:** the product had no public front door: `/` redirected straight to `/login`. Brief from the
+  team lead: hero with video, what-it-is, a scrolling how-it-works with a phone that alternates sides
+  and ends on a laptop, then a rider/driver section.
+- **Contract impact:** none. The page makes no API calls. **No backend endpoint exists for the driver
+  email form**, so it validates and then says nothing was sent; see
+  [LANDING §4](modules/LANDING.md).
+- **Tests:** `src/pages/landing/__tests__/{story,LeadForm,LandingPage}` (new), `src/__tests__/App.test.jsx`
+  (+2 root-route cases), `e2e/landing.spec.ts` (new, 9 cases).
+- **Docs updated:** this entry, `modules/LANDING.md`, `TESTING_GUIDE.md`, `docs/README.md`, `CLAUDE.md`.
+- **Follow-ups / known issues:**
+  - **Hero video not chosen yet** (`HERO_VIDEO` is `null`). Candidates are royalty-free Mixkit
+    night-city/traffic clips; a download needs approval and the licence checked.
+  - **Store URLs** (`APP_LINKS`) are `null`, so the buttons read "Coming soon".
+  - **Driver email capture needs a backend endpoint** (and a sandbox fixture, per `CLAUDE.md`).
+  - The portal's `overflow-x: hidden` on `#root` breaks `position: sticky`; `landing.css` overrides
+    it only when `.landing` is present. See LANDING §5.
+  - `ProtectedShell`'s own `path="/"` redirects are now unreachable (the public route matches first).
+    Left in place to keep this change small.
+
 ## 2026-09-23 — Manager portal: dead surfaces removed, roster filterable
 - **Branch:** feature/manager-mobile-responsive
 - **Modules touched:** [DASHBOARD](modules/DASHBOARD.md),

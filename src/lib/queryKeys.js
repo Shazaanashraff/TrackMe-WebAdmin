@@ -53,4 +53,9 @@ export const qk = {
     manager: () => ['enrollment-schema', 'manager'],
     organization: (organizationId) => ['enrollment-schema', 'organization', organizationId],
   },
+  appReleases: {
+    all: () => ['app-releases'],
+    list: () => ['app-releases', 'list'],
+    history: (app) => ['app-releases', 'history', app],
+  },
 };

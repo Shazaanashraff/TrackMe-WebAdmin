@@ -64,6 +64,11 @@ describe('Topbar', () => {
     expect(screen.getByText('Unknown Page')).toBeInTheDocument();
   });
 
+  it('shows the Releases breadcrumb label for the super-admin releases route', () => {
+    renderTopbar({ path: '/releases' });
+    expect(screen.getByText('Releases')).toBeInTheDocument();
+  });
+
   it('renders theme toggle and flips between light and dark', async () => {
     const user = userEvent.setup();
     renderTopbar();

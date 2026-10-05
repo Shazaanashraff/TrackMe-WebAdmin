@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { LoginPage } from './pages/LoginPage';
@@ -23,6 +23,7 @@ import { ManagerTrackingPage } from './pages/ManagerTrackingPage';
 import { ManagerAccountsPage } from './pages/ManagerAccountsPage';
 import { ManagerRequestsPage } from './pages/ManagerRequestsPage';
 import { ManagerSettingsPage } from './pages/ManagerSettingsPage';
+import { AppReleasesPage } from './pages/releases/AppReleasesPage';
 import { adminApi } from './api';
 import { clearStoredAuth, readStoredAuth, writeStoredAuth } from './lib/authSession';
 import { clearPersistedQueryCache } from './lib/queryClient';
@@ -31,6 +32,23 @@ import { useTypographyScope } from './hooks/use-typography-scope';
 import { StyleGuidePage } from './pages/StyleGuidePage';
 import { DeveloperPage } from './pages/DeveloperPage';
 import { EnrollmentFormPage } from './pages/EnrollmentFormPage';
+
+// Public marketing page. Lazy so the portal's own bundle never pays for it.
+const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
+
+// `/` is the landing page for a signed-out visitor, and the dashboard for
+// anyone already signed in to a role this portal serves.
+export function LandingGate({ auth }) {
+  const role = auth?.user?.role;
+  const hasSession = Boolean(auth?.token || auth?.accessToken);
+  if (hasSession && role === 'super-admin') return <Navigate to="/dashboard" replace />;
+  if (hasSession && role === 'admin') return <Navigate to="/manager/dashboard" replace />;
+  return (
+    <Suspense fallback={<AppLoading />}>
+      <LandingPage />
+    </Suspense>
+  );
+}
 
 function ProtectedShell({
   auth, onLogout, triggerRefresh, onUserUpdate,
@@ -60,6 +78,7 @@ function ProtectedShell({
           <Route path="/managers" element={<ManagersPage />} />
           <Route path="/operations" element={<OperationsPage />} />
           <Route path="/routes" element={<RoutesPage />} />
+          <Route path="/releases" element={<AppReleasesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/enrollment-form" element={<EnrollmentFormPage />} />
           {import.meta.env.DEV && <Route path="/developer" element={<DeveloperPage />} />}
@@ -237,6 +256,7 @@ export default function App() {
       {!hydrating ? (
         <Routes>
           {import.meta.env.DEV && <Route path="/styleguide" element={<StyleGuidePage />} />}
+          <Route path="/" element={<LandingGate auth={auth} />} />
           <Route path="/login" element={<LoginShell auth={auth} setAuth={setAuth} />} />
           <Route path="/forgot-password" element={<ForgotPasswordRequestPage />} />
           <Route path="/forgot-password/verify" element={<ForgotPasswordVerifyPage />} />

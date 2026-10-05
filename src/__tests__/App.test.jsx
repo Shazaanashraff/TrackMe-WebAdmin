@@ -30,6 +30,7 @@ vi.mock('../pages/DashboardPage', () => ({ DashboardPage: () => <div>dashboard-s
 vi.mock('../pages/ManagersPage', () => ({ ManagersPage: () => <div>managers-stub</div> }));
 vi.mock('../pages/OperationsPage', () => ({ OperationsPage: () => <div>operations-stub</div> }));
 vi.mock('../pages/RoutesPage', () => ({ RoutesPage: () => <div>routes-stub</div> }));
+vi.mock('../pages/releases/AppReleasesPage', () => ({ AppReleasesPage: () => <div>releases-stub</div> }));
 vi.mock('../pages/SettingsPage', () => ({ SettingsPage: () => <div>settings-stub</div> }));
 vi.mock('../pages/ManagerDashboardPage', () => ({
   ManagerDashboardPage: () => <div>manager-dashboard-stub</div>
@@ -66,6 +67,31 @@ beforeEach(() => {
   window.sessionStorage.clear();
   vi.clearAllMocks();
 });
+
+// The landing page is a lazy chunk; under a full parallel run its first import
+// can outlast findBy's default 1s, so these wait for it explicitly.
+const LANDING_WAIT = { timeout: 10000 };
+
+describe('App — the root path', () => {
+  it('shows the public landing page to a signed-out visitor', async () => {
+    renderApp('/');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /every shuttle/i }, LANDING_WAIT)
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^sign in$/i })).not.toBeInTheDocument();
+  });
+
+  it('keeps a stored session whose role this portal does not serve on the landing page', async () => {
+    writeStoredAuth({ token: 'x-token', user: { role: 'passenger' } }, true);
+
+    renderApp('/');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: /every shuttle/i }, LANDING_WAIT)
+    ).toBeInTheDocument();
+  });
+}, 20000);
 
 describe('App — unauthenticated', () => {
   it('shows the login form when there is no stored session', async () => {
@@ -221,6 +247,23 @@ describe('App — ProtectedShell role scoping', () => {
 
     expect(await screen.findByText('Page not found')).toBeInTheDocument();
     expect(screen.queryByText('manager-dashboard-stub')).not.toBeInTheDocument();
+  });
+
+  it('a super-admin can reach the app releases route', async () => {
+    writeStoredAuth({ token: 'sa-token', user: { role: 'super-admin' } }, true);
+
+    renderApp('/releases');
+
+    expect(await screen.findByText('releases-stub')).toBeInTheDocument();
+  });
+
+  it('a manager cannot reach the app releases route — sees NotFound instead', async () => {
+    writeStoredAuth({ token: 'mgr-token', user: { role: 'admin' } }, true);
+
+    renderApp('/releases');
+
+    expect(await screen.findByText('Page not found')).toBeInTheDocument();
+    expect(screen.queryByText('releases-stub')).not.toBeInTheDocument();
   });
 
   it('a manager sees their own dashboard at their own route', async () => {

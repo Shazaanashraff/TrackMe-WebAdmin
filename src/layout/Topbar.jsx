@@ -26,6 +26,7 @@ const ROUTE_LABELS = {
   '/managers': 'Managers',
   '/operations': 'Operations',
   '/routes': 'Routes',
+  '/releases': 'Releases',
   '/settings': 'Settings',
   '/manager/dashboard': 'Overview',
   '/manager/vehicles': 'Vehicles',
