@@ -45,7 +45,7 @@ export function JoinSection({ onDriverSubmit }) {
   const { riderAndroid, riderIos, driverAndroid } = useAppDownloadLinks();
 
   return (
-    <section id="join" aria-labelledby="join-heading" className="relative px-4 py-28 sm:px-8 sm:py-40">
+    <section id="join" aria-labelledby="join-heading" className="relative px-4 py-20 sm:px-8 sm:py-40">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 bottom-0 h-[480px] bg-[radial-gradient(ellipse_at_50%_100%,rgb(45_212_191/0.14),transparent_70%)]"
@@ -75,8 +75,8 @@ export function JoinSection({ onDriverSubmit }) {
               Download the TrackMe app, enter your driver&apos;s key, and watch your shuttle on the map.
             </p>
             <div className="mt-auto flex flex-col gap-3 pt-10 sm:flex-row">
-              <StoreButton href={riderIos} sub="Download on the" label="App Store" />
-              <StoreButton href={riderAndroid} sub="Get it on" label="Google Play" />
+              <StoreButton href={riderIos} sub="Get it on" label="iPhone (iOS)" />
+              <StoreButton href={riderAndroid} sub="Direct download" label="Android (APK)" />
             </div>
           </Reveal>
 

@@ -67,4 +67,24 @@ describe('LeadForm', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/not connected yet, so nothing was sent/i);
     expect(screen.queryByText(/thanks/i)).not.toBeInTheDocument();
   });
+
+  it('silently drops a submission when the hidden honeypot field is filled', async () => {
+    const onSubmit = vi.fn();
+    const { container } = render(<LeadForm onSubmit={onSubmit} />);
+
+    await userEvent.type(screen.getByLabelText('Your email'), 'bot@example.com');
+    await userEvent.type(container.querySelector('input[name="website"]'), 'http://spam.example');
+    await userEvent.click(screen.getByRole('button', { name: /get driver access/i }));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(await screen.findByRole('status')).toHaveTextContent(/thanks/i);
+  });
+
+  it('keeps the honeypot out of the tab order and away from screen readers', () => {
+    const { container } = render(<LeadForm onSubmit={vi.fn()} />);
+    const trap = container.querySelector('input[name="website"]');
+
+    expect(trap).toHaveAttribute('tabindex', '-1');
+    expect(trap).toHaveAttribute('aria-hidden', 'true');
+  });
 });

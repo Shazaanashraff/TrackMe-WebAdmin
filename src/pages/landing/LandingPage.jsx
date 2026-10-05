@@ -2,11 +2,13 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LogoMark } from './LogoMark';
 import { LandingNav } from './LandingNav';
+import { RouteRail } from './RouteRail';
 import { Hero } from './Hero';
 import { WhatSection } from './WhatSection';
 import { ScrollStory } from './ScrollStory';
 import { JoinSection } from './JoinSection';
-import { PRIVACY_URL } from './config';
+import { DRIVER_INTEREST_ENDPOINT, PRIVACY_URL } from './config';
+import { submitDriverInterest } from './driverInterest';
 import './landing.css';
 
 function Footer() {
@@ -38,7 +40,10 @@ function Footer() {
  * Always dark. The wrapper carries `dark` so the Atlas dark tokens apply to
  * this subtree whatever theme the portal last used.
  */
-export default function LandingPage({ onDriverSubmit }) {
+export default function LandingPage({
+  // No endpoint configured -> undefined -> the form says nothing was sent.
+  onDriverSubmit = DRIVER_INTEREST_ENDPOINT ? submitDriverInterest : undefined,
+}) {
   useEffect(() => {
     const previous = document.title;
     document.title = 'TrackMe · Live shuttle tracking for Sri Lanka';
@@ -54,6 +59,7 @@ export default function LandingPage({ onDriverSubmit }) {
         Skip to content
       </a>
       <LandingNav />
+      <RouteRail />
       <main>
         <Hero />
         <WhatSection />

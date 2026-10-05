@@ -14,11 +14,18 @@ export function LeadForm({ onSubmit }) {
   const fieldId = useId();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState('idle'); // idle | invalid | sending | done | failed | unavailable
+  // Honeypot: invisible to people, tempting to form-filling bots.
+  const [trap, setTrap] = useState('');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!isValidEmail(email)) {
       setStatus('invalid');
+      return;
+    }
+    if (trap) {
+      // A bot filled the hidden field. Look successful, send nothing.
+      setStatus('done');
       return;
     }
     if (!onSubmit) {
@@ -53,10 +60,20 @@ export function LeadForm({ onSubmit }) {
   }[status];
 
   return (
-    <form onSubmit={handleSubmit} noValidate>
+    <form onSubmit={handleSubmit} noValidate className="relative">
       <label htmlFor={fieldId} className="text-sm font-medium text-white/80">
         Your email
       </label>
+      <input
+        type="text"
+        name="website"
+        value={trap}
+        onChange={(event) => setTrap(event.target.value)}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="absolute -left-[9999px] h-0 w-0 opacity-0"
+      />
       <div className="mt-2 flex flex-col gap-3 sm:flex-row">
         <input
           id={fieldId}
@@ -72,7 +89,7 @@ export function LeadForm({ onSubmit }) {
           aria-invalid={status === 'invalid'}
           aria-describedby={message ? `${fieldId}-msg` : undefined}
           className={cn(
-            'h-12 min-w-0 flex-1 rounded-full border bg-white/5 px-5 text-base text-white placeholder:text-white/30',
+            'h-12 w-full shrink-0 rounded-full border sm:min-w-0 sm:flex-1 bg-white/5 px-5 text-base text-white placeholder:text-white/30',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300',
             status === 'invalid' ? 'border-red-400/70' : 'border-white/15',
           )}
@@ -80,7 +97,7 @@ export function LeadForm({ onSubmit }) {
         <button
           type="submit"
           disabled={status === 'sending'}
-          className="group inline-flex h-12 items-center justify-center gap-2 rounded-full bg-teal-300 px-6 text-sm font-semibold text-[#04211d] transition-colors hover:bg-teal-200 disabled:opacity-60"
+          className="group inline-flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-teal-300 px-6 sm:w-auto text-sm font-semibold text-[#04211d] transition-colors hover:bg-teal-200 disabled:opacity-60"
         >
           {status === 'sending' ? 'Sending…' : 'Get driver access'}
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />

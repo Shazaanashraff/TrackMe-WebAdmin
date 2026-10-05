@@ -7,15 +7,12 @@ import { NAV_LINKS } from './config';
 
 export function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
-  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     let frame = 0;
     const update = () => {
       frame = 0;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
       setScrolled(window.scrollY > 24);
-      setProgress(max > 0 ? Math.min(1, window.scrollY / max) : 0);
     };
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
     update();
@@ -59,11 +56,6 @@ export function LandingNav() {
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
       </div>
-      <div
-        aria-hidden="true"
-        className="h-px origin-left bg-gradient-to-r from-teal-300 via-teal-400 to-sky-300"
-        style={{ transform: `scaleX(${progress})` }}
-      />
     </header>
   );
 }

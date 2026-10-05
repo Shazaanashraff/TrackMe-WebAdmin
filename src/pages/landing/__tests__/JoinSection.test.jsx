@@ -13,8 +13,8 @@ describe('JoinSection — app download links', () => {
     useAppDownloadLinks.mockReturnValue({ riderAndroid: null, riderIos: null, driverAndroid: null });
     render(<JoinSection />);
 
-    expect(screen.getByRole('button', { name: /app store/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /google play/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /iphone/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /android/i })).toBeDisabled();
     expect(screen.getAllByText(/coming soon/i)).toHaveLength(2);
   });
 
@@ -26,8 +26,8 @@ describe('JoinSection — app download links', () => {
     });
     render(<JoinSection />);
 
-    expect(screen.getByRole('link', { name: /app store/i })).toHaveAttribute('href', 'https://testflight.apple.com/join/abc123');
-    expect(screen.getByRole('link', { name: /google play/i })).toHaveAttribute('href', '/downloads/rider-app-1.0.0.apk');
+    expect(screen.getByRole('link', { name: /iphone/i })).toHaveAttribute('href', 'https://testflight.apple.com/join/abc123');
+    expect(screen.getByRole('link', { name: /android/i })).toHaveAttribute('href', '/downloads/rider-app-1.0.0.apk');
   });
 
   it('shows no direct driver download link when no driver build exists', () => {

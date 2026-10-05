@@ -62,6 +62,42 @@ when source under `src/` changed. One entry per session/PR is enough.
   - A visitor already on `/` when a release is retracted keeps the old link until they reload —
     no client-side invalidation on the public page.
 
+## 2026-10-05 — Landing page: honest store labels, driver-form groundwork, real mobile design
+- **Branch:** feature/landing-polish
+- **Modules touched:** [LANDING](modules/LANDING.md)
+- **What changed:**
+  - **Relabel:** the rider buttons said "App Store" / "Google Play", but the Android one is a direct
+    APK download and iOS has no build. They now read **"iPhone (iOS)"** and **"Android (APK)"**
+    ("Direct download" once live, "Coming soon" until then).
+  - **Driver form groundwork:** `DRIVER_INTEREST_ENDPOINT` in `config.js` (`null`) +
+    `driverInterest.js` (`POST { email, source: 'landing' }`). `LandingPage` wires it in only when an
+    endpoint is set, so nothing changes in behaviour yet: the form still says nothing was sent. Added
+    an invisible honeypot field against form-filling bots.
+  - **Mobile bug fixed:** the email input rendered ~20px tall on phones (`flex-1` inside a column flex
+    container). Input and button are now full width and 48px tall below `sm`.
+  - **Mobile design pass** (desktop unchanged): bigger hero headline, the ETA card shown inline
+    under the hero buttons, phones tilt in alternating directions in the stacked story, the laptop
+    is cropped wider than the screen with area pills beneath it, route art on the first two cards,
+    the third phone screen gets a shuttle card instead of an empty lower half, tighter section spacing.
+  - **The page is a route** (new, both layouts): a rail along the left edge fills as you scroll, a small
+    shuttle rides its tip, and each section is a stop that lights up on arrival. It replaces the nav's
+    plain progress line. Decorative only: `aria-hidden`, never takes a tap.
+  - **Laptop on phones is shown whole** instead of cropped (the crop looked zoomed in); the pills
+    under it say what the manager portal covers.
+- **Why:** the team lead asked for the page to look professional on mobile as well as desktop, and for
+  the store buttons and driver form to be ready for the real links and endpoint.
+- **Contract impact:** none yet. The proposed driver-form request shape is documented in
+  LANDING §4 and **must be agreed with the backend owner before the endpoint is set**.
+- **Tests:** `driverInterest.test.js` (new), `LeadForm.test.jsx` (+2 honeypot), `JoinSection.test.jsx`
+  and `LandingPage.test.jsx` (relabel), `journey.test.js` + `RouteRail.test.jsx` (new), `e2e/landing.spec.ts` (+6: 360px overflow,
+  input/button size, button labels, three route-rail cases). Vitest 861 passed, Playwright 57 passed, lint 0 errors, build passes.
+- **Docs updated:** this entry, `modules/LANDING.md`, `TESTING_GUIDE.md`.
+- **Follow-ups / known issues:**
+  - The live site's build contains only `http://localhost:5000` as its API address, so
+    `useAppDownloadLinks` cannot reach a backend in production. Check `VITE_API_URL` in Vercel.
+  - The `/downloads/*.apk` files are served as 134-byte Git LFS pointers until Git LFS is enabled in
+    the Vercel project (see APP_RELEASES.md).
+
 ## 2026-10-03 — Public landing page at `/`, TrackMe branding
 - **Branch:** feature/landing-page
 - **Modules touched:** [LANDING](modules/LANDING.md) (new), [AUTH](modules/AUTH.md) (root route)

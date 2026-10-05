@@ -146,25 +146,49 @@ function DesktopStory({ step }) {
   );
 }
 
+const PORTAL_AREAS = ['Vehicles', 'Drivers', 'Enrollments', 'Live tracking'];
+
+// Below `lg` there is no room to slide a device between sides, so the phones
+// tilt in alternate directions instead, echoing the swap. The laptop is shown
+// whole; its screen is texture at this size, so the pills below say what it does.
 function StackedStory() {
   return (
-    <div className="mx-auto max-w-2xl space-y-24 px-4 pb-24 sm:px-8">
+    <div className="mx-auto max-w-2xl space-y-20 px-4 pb-4 sm:px-8 sm:pb-16">
       {STORY.map((item, i) => {
         const Screen = PHONE_SCREENS[i];
+        const isLaptop = item.device === 'laptop';
         return (
-          <Reveal key={item.key} className="space-y-10">
+          <Reveal key={item.key} className="space-y-8">
             <div>
               <StepCopy item={item} index={i} />
             </div>
-            <div className="relative grid place-items-center py-6">
+            <div className="relative grid grid-cols-[minmax(0,1fr)] place-items-center py-4">
               <div
                 aria-hidden="true"
                 className="absolute h-3/4 w-3/4 rounded-full bg-teal-400/20 blur-[90px]"
               />
-              {item.device === 'laptop' ? (
-                <LaptopFrame><PortalScreen /></LaptopFrame>
+              {isLaptop ? (
+                <div className="w-full">
+                  <div className="flex justify-center py-2">
+                    <LaptopFrame>
+                      <PortalScreen />
+                    </LaptopFrame>
+                  </div>
+                  <ul className="mt-6 flex flex-wrap justify-center gap-2">
+                    {PORTAL_AREAS.map((area) => (
+                      <li
+                        key={area}
+                        className="rounded-full border border-white/12 bg-white/[0.04] px-3.5 py-1.5 text-xs font-medium text-white/70"
+                      >
+                        {area}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ) : (
-                <PhoneFrame><Screen /></PhoneFrame>
+                <PhoneFrame className={cn('sm:rotate-0', i % 2 === 0 ? '-rotate-3' : 'rotate-3')}>
+                  <Screen />
+                </PhoneFrame>
               )}
             </div>
           </Reveal>
@@ -202,7 +226,7 @@ export function ScrollStory() {
         </div>
       ) : (
         <>
-          <div className="mx-auto max-w-2xl px-4 pb-14 pt-24 sm:px-8">
+          <div className="mx-auto max-w-2xl px-4 pb-10 pt-20 sm:px-8 sm:pb-14 sm:pt-24">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/40">How it works</p>
             <h2
               id="how-heading"
