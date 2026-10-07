@@ -772,6 +772,25 @@ describe('ManagerAccountsPage: add driver form', () => {
     expect(within(summary).getByText('Driver ID')).toBeInTheDocument();
     expect(screen.getByText('TMD-AAAA-BBBB-CCCC')).toBeInTheDocument();
   });
+
+  it('does not offer an email sign-in in the summary, even when the driver has one', async () => {
+    const createMut = makeMutation({
+      mutateAsync: vi.fn().mockResolvedValue({
+        data: { _id: 'new-6', name: 'Nimal', email: 'nimal@example.com', driverCode: 'DRV-3333-4444' },
+      }),
+    });
+    const { user } = setup({ createMut });
+    await openForm(user);
+
+    await user.type(screen.getByLabelText(/Full name/i), 'Nimal');
+    await user.type(screen.getByLabelText(/Vehicle number/i), 'BUS-2');
+    await user.type(screen.getByLabelText(/^Password$/i), 'DriverPass1!');
+    await user.click(screen.getByRole('button', { name: /create driver/i }));
+
+    const summary = (await screen.findByText('DRV-3333-4444')).closest('div').parentElement;
+    expect(within(summary).queryByText(/signs in with/i)).not.toBeInTheDocument();
+    expect(within(summary).queryByText('nimal@example.com')).not.toBeInTheDocument();
+  });
 });
 
 describe('ManagerAccountsPage: viewing a driver password', () => {
