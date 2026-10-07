@@ -32,7 +32,7 @@ export function ForgotPasswordRequestPage() {
   return (
     <AuthCard
       title="Reset your password"
-      subtitle="Enter the email address linked to your TrackMe account and we'll send a recovery code."
+      subtitle="Enter the email address linked to your PinGo account and we'll send a recovery code."
       onBack={() => navigate('/login')}
       backLabel="Back to sign in"
     >

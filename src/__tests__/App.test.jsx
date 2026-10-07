@@ -119,7 +119,7 @@ describe('App — LoginShell', () => {
     await user.type(screen.getByLabelText(/^Password/), 'secret123');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-    expect(await screen.findByText(/reserved for authorized trackme administrative accounts/i)).toBeInTheDocument();
+    expect(await screen.findByText(/reserved for authorized pingo administrative accounts/i)).toBeInTheDocument();
     expect(readStoredAuth()).toBeNull();
   });
 

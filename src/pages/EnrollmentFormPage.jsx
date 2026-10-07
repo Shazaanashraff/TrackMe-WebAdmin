@@ -91,7 +91,7 @@ export function EnrollmentFormPage() {
         </Card>
       ) : null}
 
-      <Alert><AlertDescription>Full name and guardian/contact phone are always collected by TrackMe. The fields below are the organization-specific details added to that standard information.</AlertDescription></Alert>
+      <Alert><AlertDescription>Full name and guardian/contact phone are always collected by PinGo. The fields below are the organization-specific details added to that standard information.</AlertDescription></Alert>
 
       {schemaQ.isLoading ? <Skeleton className="h-72 w-full rounded-xl" /> : schemaQ.error && !config ? (
         !isOnline

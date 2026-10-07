@@ -155,7 +155,7 @@ export function AppShell({
 
   const isSuperAdmin = user?.role === 'super-admin';
   const navItems = isSuperAdmin ? SUPER_ADMIN_NAV : MANAGER_NAV;
-  const wordmark = isSuperAdmin ? 'TRACKME ADMIN' : 'TRACKME MGR';
+  const wordmark = isSuperAdmin ? 'PINGO ADMIN' : 'PINGO MGR';
 
   // Pending enrolment requests waiting on this manager. Super-admins own no
   // drivers, so the call is skipped for them entirely.
@@ -187,7 +187,7 @@ export function AppShell({
         >
           <div className="flex items-center h-12 border-b border-border px-3 gap-2 shrink-0">
             <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-              <span className="text-primary-foreground text-xs font-bold font-heading">T</span>
+              <span className="text-primary-foreground text-xs font-bold font-heading">P</span>
             </div>
             {!collapsed && (
               <span className="font-heading text-sm font-semibold text-foreground truncate">
@@ -222,7 +222,7 @@ export function AppShell({
             <SheetContent side="left" className="w-56 p-0 flex flex-col">
               <div className="flex items-center h-12 border-b border-border px-3 gap-2 shrink-0">
                 <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground text-xs font-bold font-heading">T</span>
+                  <span className="text-primary-foreground text-xs font-bold font-heading">P</span>
                 </div>
                 <span className="font-heading text-sm font-semibold text-foreground truncate">
                   {wordmark}

@@ -80,7 +80,7 @@ test.describe('Login', () => {
     await page.getByLabel(/^password/i).fill('secret123');
     await page.getByRole('button', { name: /sign in/i }).click();
 
-    await expect(page.getByText(/reserved for authorized trackme administrative accounts/i)).toBeVisible();
+    await expect(page.getByText(/reserved for authorized pingo administrative accounts/i)).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
   });
 });

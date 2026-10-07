@@ -18,6 +18,29 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-10-08: Tutorial readiness (QR boarding switch, driver card, PinGo name)
+- **Branch:** feature/tutorial-readiness
+- **Modules touched:** [SETTINGS](modules/SETTINGS.md), [ACCOUNTS](modules/ACCOUNTS.md) (driver
+  create card), [AUTH](modules/AUTH.md) (sign-in, activation and reset copy)
+- **What changed:**
+  - **Manager Settings: QR boarding card.** One switch per route the manager owns, saved
+    through `PATCH /api/manager/routes/:routeId/qr`. Managers previously had no way to set it.
+  - **New-driver card** no longer shows "Or signs in with &lt;email&gt;"; it hands back the
+    Driver ID only.
+  - **PinGo name** in visible text: sidebar wordmarks (PINGO ADMIN / PINGO MGR) and logo tile,
+    the access-denied message, and the activation, reset and enrollment-form copy. Storage keys,
+    example emails, comments and the dev-only style guide footer are unchanged.
+- **Why:** fixes before recording the passenger and driver tutorials; the user chose PinGo for all
+  three apps' visible text (2026-10-06).
+- **Contract impact:** none. Uses existing `GET /api/manager/routes`, `GET /api/routes/:routeId`
+  and `PATCH /api/manager/routes/:routeId/qr`.
+- **Tests:** `ManagerSettingsPage.test.jsx` (QR card), `ManagerAccountsPage.test.jsx` (no email
+  sign-in), `AppShell.test.jsx`, `App.test.jsx`, `e2e/login.spec.ts` (new name),
+  `e2e/settings.spec.ts` (QR toggle); `e2e/helpers.ts` mocks `GET /api/routes/:routeId`.
+- **Docs updated:** `modules/SETTINGS.md`, TESTING_GUIDE Settings row.
+- **Follow-ups / known issues:** the shared `Switch` off state (`bg-surface-muted`) is hard to see
+  on a white card. The browser tab title is still "Vite + React".
+
 ## 2026-09-23 — Manager portal: dead surfaces removed, roster filterable
 - **Branch:** feature/manager-mobile-responsive
 - **Modules touched:** [DASHBOARD](modules/DASHBOARD.md),

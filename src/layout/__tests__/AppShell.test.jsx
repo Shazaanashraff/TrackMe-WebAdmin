@@ -114,24 +114,24 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Managers' })).not.toHaveAttribute('aria-current');
   });
 
-  it('shows TRACKME ADMIN wordmark for super-admin', () => {
+  it('shows PINGO ADMIN wordmark for super-admin', () => {
     renderShell({ role: 'super-admin' });
-    expect(screen.getByText('TRACKME ADMIN')).toBeInTheDocument();
+    expect(screen.getByText('PINGO ADMIN')).toBeInTheDocument();
   });
 
-  it('shows TRACKME MGR wordmark for manager', () => {
+  it('shows PINGO MGR wordmark for manager', () => {
     renderShell({ role: 'admin', path: '/manager/dashboard' });
-    expect(screen.getByText('TRACKME MGR')).toBeInTheDocument();
+    expect(screen.getByText('PINGO MGR')).toBeInTheDocument();
   });
 
   it('collapses the sidebar and persists to localStorage', async () => {
     const user = userEvent.setup();
     renderShell();
-    expect(screen.getByText('TRACKME ADMIN')).toBeInTheDocument();
+    expect(screen.getByText('PINGO ADMIN')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
 
-    expect(screen.queryByText('TRACKME ADMIN')).not.toBeInTheDocument();
+    expect(screen.queryByText('PINGO ADMIN')).not.toBeInTheDocument();
     expect(localStorage.getItem('webadmin-sidebar-collapsed')).toBe('true');
   });
 
@@ -139,18 +139,18 @@ describe('AppShell', () => {
     const user = userEvent.setup();
     localStorage.setItem('webadmin-sidebar-collapsed', 'true');
     renderShell();
-    expect(screen.queryByText('TRACKME ADMIN')).not.toBeInTheDocument();
+    expect(screen.queryByText('PINGO ADMIN')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Expand sidebar' }));
 
-    expect(screen.getByText('TRACKME ADMIN')).toBeInTheDocument();
+    expect(screen.getByText('PINGO ADMIN')).toBeInTheDocument();
     expect(localStorage.getItem('webadmin-sidebar-collapsed')).toBe('false');
   });
 
   it('restores collapsed state from localStorage on mount', () => {
     localStorage.setItem('webadmin-sidebar-collapsed', 'true');
     renderShell();
-    expect(screen.queryByText('TRACKME ADMIN')).not.toBeInTheDocument();
+    expect(screen.queryByText('PINGO ADMIN')).not.toBeInTheDocument();
   });
 
   it('calls onLogout when the sign-out button is clicked', async () => {

@@ -66,7 +66,7 @@ export function ForgotPasswordResetPage() {
   return (
     <AuthCard
       title="Create a new password"
-      subtitle="Use the verification code to complete the password reset for your TrackMe account."
+      subtitle="Use the verification code to complete the password reset for your PinGo account."
       onBack={() => navigate('/forgot-password/verify', { state: { email } })}
     >
       <Box component="form" onSubmit={handleSubmit} sx={{ display: 'grid', gap: 1.75 }}>
