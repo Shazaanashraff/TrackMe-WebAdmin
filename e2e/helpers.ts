@@ -332,6 +332,18 @@ export async function mockManagerBackend(
     route.fulfill(json({ success: true, data: [...publicRoutes, ...active] }));
   });
 
+  // GET /api/routes/:routeId: the full document Settings' QR boarding card reads
+  // for each listed route. Public routes have no owner; custom ones are this
+  // manager's.
+  await page.route(/\/api\/routes\/[^/?]+$/, (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    const routeId = decodeURIComponent(new URL(route.request().url()).pathname.split('/').pop() || '');
+    const found = [...publicRoutes, ...customRoutes].find((r) => r.routeId === routeId);
+    if (!found) return route.fulfill(json({ success: false, message: 'Route not found' }, 404));
+    const managerId = found.visibility === 'PUBLIC' ? null : MANAGER_AUTH.user._id;
+    return route.fulfill(json({ success: true, data: { ...found, managerId, qrEnabled: false } }));
+  });
+
   await page.route('**/api/manager/custom-routes?status=PENDING_NAMING', (route) => {
     route.fulfill(json({ success: true, data: customRoutes.filter((r) => r.status !== 'ACTIVE') }));
   });

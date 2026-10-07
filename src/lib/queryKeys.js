@@ -24,6 +24,8 @@ export const qk = {
     all: () => ['system-routes'],
     list: (params = {}) => ['system-routes', params],
   },
+  // Not under 'routes': that prefix already holds the assignable-routes list.
+  routeDetail: (routeId) => ['route-detail', routeId],
   vehicles: {
     all: () => ['vehicles'],
     manager: () => ['vehicles', 'manager'],

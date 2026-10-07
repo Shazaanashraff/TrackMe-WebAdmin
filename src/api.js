@@ -362,6 +362,17 @@ export const adminApi = {
   // the correct source for any "assign a route to my vehicle" dropdown.
   getManagerAssignableRoutes: () => request('/api/manager/routes'),
 
+  // The full route document, including `managerId` and `qrEnabled`, which the
+  // assignable-routes list leaves out.
+  getRoute: (routeId) => request(`/api/routes/${routeId}`),
+
+  // QR boarding is a per-route switch only the route's own manager may change.
+  setManagerRouteQr: (routeId, qrEnabled) =>
+    request(`/api/manager/routes/${routeId}/qr`, {
+      method: 'PATCH',
+      body: JSON.stringify({ qrEnabled })
+    }),
+
   // The schools / universities / offices a driver can be attached to. Same list
   // the super admin assigns managers to.
   getManagerOrganizations: (serviceType) =>

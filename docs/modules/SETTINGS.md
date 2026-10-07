@@ -5,6 +5,7 @@ Manager and super-admin self-service account settings.
 **Status:** `SHIPPED` — minimal scope (issue #6). Name editing and a password-change entry point
 for both roles. Email is read-only (no self-service change-email endpoint exists yet); everything
 else on the old placeholder pages remains a documented "coming soon" list, not real functionality.
+Managers also get a **QR boarding** card: one switch per route they own (2026-10-08).
 
 ---
 
@@ -24,7 +25,8 @@ unbuilt and are labeled "Coming soon" rather than implied to work.
 | `src/pages/SettingsPage.jsx` | Super-admin settings route (`/settings`). |
 | `src/pages/ManagerSettingsPage.jsx` | Manager settings route (`/manager/settings`). |
 | `src/components/shared/account-settings-panel.jsx` | The actual self-service UI (`AccountSettingsPanel`), shared by both pages above — name edit + save, read-only email, "Change password" entry point. |
-| `src/hooks/use-profile.js` | `useUpdateOwnProfile()` — the one mutation this module adds. |
+| `src/hooks/use-profile.js` | `useUpdateOwnProfile()` — the profile mutation. |
+| `src/hooks/use-route-qr.js` | `useOwnRouteQr(managerId)` (the manager's own routes with their QR state) and `useSetRouteQr()`, used by `QrBoardingCard` in `ManagerSettingsPage.jsx`. |
 | `src/App.jsx` | Owns the `auth` state; `updateStoredUser()` merges a profile patch into the stored session so the topbar reflects a new name without a re-login. |
 | `src/layout/AppShell.jsx` | Passes `user` and `onUserUpdate` into `<Outlet context={{ user, onUserUpdate }} />` — how both settings pages (and any future page) reach the current account and the update callback. |
 
@@ -37,6 +39,12 @@ AccountSettingsPanel (useOutletContext: user, onUserUpdate)
 
 "Change password" button → navigate('/forgot-password', { state: { email } })
   → existing ForgotPasswordRequestPage → ...verify... → ...reset... (see AUTH.md)
+
+QrBoardingCard (manager only)
+  → useManagerAssignableRoutes() → GET /api/manager/routes        (ids only: no owner, no QR state)
+  → one GET /api/routes/:routeId per listed route (qk.routeDetail) → keep routes whose managerId is the user
+  → switch → useSetRouteQr() → PATCH /api/manager/routes/:routeId/qr { qrEnabled }
+  → the saved value is written into that route's qk.routeDetail cache entry
 ```
 
 No TanStack Query cache entry backs the current account — it lives in `authSession`'s stored
@@ -49,6 +57,8 @@ result is applied directly via `onUserUpdate`.
 |---|---|---|
 | REST | `PUT /api/auth/profile` | `{ name }` → `{ success, data }`. Pre-existing, generic across every account role (`protect` only — no role middleware); web-admin only sends `name`, never `phoneNumber` (that field is rider-only). Backend: [`backend/docs/modules/AUTH.md`](../../../backend/docs/modules/AUTH.md). |
 | REST | `POST /api/auth/forgot-password/request-otp` (+ verify/reset) | Unchanged — reused as-is for the "Change password" entry point. See [`AUTH.md`](AUTH.md) / `backend/docs/modules/AUTH.md`. |
+| REST | `GET /api/routes/:routeId` | Full route document, including `managerId` and `qrEnabled`, which `GET /api/manager/routes` leaves out. |
+| REST | `PATCH /api/manager/routes/:routeId/qr` | `{ qrEnabled }` → `{ success, data: { routeId, qrEnabled } }`. Owner only: another manager's or a public route answers 403. |
 | Storage | `admin-auth` (localStorage or sessionStorage, per `rememberMe`) | `auth.user.name` is updated in place by `App.jsx`'s `updateStoredUser()` after a successful save — see `src/lib/authSession.js`. |
 
 No contract change: `PUT /api/auth/profile` already existed and already supported every role: this
@@ -83,14 +93,18 @@ cross-repo coordination note beyond this doc itself.
 - Role scoping is unchanged and not cosmetic here either: `SettingsPage` is only reachable from the
   super-admin route tree and `ManagerSettingsPage` only from the manager one (see `src/App.jsx`) —
   this module didn't touch that gate.
+- **QR boarding reaches the apps with a delay.** The switch drives the driver app's On board card
+  and Scan action and the passenger app's Vehicle pass. The driver app caches the route, so a
+  change can take up to about 5 minutes to show there. The card costs one request per assignable
+  route, because no list endpoint returns the owner or the QR state.
 
 ## 7. Tests covering this module
 
 | Layer | File | What it locks |
 |---|---|---|
 | Unit/RTL | `src/components/shared/__tests__/account-settings-panel.test.jsx` | name edit/save, save disabled while unchanged, empty-name client-side rejection, server-error rendering, `onUserUpdate` + toast on success, "Change password" navigation with the account email |
-| Unit/RTL | `src/pages/__tests__/SettingsPage.test.jsx`, `src/pages/__tests__/ManagerSettingsPage.test.jsx` | each page wires `useOutletContext()` into the panel; "Coming soon" replaces the old "under development" copy |
-| E2E | `e2e/settings.spec.ts` | full mocked-backend flow for both roles: edit name → save → toast; manager flow also confirms "Change password" reaches `/forgot-password` |
+| Unit/RTL | `src/pages/__tests__/SettingsPage.test.jsx`, `src/pages/__tests__/ManagerSettingsPage.test.jsx` | each page wires `useOutletContext()` into the panel; "Coming soon" replaces the old "under development" copy; QR boarding shows a switch only for owned routes, set to their state, saves through the manager endpoint, stays put and toasts on failure, and says so when there are no owned routes |
+| E2E | `e2e/settings.spec.ts` | full mocked-backend flow for both roles: edit name → save → toast; manager flow also toggles QR boarding on an owned route (one PATCH with `{ qrEnabled: true }`) and confirms "Change password" reaches `/forgot-password` |
 
 See [`ADDING_A_TEST.md`](../guides/ADDING_A_TEST.md) and the [`TESTING_GUIDE.md`](../TESTING_GUIDE.md)
 "Settings" section.
