@@ -7,9 +7,9 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 /** The sections that are stops on the route, in page order. */
 export const STOPS = [
   { id: 'top', label: 'Start' },
-  { id: 'what', label: 'What is TrackMe' },
+  { id: 'what', label: 'Why TrackMe' },
   { id: 'how-it-works', label: 'How it works' },
-  { id: 'join', label: 'Get started' },
+  { id: 'join', label: 'Get the app' },
 ];
 
 /** 0 at the top of the page, 1 once the bottom has been reached. */

@@ -43,7 +43,7 @@ test.describe('Landing page — desktop', () => {
 
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Every shuttle.');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText("Where's the shuttle?");
     await expect(page.locator('#what')).toBeAttached();
     await expect(page.locator('#how-it-works')).toBeAttached();
     await expect(page.locator('#join')).toBeAttached();
@@ -68,7 +68,80 @@ test.describe('Landing page — desktop', () => {
     expect(stageTop).toBe(0);
 
     // The last step's copy is the manager one, and the portal shot is on screen.
-    await expect(page.getByRole('heading', { name: /your whole fleet, on one screen/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /run the whole fleet/i })).toBeVisible();
+  });
+
+  // A cheap fingerprint of what the hero canvas is showing right now.
+  const canvasFingerprint = (page: Page) =>
+    page.evaluate(() => {
+      const canvas = document.querySelector('#top canvas') as HTMLCanvasElement;
+      const ctx = canvas.getContext('2d')!;
+      const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let sum = 0;
+      let lit = 0;
+      for (let i = 0; i < data.length; i += 4 * 211) {
+        sum = (sum * 31 + data[i] + data[i + 1] * 3 + data[i + 2] * 7) % 1000003;
+        if (data[i] + data[i + 1] + data[i + 2] > 60) lit += 1;
+      }
+      return { sum, lit };
+    });
+
+  test('the hero night road is actually drawn, and it moves', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#top canvas').waitFor();
+    await page.waitForTimeout(800);
+
+    const first = await canvasFingerprint(page);
+    expect(first.lit).toBeGreaterThan(200); // not a blank or black canvas
+
+    await page.waitForTimeout(700);
+    const second = await canvasFingerprint(page);
+    expect(second.sum).not.toBe(first.sum); // the lamps and lane lines have moved
+  });
+
+  test('the hero road is purely decorative', async ({ page }) => {
+    await page.goto('/');
+    const canvas = page.locator('#top canvas');
+    await expect(canvas).toHaveAttribute('aria-hidden', 'true');
+    // Nothing on the canvas may steal a click from the buttons above it.
+    await page.getByRole('link', { name: /i'm a rider/i }).click();
+    await expect(page).toHaveURL(/#join$/);
+  });
+
+  test('the hero countdown is alive: it ticks while you look at it', async ({ page }) => {
+    await page.goto('/');
+    const clock = page.locator('p', { hasText: 'Right here.' }).locator('span.tabular-nums');
+    await expect(clock).toBeVisible();
+    const first = await clock.textContent();
+    await expect.poll(async () => clock.textContent(), { timeout: 4000 }).not.toBe(first);
+  });
+
+  test('the statement lights up word by word as it is scrolled into reading position', async ({ page }) => {
+    await page.goto('/');
+    const lastWord = page.locator('#what-heading span').last();
+    await expect(lastWord).toBeAttached();
+    const dim = Number(await lastWord.evaluate((el) => getComputedStyle(el).opacity));
+    expect(dim).toBeLessThan(0.5);
+
+    await page.evaluate(() => {
+      const top = document.getElementById('what-heading')!.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo(0, top - 80);
+    });
+    await expect
+      .poll(async () => Number(await lastWord.evaluate((el) => getComputedStyle(el).opacity)))
+      .toBeGreaterThan(0.95);
+  });
+
+  test('the nav underlines the section you are in', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#how-it-works').waitFor();
+    await page.evaluate(() => {
+      const top = document.getElementById('how-it-works')!.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo(0, top + 100);
+    });
+    const nav = page.getByRole('navigation', { name: 'Landing' });
+    await expect(nav.getByRole('link', { name: 'How it works' })).toHaveAttribute('aria-current', 'location');
+    await expect(nav.getByRole('link', { name: 'Why TrackMe' })).not.toHaveAttribute('aria-current', 'location');
   });
 
   test('has no horizontal overflow', async ({ page }) => {
@@ -82,8 +155,8 @@ test.describe('Landing page — desktop', () => {
 
   test('the nav anchors scroll to their sections', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('navigation', { name: 'Landing' }).getByRole('link', { name: 'Get started' }).click();
-    await expect(page.getByRole('heading', { name: /rider,\s*or a driver\?/i })).toBeInViewport();
+    await page.getByRole('navigation', { name: 'Landing' }).getByRole('link', { name: 'Get the app' }).click();
+    await expect(page.getByRole('heading', { name: /rider or driver\?/i })).toBeInViewport();
   });
 
   test('manager sign in goes to the login page', async ({ page }) => {
@@ -106,6 +179,31 @@ test.describe('Landing page — desktop', () => {
   });
 });
 
+test.describe('Landing page — reduced motion', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test('the hero road holds one still frame, and the countdown stops', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    await page.locator('#top canvas').waitFor();
+    await page.waitForTimeout(600);
+
+    const fingerprint = () =>
+      page.evaluate(() => {
+        const canvas = document.querySelector('#top canvas') as HTMLCanvasElement;
+        const { data } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
+        let sum = 0;
+        for (let i = 0; i < data.length; i += 4 * 211) sum = (sum * 31 + data[i] + data[i + 1] * 3) % 1000003;
+        return sum;
+      });
+
+    const first = await fingerprint();
+    await page.waitForTimeout(1500);
+    expect(await fingerprint()).toBe(first);
+    await expect(page.locator('#top').getByText('4 min', { exact: true })).toBeVisible();
+  });
+});
+
 test.describe('Landing page — phone', () => {
   test.use({ viewport: { width: 375, height: 800 } });
 
@@ -125,7 +223,7 @@ test.describe('Landing page — phone', () => {
       document.documentElement.clientWidth,
     ]);
     expect(scroll).toBeLessThanOrEqual(client);
-    await expect(page.getByRole('heading', { level: 3, name: /your whole fleet, on one screen/i })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 3, name: /run the whole fleet/i })).toBeVisible();
   });
 });
 

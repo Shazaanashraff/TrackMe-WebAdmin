@@ -45,14 +45,14 @@ function useStoryStep(ref, count, enabled) {
 function StepCopy({ item, index }) {
   return (
     <>
-      <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-teal-300">
-        <span className="font-mono text-white/40">{String(index + 1).padStart(2, '0')}</span>
+      <p className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-l-teal">
+        <span className="font-mono text-l-bone/40">{String(index + 1).padStart(2, '0')}</span>
         {item.audience}
       </p>
-      <h3 className="font-display mt-4 text-[clamp(2rem,3.6vw,3.4rem)] font-semibold leading-[1.05] text-white">
+      <h3 className="font-display mt-4 text-[clamp(2.6rem,5vw,5rem)] font-semibold leading-[0.98] text-l-bone">
         {item.title}
       </h3>
-      <p className="mt-5 max-w-md text-base leading-relaxed text-white/60 sm:text-lg">{item.body}</p>
+      <p className="mt-5 max-w-sm text-lg leading-snug text-l-bone/65">{item.body}</p>
     </>
   );
 }
@@ -87,9 +87,10 @@ function DesktopStory({ step }) {
         className="l-device-move absolute inset-y-0 left-0 grid w-1/2 place-items-center"
         style={{ transform: side === 'right' ? 'translateX(100%)' : 'translateX(0)' }}
       >
+        <div aria-hidden="true" className="absolute aspect-square h-[78%] rounded-full border border-white/10" />
         <div
           aria-hidden="true"
-          className="absolute h-[70%] w-[70%] rounded-full bg-teal-400/20 blur-[110px]"
+          className="l-spin absolute aspect-square h-[94%] rounded-full border border-dashed border-white/15"
         />
         <div
           className={cn(
@@ -163,10 +164,7 @@ function StackedStory() {
               <StepCopy item={item} index={i} />
             </div>
             <div className="relative grid grid-cols-[minmax(0,1fr)] place-items-center py-4">
-              <div
-                aria-hidden="true"
-                className="absolute h-3/4 w-3/4 rounded-full bg-teal-400/20 blur-[90px]"
-              />
+              <div aria-hidden="true" className="absolute aspect-square h-[92%] rounded-full border border-white/10" />
               {isLaptop ? (
                 <div className="w-full">
                   <div className="flex justify-center py-2">
@@ -211,13 +209,13 @@ export function ScrollStory() {
       data-step={isDesktop ? step : undefined}
       data-side={isDesktop ? side : undefined}
       aria-labelledby="how-heading"
-      className="relative border-t border-white/10"
+      className="relative bg-l-ink"
       style={isDesktop ? { height: `${STORY.length * 100}vh` } : undefined}
     >
       {isDesktop ? (
         <div className="sticky top-0 flex h-screen flex-col overflow-hidden">
           <div className="mx-auto w-full max-w-7xl px-8 pt-24">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/40">How it works</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-l-bone/40">How it works</p>
             <h2 id="how-heading" className="sr-only">How TrackMe works</h2>
           </div>
           <div className="min-h-0 flex-1">
@@ -227,12 +225,12 @@ export function ScrollStory() {
       ) : (
         <>
           <div className="mx-auto max-w-2xl px-4 pb-10 pt-20 sm:px-8 sm:pb-14 sm:pt-24">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/40">How it works</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-l-bone/40">How it works</p>
             <h2
               id="how-heading"
-              className="font-display mt-3 text-4xl font-semibold leading-tight text-white sm:text-5xl"
+              className="font-display mt-3 text-5xl font-semibold leading-[0.95] text-l-bone sm:text-6xl"
             >
-              From the roadside to the control room.
+              Roadside to control room.
             </h2>
           </div>
           <StackedStory />

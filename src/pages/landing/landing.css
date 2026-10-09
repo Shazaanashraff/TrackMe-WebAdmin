@@ -3,10 +3,16 @@
    carries the `dark` class too), then adds the few extra depth values below. */
 
 .landing {
-  --l-ink: #04090b;
-  --l-panel: rgb(255 255 255 / 0.035);
+  --l-ink: #07100f;
+  --l-bone: #efeadf;
+  --l-petrol: #0c5e58;
+  --l-teal: #5eead4;
+  /* The same colours as space-separated RGB channels, for Tailwind's opacity modifiers. */
+  --l-ink-rgb: 7 16 15;
+  --l-bone-rgb: 239 234 223;
+  --l-petrol-rgb: 12 94 88;
+  --l-teal-rgb: 94 234 212;
   --l-line: rgb(255 255 255 / 0.09);
-  --l-glow: rgb(45 212 191 / 0.34);
   --l-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   background: var(--l-ink);
   color: var(--foreground);
@@ -35,7 +41,7 @@ html:has(.landing) body,
 html:has(.landing) #root {
   overflow: visible;
   height: auto;
-  background-color: #04090b;
+  background-color: #07100f;
 }
 
 .landing .font-display {
@@ -99,13 +105,6 @@ html:has(.landing) #root {
   }
 }
 
-.landing .l-gradient-text {
-  background: linear-gradient(100deg, #5eead4 0%, #2dd4bf 40%, #7dd3fc 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
 /* ── Ambient motion ──────────────────────────────────────────────────────── */
 @keyframes l-float {
   0%,
@@ -160,39 +159,6 @@ html:has(.landing) #root {
   }
 }
 
-/* Cursor-following spotlight; --mx/--my are set from pointer events. */
-.landing .l-spotlight {
-  background: radial-gradient(
-    640px circle at var(--mx, 70%) var(--my, 30%),
-    rgb(45 212 191 / 0.16),
-    transparent 60%
-  );
-}
-
-/* Glass surface used for cards sitting over the hero and the device stage. */
-.landing .l-glass {
-  background: linear-gradient(160deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.03));
-  border: 1px solid var(--l-line);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-}
-
-/* Bento card: a hairline that lights up under the pointer. */
-.landing .l-card {
-  position: relative;
-  background: var(--l-panel);
-  border: 1px solid var(--l-line);
-  transition:
-    border-color 0.4s var(--l-ease),
-    transform 0.5s var(--l-ease),
-    background 0.4s var(--l-ease);
-}
-.landing .l-card:hover {
-  border-color: rgb(45 212 191 / 0.45);
-  background: rgb(45 212 191 / 0.05);
-  transform: translateY(-4px);
-}
-
 /* The sticky story moves the device between sides; the easing is the feel. */
 .landing .l-device-move {
   transition: transform 1s var(--l-ease);
@@ -202,4 +168,47 @@ html:has(.landing) #root {
   transition:
     opacity 0.7s var(--l-ease),
     transform 0.9s var(--l-ease);
+}
+
+/* Outlined display type: giant words that are texture, not content. */
+.landing .l-outline {
+  color: transparent;
+  -webkit-text-stroke: 1px rgb(239 234 223 / 0.32);
+}
+
+/* A slow-turning dashed ring behind the devices. */
+@keyframes l-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.landing .l-spin {
+  animation: l-spin 90s linear infinite;
+}
+
+/* The rider / driver split: stacked on a phone, side by side on a wide screen,
+   where the panel under the pointer (or holding focus) widens a little. */
+.landing .l-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1024px) {
+  .landing .l-split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    transition: grid-template-columns 0.8s var(--l-ease);
+  }
+  .landing .l-split:has(.l-panel-a:hover),
+  .landing .l-split:has(.l-panel-a:focus-within) {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  }
+  .landing .l-split:has(.l-panel-b:hover),
+  .landing .l-split:has(.l-panel-b:focus-within) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  }
+}
+
+/* Small floating label (the route rail's stop name). Flat, not frosted glass. */
+.landing .l-glass {
+  background: rgb(7 16 15 / 0.82);
+  border: 1px solid var(--l-line);
 }

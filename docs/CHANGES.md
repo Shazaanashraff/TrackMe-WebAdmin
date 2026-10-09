@@ -62,6 +62,47 @@ when source under `src/` changed. One entry per session/PR is enough.
   - A visitor already on `/` when a release is retracted keeps the old link until they reload —
     no client-side invalidation on the public page.
 
+## 2026-10-09 — Landing page redesigned: editorial look, coded hero, less copy
+- **Branch:** feature/landing-redesign
+- **Modules touched:** [LANDING](modules/LANDING.md)
+- **What changed:**
+  - **New visual direction.** The first version was called out for looking AI-made (glow blobs,
+    frosted-glass cards, gradient text, icon-in-a-box grid, paragraphs of copy). It is now editorial:
+    huge type, a warm paper section between dark ones, flat petrol and ink panels, one bright teal kept
+    for live things. Most of the copy is gone.
+  - **Hero:** headline "Where's the shuttle?" answered by a live countdown pill ("Right here. 3:57 to
+    your stop"). The backdrop is a **night road drawn live on a canvas in code** (`NightRoad.jsx`,
+    `roadScene.js`): perspective road, skyline, streaming lane lines and lamps, oncoming headlights, and a
+    shuttle with a tracking reticle. Original artwork, no video file. `HERO_VIDEO` still works if real
+    footage is wanted later.
+  - **Statement** (`ScrubText`): one big sentence that lights up word by word as you scroll, then three
+    short points, replacing the four-card bento grid. Overlaps the hero with rounded corners.
+  - **How it works:** same sticky phone swap and laptop, with much shorter copy and slow-turning rings
+    instead of a glow.
+  - **Rider or driver:** two full-width panels (petrol and ink) that widen under the pointer on desktop.
+  - **Footer:** a giant outlined wordmark. **Nav:** underlines the section you are in; the route rail no
+    longer names stops (it overlapped content).
+  - Removed `RouteCanvas.jsx` and `MiniRoute.jsx`.
+  - `tailwind.config.cjs` gains `l-ink`, `l-bone`, `l-petrol`, `l-teal`; `src/test/setup.js` stubs canvas.
+- **Why:** team lead feedback: "it looks AI", add a hero video / motion graphics, less text, keep the app
+  transition showing features and the rider-or-driver section, and the domain is arriving soon.
+- **Contract impact:** none. Still no API calls beyond the existing download-link lookup.
+- **Tests:** new `roadScene`, `NightRoad`, `scrub`, `ScrubText`, `eta`, `LiveEta` suites; `LandingPage`,
+  `JoinSection` and `App` tests updated for the new copy; `e2e/landing.spec.ts` extended (canvas painted
+  and moving, reduced-motion still frame, countdown, scrubbed statement, nav current section).
+  Vitest 923 passed, Playwright 63 passed, lint 0 errors, build passes.
+- **Docs updated:** this entry, `modules/LANDING.md` (rewritten sections 2, 5, 6, 7), `TESTING_GUIDE.md`.
+- **Follow-ups / known issues:**
+  - **Two bugs worth remembering.** (1) Tailwind silently drops an opacity modifier on a colour written as
+    `text-[color:var(--x)]/60`, so dimmed colours rendered at full strength and the nav went transparent;
+    the palette is now registered properly. (2) `nightRoad.js` beside `NightRoad.jsx` collides on
+    case-insensitive file systems (Windows/macOS) and crashed the page while Linux CI would have passed;
+    the logic file is `roadScene.js`.
+  - Still open from before: the driver email endpoint, the live download links (backend deploy,
+    `VITE_API_URL` and the release registered), and Vercel Git LFS for the `/downloads/*.apk` pointers.
+  - The download-link lookup (`useAppDownloadLinks`) calls `localhost:5000` when `VITE_API_URL` is unset,
+    which logs connection errors in the visitor's console on the live site.
+
 ## 2026-10-05 — Landing page: honest store labels, driver-form groundwork, real mobile design
 - **Branch:** feature/landing-polish
 - **Modules touched:** [LANDING](modules/LANDING.md)

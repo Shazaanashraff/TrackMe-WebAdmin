@@ -90,14 +90,14 @@ export function LeadForm({ onSubmit }) {
           aria-describedby={message ? `${fieldId}-msg` : undefined}
           className={cn(
             'h-12 w-full shrink-0 rounded-full border sm:min-w-0 sm:flex-1 bg-white/5 px-5 text-base text-white placeholder:text-white/30',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300',
-            status === 'invalid' ? 'border-red-400/70' : 'border-white/15',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-l-bone',
+            status === 'invalid' ? 'border-red-400/70' : 'border-l-bone/25',
           )}
         />
         <button
           type="submit"
           disabled={status === 'sending'}
-          className="group inline-flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-teal-300 px-6 sm:w-auto text-sm font-semibold text-[#04211d] transition-colors hover:bg-teal-200 disabled:opacity-60"
+          className="group inline-flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-l-bone px-6 text-sm font-semibold text-l-ink transition-colors hover:bg-white disabled:opacity-60 sm:w-auto"
         >
           {status === 'sending' ? 'Sending…' : 'Get driver access'}
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />

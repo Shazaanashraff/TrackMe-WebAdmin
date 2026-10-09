@@ -77,7 +77,7 @@ describe('App — the root path', () => {
     renderApp('/');
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: /every shuttle/i }, LANDING_WAIT)
+      await screen.findByRole('heading', { level: 1, name: /where.s the shuttle/i }, LANDING_WAIT)
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^sign in$/i })).not.toBeInTheDocument();
   });
@@ -88,7 +88,7 @@ describe('App — the root path', () => {
     renderApp('/');
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: /every shuttle/i }, LANDING_WAIT)
+      await screen.findByRole('heading', { level: 1, name: /where.s the shuttle/i }, LANDING_WAIT)
     ).toBeInTheDocument();
   });
 }, 20000);

@@ -34,7 +34,7 @@ describe('JoinSection — app download links', () => {
     useAppDownloadLinks.mockReturnValue({ riderAndroid: null, riderIos: null, driverAndroid: null });
     render(<JoinSection />);
 
-    expect(screen.queryByText(/download the driver app directly/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/download the driver app/i)).not.toBeInTheDocument();
   });
 
   it('shows a direct driver download link once a driver build exists, without touching the LeadForm', () => {
@@ -45,7 +45,7 @@ describe('JoinSection — app download links', () => {
     });
     render(<JoinSection />);
 
-    const link = screen.getByRole('link', { name: /download the driver app directly/i });
+    const link = screen.getByRole('link', { name: /download the driver app/i });
     expect(link).toHaveAttribute('href', '/downloads/driver-app-1.0.0.apk');
     // The LeadForm is still the primary CTA, unchanged.
     expect(screen.getByLabelText('Your email')).toBeInTheDocument();

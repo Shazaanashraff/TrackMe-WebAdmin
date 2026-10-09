@@ -7,6 +7,9 @@ globalThis.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 window.HTMLElement.prototype.scrollIntoView = function scrollIntoView() {};
+// jsdom has no canvas. A null context is what real browsers return when drawing is
+// unavailable, and components must cope with it (see landing/NightRoad.jsx).
+window.HTMLCanvasElement.prototype.getContext = function getContext() { return null; };
 // Radix UI Select uses hasPointerCapture/releasePointerCapture — not in JSDOM
 window.HTMLElement.prototype.hasPointerCapture = function hasPointerCapture() { return false; };
 window.HTMLElement.prototype.setPointerCapture = function setPointerCapture() {};

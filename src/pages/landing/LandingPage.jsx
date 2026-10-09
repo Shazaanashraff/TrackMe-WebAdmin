@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { LogoMark } from './LogoMark';
 import { LandingNav } from './LandingNav';
 import { RouteRail } from './RouteRail';
 import { Hero } from './Hero';
@@ -13,22 +12,25 @@ import './landing.css';
 
 function Footer() {
   return (
-    <footer className="border-t border-white/10 px-4 py-12 sm:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 sm:flex-row sm:items-center">
-        <div className="flex items-center gap-2.5">
-          <LogoMark />
-          <span className="font-display text-base font-semibold text-white">TrackMe</span>
-        </div>
-        <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-8 gap-y-3 text-sm text-white/55">
-          <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="transition-colors hover:text-white">
+    <footer className="overflow-hidden bg-l-ink px-4 pt-16 text-l-bone sm:px-8">
+      <div className="mx-auto flex max-w-[90rem] flex-wrap items-center justify-between gap-x-10 gap-y-4 border-t border-l-bone/15 pt-8 text-sm text-l-bone/60">
+        <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-8 gap-y-3">
+          <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="transition-colors hover:text-l-bone">
             Privacy policy
           </a>
-          <Link to="/login" className="transition-colors hover:text-white">
+          <Link to="/login" className="transition-colors hover:text-l-bone">
             Manager sign in
           </Link>
         </nav>
-        <p className="text-xs text-white/35">© {new Date().getFullYear()} TrackMe</p>
+        <p>© {new Date().getFullYear()} TrackMe</p>
       </div>
+      {/* The wordmark, drawn huge and outlined, and clipped by the page edge. */}
+      <p
+        aria-hidden="true"
+        className="l-outline font-display mx-auto mt-10 max-w-[90rem] select-none text-center text-[clamp(4rem,22vw,24rem)] font-semibold leading-[0.78]"
+      >
+        TrackMe
+      </p>
     </footer>
   );
 }

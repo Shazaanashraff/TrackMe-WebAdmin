@@ -6,7 +6,7 @@ export function PhoneFrame({ children, className }) {
     <div
       className={cn(
         'relative aspect-[9/18.5] w-[min(300px,76vw)] rounded-[2.8rem] border border-white/20 bg-[#02080a] p-[9px]',
-        'shadow-[0_40px_90px_-30px_rgb(45_212_191/0.45),0_0_0_1px_rgb(255_255_255/0.04),inset_0_0_0_1px_rgb(255_255_255/0.06)]',
+        'shadow-[0_50px_100px_-40px_rgb(0_0_0/0.95),inset_0_0_0_1px_rgb(255_255_255/0.06)]',
         className,
       )}
     >
@@ -25,7 +25,7 @@ export function PhoneFrame({ children, className }) {
 export function LaptopFrame({ children, className }) {
   return (
     <div className={cn('relative w-[min(640px,92vw)]', className)}>
-      <div className="rounded-t-2xl border border-white/20 bg-[#02080a] p-[10px] shadow-[0_40px_90px_-30px_rgb(45_212_191/0.4)]">
+      <div className="rounded-t-2xl border border-white/20 bg-[#02080a] p-[10px] shadow-[0_50px_100px_-40px_rgb(0_0_0/0.95)]">
         <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-[#0a1316]">{children}</div>
       </div>
       <div

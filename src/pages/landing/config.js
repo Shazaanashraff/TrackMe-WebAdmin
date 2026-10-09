@@ -19,65 +19,48 @@ export const DRIVER_INTEREST_ENDPOINT = null;
 export const PRIVACY_URL = 'https://shazaanashraff.github.io/trackme-privacy/';
 
 export const NAV_LINKS = [
-  { label: 'What is TrackMe', href: '#what' },
+  { label: 'Why TrackMe', href: '#what' },
   { label: 'How it works', href: '#how-it-works' },
-  { label: 'Get started', href: '#join' },
+  { label: 'Get the app', href: '#join' },
 ];
 
-export const PILLARS = [
-  {
-    key: 'live',
-    title: 'Live tracking',
-    body: 'See where each vehicle is right now on a map, updated as the driver moves.',
-    span: 'lg:col-span-2',
-  },
-  {
-    key: 'enroll',
-    title: 'Approved enrollment',
-    body: 'Riders join a driver with a key. Private drivers need a manager to approve first.',
-    span: '',
-  },
-  {
-    key: 'fleet',
-    title: 'Fleet control',
-    body: 'Vehicles, drivers, routes and rider requests, managed from one portal.',
-    span: '',
-  },
-  {
-    key: 'routes',
-    title: 'Built around real routes',
-    body: 'Start from public routes or draw your own custom route for a school, campus or office.',
-    span: 'sm:col-span-2 lg:col-span-4',
-  },
+// The one big sentence under the hero. It lights up word by word as you scroll.
+export const STATEMENT = 'School runs, campus shuttles and office rides. Every one on a single live map.';
+
+// Three real capabilities, said in a handful of words each.
+export const POINTS = [
+  { key: 'live', title: 'Live map', body: 'See every vehicle, right now.' },
+  { key: 'riders', title: 'Approved riders', body: 'Join by key. Managers approve.' },
+  { key: 'fleet', title: 'Fleet control', body: 'Vehicles, drivers, routes. One place.' },
 ];
 
 export const STORY = [
   {
     key: 'track',
     audience: 'For riders',
-    title: 'See where your ride is, right now.',
-    body: 'Open the map and watch your shuttle move along its route, with the next stop and a live arrival time. No more standing at the gate guessing.',
+    title: 'See it coming.',
+    body: 'Watch your shuttle move, with a live arrival time.',
     device: 'phone',
   },
   {
     key: 'join',
     audience: 'For riders',
-    title: 'Join your driver with a key.',
-    body: 'Your driver shares an enrollment key. Enter it once. For private drivers the fleet manager approves your request, and you can see its status as it happens.',
+    title: 'Join with a key.',
+    body: 'Your driver shares it. Your manager approves.',
     device: 'phone',
   },
   {
     key: 'family',
     audience: 'For riders',
-    title: 'One account, every rider.',
-    body: 'Add a child or an employee as a managed profile and follow each of them separately, from a single login.',
+    title: 'One login, every rider.',
+    body: 'Add children or staff. Follow each one.',
     device: 'phone',
   },
   {
     key: 'manage',
     audience: 'For fleet managers',
-    title: 'Your whole fleet, on one screen.',
-    body: 'Vehicles, drivers, enrollments and live positions in the manager portal. Approve riders, assign routes and keep every shuttle in view from your desk.',
+    title: 'Run the whole fleet.',
+    body: 'Vehicles, drivers, requests and live positions in one portal.',
     device: 'laptop',
   },
 ];

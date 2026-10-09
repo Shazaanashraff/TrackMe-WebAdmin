@@ -1,9 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Bus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { STOPS, activeStop, journeyProgress, stopFractions } from './journey';
-
-const CHIP_MS = 1800;
 
 /**
  * The page as a route. A line along the left edge fills as you scroll, a tiny
@@ -13,9 +11,6 @@ const CHIP_MS = 1800;
  */
 export function RouteRail() {
   const [state, setState] = useState({ progress: 0, fractions: STOPS.map(() => 0) });
-  const [chip, setChip] = useState(null);
-  const lastStop = useRef(0);
-  const chipTimer = useRef(0);
 
   useEffect(() => {
     let frame = 0;
@@ -32,18 +27,6 @@ export function RouteRail() {
       const fractions = stopFractions(tops, height, viewport);
       setState({ progress, fractions });
 
-      // Name the stop for a moment when the shuttle arrives at a new one.
-      const current = activeStop(progress, fractions);
-      if (current !== lastStop.current) {
-        lastStop.current = current;
-        if (current > 0) {
-          setChip(STOPS[current].label);
-          window.clearTimeout(chipTimer.current);
-          chipTimer.current = window.setTimeout(() => setChip(null), CHIP_MS);
-        } else {
-          setChip(null);
-        }
-      }
     };
 
     const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
@@ -60,7 +43,6 @@ export function RouteRail() {
       window.removeEventListener('resize', schedule);
       window.removeEventListener('load', schedule);
       window.clearTimeout(settle);
-      window.clearTimeout(chipTimer.current);
       if (frame) cancelAnimationFrame(frame);
     };
   }, []);
@@ -79,7 +61,7 @@ export function RouteRail() {
         progress > 0.01 ? 'opacity-100' : 'opacity-0',
       )}
     >
-      <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/10" />
+      <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-[#7c8885]/40" />
       <span
         className="absolute left-1/2 top-0 w-[2px] -translate-x-1/2 rounded-full bg-gradient-to-b from-teal-300/0 via-teal-300 to-sky-300"
         style={{ height: `${progress * 100}%` }}
@@ -94,7 +76,7 @@ export function RouteRail() {
             data-reached={reached}
             className={cn(
               'absolute left-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 transition-colors duration-500',
-              reached ? 'border-teal-300 bg-teal-300' : 'border-white/25 bg-[#04090b]',
+              reached ? 'border-teal-300 bg-teal-300' : 'border-[#7c8885] bg-l-ink',
             )}
             style={{ top: `${fractions[index] * 100}%` }}
           />
@@ -113,14 +95,6 @@ export function RouteRail() {
         ) : null}
         <span className="relative flex h-4 w-4 items-center justify-center rounded-full bg-teal-300 text-[#04211d] shadow-[0_0_18px_rgb(45_212_191/0.8)] sm:h-6 sm:w-6">
           <Bus className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
-        </span>
-        <span
-          className={cn(
-            'l-glass absolute left-6 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-teal-100 transition-opacity duration-500 sm:left-9',
-            chip ? 'opacity-100' : 'opacity-0',
-          )}
-        >
-          {chip}
         </span>
       </span>
     </div>
