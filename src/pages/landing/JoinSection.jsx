@@ -1,4 +1,4 @@
-import { Car, Download, UserRound } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Reveal } from './Reveal';
 import { LeadForm } from './LeadForm';
@@ -16,7 +16,7 @@ function StoreButton({ href, label, sub }) {
       </span>
     </>
   );
-  const base = 'inline-flex min-h-14 items-center gap-3 rounded-2xl border px-5 transition-colors';
+  const base = 'inline-flex min-h-14 items-center gap-3 rounded-full border px-6 transition-colors';
 
   if (href) {
     return (
@@ -24,7 +24,10 @@ function StoreButton({ href, label, sub }) {
         href={href}
         target="_blank"
         rel="noreferrer"
-        className={cn(base, 'border-white/20 bg-white text-[#04211d] hover:bg-teal-100')}
+        className={cn(
+          base,
+          'border-transparent bg-l-bone text-l-ink hover:bg-white',
+        )}
       >
         {body}
       </a>
@@ -34,72 +37,68 @@ function StoreButton({ href, label, sub }) {
     <button
       type="button"
       disabled
-      className={cn(base, 'cursor-not-allowed border-white/10 bg-white/5 text-white/50')}
+      className={cn(base, 'cursor-not-allowed border-l-bone/25 bg-black/15 text-l-bone/70')}
     >
       {body}
     </button>
   );
 }
 
+/**
+ * Two full-width panels, no cards: petrol for riders, ink for drivers. On a
+ * wide screen the panel under the pointer widens a little. Few words, because
+ * the choice itself is the content.
+ */
 export function JoinSection({ onDriverSubmit }) {
   const { riderAndroid, riderIos, driverAndroid } = useAppDownloadLinks();
 
   return (
-    <section id="join" aria-labelledby="join-heading" className="relative px-4 py-20 sm:px-8 sm:py-40">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[480px] bg-[radial-gradient(ellipse_at_50%_100%,rgb(45_212_191/0.14),transparent_70%)]"
-      />
-      <div className="relative mx-auto max-w-7xl">
+    <section id="join" aria-labelledby="join-heading" className="relative bg-l-ink">
+      <div className="mx-auto max-w-[90rem] px-4 pb-14 pt-24 sm:px-8 sm:pb-20 sm:pt-36">
         <Reveal>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-teal-300">Get started</p>
-        </Reveal>
-        <Reveal delay={80}>
           <h2
             id="join-heading"
-            className="font-display mt-5 max-w-3xl text-[clamp(2.4rem,6vw,5rem)] font-semibold leading-[1.02] text-white"
+            className="font-display text-[clamp(3rem,10vw,9.5rem)] font-semibold leading-[0.9] text-l-bone"
           >
-            Are you a rider,
-            <br />
-            or a <span className="l-gradient-text">driver?</span>
+            Rider or driver?
           </h2>
         </Reveal>
+      </div>
 
-        <div className="mt-16 grid gap-5 lg:grid-cols-2">
-          <Reveal className="l-card flex flex-col rounded-[2rem] p-8 sm:p-10">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-300 text-[#04211d]">
-              <UserRound className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <h3 className="font-display mt-8 text-3xl font-semibold text-white">I&apos;m a rider</h3>
-            <p className="mt-3 max-w-md leading-relaxed text-white/60">
-              Download the TrackMe app, enter your driver&apos;s key, and watch your shuttle on the map.
-            </p>
-            <div className="mt-auto flex flex-col gap-3 pt-10 sm:flex-row">
-              <StoreButton href={riderIos} sub="Get it on" label="iPhone (iOS)" />
-              <StoreButton href={riderAndroid} sub="Direct download" label="Android (APK)" />
-            </div>
-          </Reveal>
+      <div className="l-split">
+        <div className="l-panel-a flex min-h-[26rem] flex-col bg-l-petrol p-8 text-l-bone sm:p-14 lg:min-h-[34rem]">
+          <p className="font-mono text-sm text-l-bone/60">01</p>
+          <h3 className="font-display mt-6 text-[clamp(2.6rem,5vw,4.6rem)] font-semibold leading-none">
+            I&apos;m a rider
+          </h3>
+          <p className="mt-4 max-w-xs text-lg text-l-bone/75">
+            Get the app. Enter your driver&apos;s key.
+          </p>
+          <div className="mt-auto flex flex-col gap-3 pt-12 sm:flex-row">
+            <StoreButton href={riderIos} sub="Get it on" label="iPhone (iOS)" />
+            <StoreButton href={riderAndroid} sub="Direct download" label="Android (APK)" />
+          </div>
+        </div>
 
-          <Reveal delay={120} className="l-card flex flex-col rounded-[2rem] p-8 sm:p-10">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-teal-300/40 bg-teal-300/10 text-teal-200">
-              <Car className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <h3 className="font-display mt-8 text-3xl font-semibold text-white">I&apos;m a driver</h3>
-            <p className="mt-3 max-w-md leading-relaxed text-white/60">
-              Leave your email and we&apos;ll send you the driver app and what happens next.
-            </p>
-            <div className="mt-auto pt-10">
-              <LeadForm onSubmit={onDriverSubmit} />
-              {driverAndroid && (
-                <p className="mt-4 text-xs text-white/50">
-                  Already approved by a manager?{' '}
-                  <a href={driverAndroid} className="font-medium text-teal-300 underline-offset-2 hover:underline">
-                    Download the driver app directly
-                  </a>
-                </p>
-              )}
-            </div>
-          </Reveal>
+        <div className="l-panel-b flex min-h-[26rem] flex-col border-t border-l-bone/10 bg-l-ink p-8 text-l-bone sm:p-14 lg:min-h-[34rem] lg:border-l lg:border-t-0">
+          <p className="font-mono text-sm text-l-bone/50">02</p>
+          <h3 className="font-display mt-6 text-[clamp(2.6rem,5vw,4.6rem)] font-semibold leading-none">
+            I&apos;m a driver
+          </h3>
+          <p className="mt-4 max-w-xs text-lg text-l-bone/70">
+            Leave your email. We&apos;ll send the app.
+          </p>
+          <div className="mt-auto pt-12">
+            <LeadForm onSubmit={onDriverSubmit} />
+            {driverAndroid && (
+              <p className="mt-4 text-sm text-l-bone/55">
+                Already approved?{' '}
+                <a href={driverAndroid} className="font-medium text-l-teal underline-offset-2 hover:underline">
+                  Download the driver app
+                </a>
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </section>

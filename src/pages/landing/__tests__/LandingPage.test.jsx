@@ -10,7 +10,7 @@ describe('LandingPage', () => {
   it('opens with the hero headline and both audience calls to action', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/every shuttle\.\s*every stop\.\s*live\./i);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/where.s the shuttle\?/i);
     expect(screen.getByRole('link', { name: /i'm a rider/i })).toHaveAttribute('href', '#join');
     expect(screen.getByRole('link', { name: /i'm a driver/i })).toHaveAttribute('href', '#join');
   });
@@ -30,9 +30,9 @@ describe('LandingPage', () => {
     expect(ids).toEqual(['top', 'what', 'how-it-works', 'join']);
   });
 
-  it('explains what TrackMe is', () => {
+  it('says what TrackMe is in one sentence and three short points', () => {
     renderPage();
-    expect(screen.getByRole('heading', { name: /one live view for every school/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /school runs, campus shuttles/i })).toBeInTheDocument();
   });
 
   it('tells every step of the how-it-works story (stacked layout without matchMedia)', () => {
@@ -52,7 +52,7 @@ describe('LandingPage', () => {
     renderPage();
 
     const join = document.getElementById('join');
-    expect(within(join).getByRole('heading', { name: /rider,\s*or a driver\?/i })).toBeInTheDocument();
+    expect(within(join).getByRole('heading', { name: /rider or driver\?/i })).toBeInTheDocument();
     expect(within(join).getByLabelText('Your email')).toBeInTheDocument();
     expect(within(join).getByRole('button', { name: /get driver access/i })).toBeInTheDocument();
   });

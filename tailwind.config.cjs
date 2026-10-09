@@ -37,6 +37,14 @@ module.exports = {
           danger: 'var(--status-danger)',
         },
 
+        // ─── Landing page palette. Defined as RGB channels (see landing.css) so
+        // Tailwind can apply opacity: `text-l-bone/60`, `bg-l-ink/95`. A colour
+        // written as `text-[color:var(--x)]/60` silently drops the /60. ───
+        'l-ink': 'rgb(var(--l-ink-rgb) / <alpha-value>)',
+        'l-bone': 'rgb(var(--l-bone-rgb) / <alpha-value>)',
+        'l-petrol': 'rgb(var(--l-petrol-rgb) / <alpha-value>)',
+        'l-teal': 'rgb(var(--l-teal-rgb) / <alpha-value>)',
+
         // ─── Legacy (kept until MUI pages are migrated — do not add more) ───
         'ace-primary': '#10b981',
         'ace-secondary': '#111827',
