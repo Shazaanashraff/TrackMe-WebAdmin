@@ -62,6 +62,38 @@ when source under `src/` changed. One entry per session/PR is enough.
   - A visitor already on `/` when a release is retracted keeps the old link until they reload —
     no client-side invalidation on the public page.
 
+## 2026-10-13 — Landing page: motion foundation (smooth scroll, opening, tooling)
+- **Branch:** feature/landing-journey
+- **Modules touched:** [LANDING](modules/LANDING.md)
+- **What changed:**
+  - **Added `gsap` and `lenis`** (landing chunk only). Lenis is MIT. GSAP's standard no-charge licence covers
+    commercial websites and was read from gsap.com/standard-license before adopting it. The portal's main
+    bundle contains neither.
+  - **Smooth, inertial scrolling** (`MotionProvider`): Lenis driven from the GSAP ticker so ScrollTrigger stays
+    in step, with in-page `#anchor` links gliding to their sections. Off for `prefers-reduced-motion` and where
+    animation is unavailable; touch devices keep native scrolling.
+  - **The opening** (`Loader`): a route draws itself under the wordmark while a 000-100 counter runs, then the
+    page opens through a circle that grows from where the shuttle sits. Plays once per session, skipped for
+    reduced motion, locks scrolling while it plays, capped at 3.6s. The hero's own entrance waits for it.
+  - **Tooling for the next stages:** `gsapSetup` (one registration point, named eases), `useGsapContext` (animation
+    code that reverts itself on unmount), a motion context (`useMotion`).
+  - **Size budget:** `scripts/check-landing-budget.mjs` + `npm run check:landing-budget`. The landing chunk went
+    from ~14 KB to ~66 KB gzipped; the limit is 120 KB.
+- **Why:** step one of rebuilding the landing page to an award-site standard, modelled on the techniques of two
+  reference sites (scroll-driven sequences, inertia scrolling, shapes as transitions). This stage adds the
+  engine only; the hero, scenes and transitions come next.
+- **Contract impact:** none. No API calls added.
+- **Tests:** new `intro`, `MotionProvider`, `Loader`, `LandingIntro` suites; `e2e/landing.spec.ts` gains the
+  opening and smooth-scrolling specs and now starts every other spec as a returning visitor. Vitest 961 passed,
+  Playwright 69 passed, lint 0 errors (28 warnings, unchanged), build passes, landing chunk 65.8 KB gzipped.
+- **Docs updated:** this entry, `modules/LANDING.md` (key files, sections 5, 6 and 7), `TESTING_GUIDE.md`.
+- **Follow-ups / known issues:**
+  - `check:landing-budget` is not wired into `.github/workflows/ci.yml`; adding it is a team decision.
+  - The pinned, scroll-scrubbed scenes, circle wipes between sections, the rotating badge and the mobile
+    choreography are not built yet (stages 3 to 6 of the plan).
+  - Everything from the earlier redesign still stands and is unchanged: the driver email endpoint, the live
+    download links (backend, `VITE_API_URL`, release registered) and Vercel Git LFS are still open.
+
 ## 2026-10-09 — Landing page redesigned: editorial look, coded hero, less copy
 - **Branch:** feature/landing-redesign
 - **Modules touched:** [LANDING](modules/LANDING.md)

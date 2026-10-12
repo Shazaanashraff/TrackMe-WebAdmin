@@ -212,3 +212,23 @@ html:has(.landing) #root {
   background: rgb(7 16 15 / 0.82);
   border: 1px solid var(--l-line);
 }
+
+/* ── The opening ─────────────────────────────────────────────────────────── */
+/* The loader hides everything until a hole, growing from where the shuttle will be,
+   opens in it. --r is animated by GSAP (0% = fully covered, ~112% = gone). */
+.landing .l-loader,
+.l-loader {
+  -webkit-mask-image: radial-gradient(circle at var(--x, 50%) var(--y, 50%), transparent var(--r, 0%), #000 calc(var(--r, 0%) + 0.4%));
+  mask-image: radial-gradient(circle at var(--x, 50%) var(--y, 50%), transparent var(--r, 0%), #000 calc(var(--r, 0%) + 0.4%));
+}
+
+/* While it plays, hold the hero's own entrance so it starts the moment the page opens. */
+.landing[data-intro='playing'] .l-word > span,
+.landing[data-intro='playing'] .l-fade-in {
+  animation-play-state: paused;
+}
+
+/* With Lenis driving the scroll, the browser's own smooth-scroll must step aside. */
+html.lenis:has(.landing) {
+  scroll-behavior: auto;
+}

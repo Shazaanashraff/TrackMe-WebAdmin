@@ -47,6 +47,11 @@ to avoid: glow blobs, frosted-glass cards, gradient text, icon-in-a-box grids, a
 | `src/pages/landing/JoinSection.jsx` / `LeadForm.jsx` / `validation.js` | "Rider or driver?": two full-width panels (petrol for riders with the store buttons, ink for drivers with the email form). On a wide screen the panel under the pointer widens a little. |
 | `src/pages/landing/landing.css` | Everything custom: the palette variables, reveal, grain, keyframes, outlined type, the rider/driver split. Scoped under `.landing`. |
 | `tailwind.config.cjs` | Registers `l-ink`, `l-bone`, `l-petrol`, `l-teal` as real Tailwind colours (see §6 for why this matters). |
+| `src/pages/landing/motion/gsapSetup.js` | The one place GSAP and ScrollTrigger are registered and configured, plus the named `EASE` set. Only the lazy landing chunk imports it, so the portal never ships GSAP. |
+| `src/pages/landing/motion/MotionProvider.jsx` / `context.js` | **Smooth, inertial scrolling (Lenis)**, driven from the GSAP ticker so ScrollTrigger stays in step, plus gliding to in-page `#anchors`. Off for reduced motion and where animation is unavailable; touch keeps native scrolling. `context.js` holds `useMotion()` (`lenis`, `reduced`, `scrollTo`) and `browserCanAnimate()`. |
+| `src/pages/landing/motion/Loader.jsx` / `intro.js` | **The opening**: a route draws itself under the wordmark while a 000-100 counter runs, then the page opens through a circle growing from where the shuttle sits (the radar-ping motif). Locks scrolling while it plays, capped at `INTRO_MAX_MS` (3.6s). `intro.js` is the pure logic: when to play, the session flag, the counter format, the circle's origin. |
+| `src/pages/landing/motion/useGsapContext.js` | Runs GSAP code for a component's lifetime and reverts all of it (tweens, timelines, ScrollTriggers) on unmount. Use it for every scroll-driven scene. |
+| `scripts/check-landing-budget.mjs` | `npm run check:landing-budget` after a build: fails if the landing chunk exceeds 120 KB gzipped. |
 | `src/hooks/use-media-query.js` | `useMediaQuery(query)`, used to pick the sticky vs stacked story. |
 | `public/landing/portal-*.jpg` | Real captures of the manager portal in dark mode, taken from the E2E mock data (not real fleets). Re-take them if the portal's look changes. |
 
@@ -79,6 +84,13 @@ flowchart TD
 - The portal sets `overflow-x: hidden` on `html`, `body` and `#root`. That makes `#root` a scroll
   container, which silently breaks `position: sticky`. `landing.css` overrides it for pages that
   contain `.landing`. If the story stage ever scrolls away instead of pinning, look here first.
+- **Scrolling is Lenis, not the browser's.** With it running, `<html>` carries the `lenis` class and
+  the page's CSS `scroll-behavior: smooth` is switched off (the two would fight). Lenis still moves the
+  real window scroll position, so every `scroll` listener, `position: sticky` and ScrollTrigger keep
+  working unchanged.
+- **The opening is a mask, not a clip.** `.l-loader` uses a `radial-gradient` mask whose radius is the CSS
+  variable `--r`, animated by GSAP from `0%` (covered) to `112%` (gone). The hole is centred on
+  `--x/--y`, set from `irisOrigin()` (the shuttle's spot in the hero).
 - When `HERO_VIDEO` is set the hero shows the clip with a teal `mix-blend-color` grade over it, and
   `NightRoad` is not drawn.
 
@@ -123,6 +135,21 @@ flowchart TD
 - **Reduced motion:** CSS animations and transitions are neutralised globally; `NightRoad` paints one
   still frame; `LiveEta` shows a static "4 min"; `ScrubText` shows every word fully lit; the route
   shuttles on the SVG story are skipped via `useMediaQuery('(prefers-reduced-motion: reduce)')`.
+- **Every test starts as a returning visitor.** The opening plays once per session (flag
+  `trackme-intro-seen` in `sessionStorage`) and locks scrolling for ~2.5s, so `e2e/landing.spec.ts`
+  sets that flag in a file-level `beforeEach`; only the "opening" describe removes it. A new spec that
+  loads `/` needs the same flag or it will meet the loader.
+- **jsdom has no `matchMedia`, so there is no Lenis and no opening in unit tests** (`browserCanAnimate()`
+  is false). Tests that need either stub `matchMedia` and mock `lenis` / `motion/gsapSetup` (see
+  `MotionProvider.test.jsx`, `Loader.test.jsx`, `LandingIntro.test.jsx`).
+- **Size budget.** GSAP, ScrollTrigger and Lenis take the landing chunk from ~14 KB to ~66 KB gzipped.
+  Run `npm run check:landing-budget` after `npm run build`; the limit is 120 KB. Raise it deliberately,
+  never to silence a failure. CI does not run it yet (adding it to `ci.yml` is a team decision).
+- **Licences.** Lenis is MIT. GSAP's "standard no-charge licence" covers commercial websites
+  (https://gsap.com/standard-license); it forbids building a competing no-code animation tool, which this
+  is not. SplitText and ScrollTrigger are covered; re-read the licence if GSAP's terms change.
+- Lenis does not expose its options on `window`, so its tuning (`lerp: 0.09`, `wheelMultiplier: 0.95`) lives
+  in `MotionProvider.jsx` and was chosen by feel against the references.
 - **jsdom has no canvas.** `src/test/setup.js` stubs `getContext` to return `null`, which is what a
   real browser returns when drawing is unavailable, and `NightRoad` must keep coping with it.
 
@@ -134,6 +161,10 @@ flowchart TD
 | Unit | `src/pages/landing/__tests__/LeadForm.test.jsx` | email validation, error clearing, success, failure, the honest "not connected" state, and the honeypot (drops the submission; out of tab order and hidden from screen readers) |
 | Unit | `src/pages/landing/__tests__/journey.test.js` | route maths: progress clamping (overscroll), stop placement, active stop (incl. nothing-to-scroll and landing a hair short), stop list order |
 | Component | `src/pages/landing/__tests__/RouteRail.test.jsx` | decorative-only (`aria-hidden`, no pointer events), starts at the first stop and hidden until scrolled, one unreached dot per later section |
+| Unit | `src/pages/landing/__tests__/intro.test.js` | when the opening plays (first visit, can animate, not reduced), never twice in a session, blocked storage treated as unseen, counter padding and clamping, the circle's origin on wide and portrait screens, the time ceiling |
+| Component | `src/pages/landing/__tests__/MotionProvider.test.jsx` | one smooth-scroll instance driven from the GSAP ticker (seconds to milliseconds), none for reduced motion or without `matchMedia`, clean shutdown on unmount, no duplicate on re-render, anchor links glide and update the URL, missing/ordinary/modified links left alone, `scrollTo` with and without Lenis |
+| Component | `src/pages/landing/__tests__/Loader.test.jsx` | announces itself as a status, builds one timeline and finishes on completion, 3.6s failsafe, reports done exactly once, clears its timer when it leaves, locks and restores scrolling, stops and restarts Lenis, works without it |
+| Component | `src/pages/landing/__tests__/LandingIntro.test.jsx` | the page plays the opening on a first visit and holds `data-intro="playing"`, opens and sets the session flag when it finishes, no replay in the same session, skipped for reduced motion and without animation support, survives blocked `sessionStorage` |
 | Unit | `src/pages/landing/__tests__/driverInterest.test.js` | refuses to run with no endpoint; POSTs `{ email, source: 'landing' }` as JSON; throws on non-2xx and on network failure |
 | Component | `src/pages/landing/__tests__/JoinSection.test.jsx` | "Coming soon" buttons while no release exists; live links once the API returns releases; the direct driver download line |
 | Unit | `src/pages/landing/__tests__/roadScene.test.js` | the scene maths: projection towards the horizon, depth looping with no seam, streaming speed, the shuttle fully on screen (with room for its tag) on five screen sizes and above the headline on a phone, deterministic skyline, haze |

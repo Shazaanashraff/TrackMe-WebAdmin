@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { LandingNav } from './LandingNav';
 import { RouteRail } from './RouteRail';
@@ -8,6 +8,10 @@ import { ScrollStory } from './ScrollStory';
 import { JoinSection } from './JoinSection';
 import { DRIVER_INTEREST_ENDPOINT, PRIVACY_URL } from './config';
 import { submitDriverInterest } from './driverInterest';
+import { MotionProvider } from './motion/MotionProvider';
+import { browserCanAnimate } from './motion/context';
+import { Loader } from './motion/Loader';
+import { markIntroSeen, readIntroSeen, shouldPlayIntro } from './motion/intro';
 import './landing.css';
 
 function Footer() {
@@ -35,6 +39,22 @@ function Footer() {
   );
 }
 
+const sessionStore = () => {
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null; // blocked by the browser: treat the opening as unseen
+  }
+};
+
+/** 'playing' if the opening should run for this visit, else 'done'. */
+function initialIntro() {
+  if (typeof window === 'undefined') return 'done';
+  const canAnimate = browserCanAnimate();
+  const reduced = canAnimate && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return shouldPlayIntro({ canAnimate, reduced, seen: readIntroSeen(sessionStore()) }) ? 'playing' : 'done';
+}
+
 /**
  * The public front door at `/`. Signed-out visitors only: App.jsx redirects a
  * signed-in manager or super-admin to their dashboard before this ever renders.
@@ -46,6 +66,12 @@ export default function LandingPage({
   // No endpoint configured -> undefined -> the form says nothing was sent.
   onDriverSubmit = DRIVER_INTEREST_ENDPOINT ? submitDriverInterest : undefined,
 }) {
+  const [intro, setIntro] = useState(initialIntro);
+  const finishIntro = useCallback(() => {
+    markIntroSeen(sessionStore());
+    setIntro('done');
+  }, []);
+
   useEffect(() => {
     const previous = document.title;
     document.title = 'TrackMe · Live shuttle tracking for Sri Lanka';
@@ -53,7 +79,9 @@ export default function LandingPage({
   }, []);
 
   return (
-    <div className="landing dark min-h-screen">
+    <MotionProvider>
+    <div className="landing dark min-h-screen" data-intro={intro}>
+      {intro === 'playing' ? <Loader onDone={finishIntro} /> : null}
       <a
         href="#what"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-teal-300 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[#04211d]"
@@ -70,5 +98,6 @@ export default function LandingPage({
       </main>
       <Footer />
     </div>
+    </MotionProvider>
   );
 }

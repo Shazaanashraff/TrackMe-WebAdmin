@@ -15,6 +15,12 @@ import {
  */
 
 // The page is a lazy chunk, so wait for the story to exist before measuring it.
+// The opening plays once per session. Every spec but the ones about the opening itself starts
+// as a returning visitor, so the loader never sits in front of what is being tested.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => window.sessionStorage.setItem('trackme-intro-seen', '1'));
+});
+
 const storyState = async (page: Page) => {
   await page.locator('#how-it-works').waitFor();
   return page.evaluate(() => {
@@ -338,5 +344,112 @@ test.describe('Landing page — signed-in visitors', () => {
     await page.goto('/');
 
     await expect(page).toHaveURL(/\/dashboard$/);
+  });
+});
+
+test.describe('Landing page — the opening', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  // Registered after the file-level beforeEach, so this removes the flag it set.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => window.sessionStorage.removeItem('trackme-intro-seen'));
+  });
+
+  const loader = (page: Page) => page.getByRole('status', { name: /loading trackme/i });
+
+  test('plays on a first visit: the counter runs, scrolling is locked, then the page opens', async ({ page }) => {
+    await page.goto('/');
+    await expect(loader(page)).toBeVisible();
+
+    // Locked: a wheel turn during the opening does not move the page.
+    await page.mouse.move(720, 450);
+    await page.mouse.wheel(0, 800);
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+    // The counter really counts.
+    const counter = loader(page).locator('p.font-mono').first();
+    const early = await counter.textContent();
+    await page.waitForTimeout(900);
+    expect(Number(await counter.textContent())).toBeGreaterThan(Number(early));
+
+    // ...and the opening ends by itself, well inside its ceiling.
+    await expect(loader(page)).toHaveCount(0, { timeout: 5000 });
+    await expect(page.locator('.landing')).toHaveAttribute('data-intro', 'done');
+    expect(await page.evaluate(() => window.sessionStorage.getItem('trackme-intro-seen'))).toBe('1');
+  });
+
+  test("holds the hero's own entrance until the page has opened", async ({ page }) => {
+    await page.goto('/');
+    await expect(loader(page)).toBeVisible();
+    const playState = () =>
+      page.locator('#top h1 .l-word > span').first().evaluate((el) => getComputedStyle(el).animationPlayState);
+
+    // While the loader plays, the headline words are still parked below their masks.
+    expect(await playState()).toBe('paused');
+    await expect(loader(page)).toHaveCount(0, { timeout: 5000 });
+    await expect.poll(playState).toBe('running');
+  });
+
+  test('is skipped entirely for visitors who prefer reduced motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    await page.locator('#top h1').waitFor();
+    await expect(loader(page)).toHaveCount(0);
+    await expect(page.locator('.landing')).toHaveAttribute('data-intro', 'done');
+  });
+});
+
+test.describe('Landing page — smooth scrolling', () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  const scrollY = (page: Page) => page.evaluate(() => Math.round(window.scrollY));
+
+  test('a wheel turn glides: the page is still travelling a moment later, then settles', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#top h1').waitFor();
+    await page.waitForTimeout(500);
+    await expect(page.locator('html')).toHaveClass(/lenis/);
+
+    await page.mouse.move(720, 450);
+    await page.mouse.wheel(0, 700);
+    await page.waitForTimeout(90);
+    const early = await scrollY(page);
+    await page.waitForTimeout(1600);
+    const settled = await scrollY(page);
+
+    expect(settled).toBeGreaterThan(450); // it went most of the way
+    expect(early).toBeLessThan(settled * 0.85); // and was not already there after 90ms
+    // Still settled: it does not drift on after coming to rest.
+    await page.waitForTimeout(300);
+    expect(Math.abs((await scrollY(page)) - settled)).toBeLessThan(3);
+  });
+
+  test('a nav link glides to its section and lands on it', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#join').waitFor();
+    await page.waitForTimeout(500);
+
+    await page.getByRole('navigation', { name: 'Landing' }).getByRole('link', { name: 'Get the app' }).click();
+    await page.waitForTimeout(150);
+    const early = await scrollY(page);
+    await page.waitForTimeout(2600);
+
+    const top = await page.evaluate(() => Math.round(document.getElementById('join')!.getBoundingClientRect().top));
+    expect(Math.abs(top)).toBeLessThan(4); // landed exactly on the section
+    expect(early).toBeLessThan(await scrollY(page)); // and did not teleport there
+    expect(await page.evaluate(() => window.location.hash)).toBe('#join');
+  });
+
+  test("uses the browser's own scrolling when reduced motion is preferred", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    await page.locator('#top h1').waitFor();
+
+    await expect(page.locator('html')).not.toHaveClass(/lenis/);
+    await page.mouse.move(720, 450);
+    await page.mouse.wheel(0, 700);
+    await page.waitForTimeout(400);
+    expect(await scrollY(page)).toBeGreaterThan(600);
   });
 });
