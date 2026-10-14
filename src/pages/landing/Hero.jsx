@@ -4,7 +4,7 @@ import { HeroFilm } from './HeroFilm';
 import { NightRoad } from './NightRoad';
 import { HERO_VIDEO } from './config';
 import { CURTAIN_VARS, RECEDE, clearCurtain, curtainScreens, curtainUnits, declareCurtain } from './curtain';
-import { coverGeometry, pickClip, sceneShift } from './heroVideo';
+import { coverGeometry, pickClip } from './heroVideo';
 import { HERO_SCREENS, heroScreens, heroWindow } from './roadScene';
 import { useMotion } from './motion/context';
 import { EASE, ScrollTrigger, gsap } from './motion/gsapSetup';
@@ -14,7 +14,7 @@ import { useViewportSize } from './motion/useViewportSize';
 // How far the visitor scrolls, in screens, while the hero is pinned and playing out (on a wide
 // screen; a phone gets a shorter film, see heroScreens in roadScene.js).
 export const HERO_SCROLL_SCREENS = HERO_SCREENS.wide;
-export const HERO_SCRUB = 0.6; // the half-second-ish lag that makes scroll-linked motion feel liquid
+export const HERO_SCRUB = 1.2; // the half-second-ish lag that makes scroll-linked motion feel liquid
 export const HERO_START_SCALE = 0.72;
 // A film clip is not zoomed out at the start (it would show its own edges as the window opens, and
 // there is no whole shuttle to fit in); it pushes in a little instead.
@@ -43,7 +43,7 @@ const TICKER = ['Schools', 'Campuses', 'Offices'];
 // from assistive tech.
 function Ticker() {
   return (
-    <div aria-hidden="true" className="absolute inset-x-0 bottom-0 z-20 overflow-hidden pb-14 sm:pb-20">
+    <div data-ticker aria-hidden="true" className="absolute inset-x-0 bottom-0 z-20 overflow-hidden pb-14 sm:pb-20" style={{ opacity: 0 }}>
       <div className="l-marquee-track flex">
         {[0, 1].map((copy) => (
           <div key={copy} className="flex shrink-0 items-center">
@@ -88,7 +88,7 @@ function Frame() {
  * moment, so nobody has to scroll to act. For visitors who prefer reduced motion the film is
  * skipped and the page shows its finished frame.
  */
-export function Hero({ video = HERO_VIDEO }) {
+export function Hero({ video = HERO_VIDEO, ready = true }) {
   const { reduced } = useMotion();
   const animated = !reduced;
   const { width, height } = useViewportSize();
@@ -107,10 +107,9 @@ export function Hero({ video = HERO_VIDEO }) {
   // natural size and pushes in a little. With a clip the scene also starts slid, so the clip's
   // subject is under the window.
   const lens = video ? { from: 1, to: HERO_VIDEO_PUSH } : { from: HERO_START_SCALE, to: 1 };
-  const shift = useMemo(
-    () => sceneShift(width, height, spec, clip, lens.from),
-    [width, height, spec, clip, lens.from],
-  );
+  // The word spans nearly the whole width, so the clip is never slid: its own edge would show through the letters.
+  const shift = { x: 0, y: 0 };
+
   const box = useMemo(
     () => (clip ? coverGeometry(width, height, clip.width, clip.height) : null),
     [width, height, clip],
@@ -165,20 +164,30 @@ export function Hero({ video = HERO_VIDEO }) {
         },
       });
 
-      tl.fromTo(stageRef.current, { '--wr': `${spec.r0}px` }, { '--wr': `${spec.rFull}px`, ease: 'power2.inOut', duration: 0.55 }, 0)
-        // The camera pushes in as the window opens (and, with a clip, glides the scene back from
-        // where it was slid to put the subject under the window).
-        .fromTo('[data-scene]', { scale: lens.from, x: shift.x, y: shift.y }, { scale: lens.to, x: 0, y: 0, ease: 'power1.out', duration: 0.6 }, 0)
-        .to('[data-frame]', { opacity: 0, duration: 0.25 }, 0.05)
+      // At rest the page is the nav, the frame and the word PINGO with the film showing through its
+      // letters. Scrolling: the word grows until the letters fill the screen, a circle of film opens
+      // from the middle and finishes the job, and only then do the words arrive.
+      tl.fromTo(stageRef.current, { '--ws': 1 }, { '--ws': 5, ease: 'power2.in', duration: 0.62 }, 0)
+        .fromTo(stageRef.current, { '--wc': '0px' }, { '--wc': `${spec.rFull}px`, ease: 'power1.inOut', duration: 0.5 }, 0.12)
+        // The camera pushes in as the word opens (and glides the scene back from where it was slid to
+        // put the bus under the word).
+        .fromTo('[data-scene]', { scale: lens.from, x: shift.x, y: shift.y }, { scale: lens.to, x: 0, y: 0, ease: 'power1.out', duration: 0.8 }, 0)
+        .to('[data-frame]', { opacity: 0, duration: 0.3 }, 0.1)
         .to('[data-cue]', { opacity: 0, duration: 0.08 }, 0)
+        // The type needs something dark to sit on: the veil comes in with the words.
+        .fromTo('[data-veil]', { opacity: 0 }, { opacity: 1, duration: 0.2 }, 0.55)
+        // The question rises in from behind its line, and the buttons and the drifting words follow.
+        .fromTo('[data-q]', { opacity: 0, yPercent: 45 }, { opacity: 1, yPercent: 0, ease: EASE.out, duration: 0.2 }, 0.6)
+        .fromTo('[data-cta]', { opacity: 0, y: 28 }, { opacity: 1, y: 0, ease: EASE.soft, duration: 0.14 }, 0.68)
+        .fromTo('[data-ticker]', { opacity: 0 }, { opacity: 1, duration: 0.16 }, 0.7)
         // The question lifts away...
-        .to('[data-q]', { yPercent: -60, opacity: 0, ease: 'power2.in', duration: 0.2 }, 0.25)
+        .to('[data-q]', { yPercent: -60, opacity: 0, ease: 'power2.in', duration: 0.1 }, 0.82)
         // ...and the answer rises in from behind its masks.
-        .set('[data-a]', { opacity: 1 }, 0.42)
-        .fromTo('[data-aw]', { yPercent: 115 }, { yPercent: 0, ease: EASE.out, duration: 0.22, stagger: 0.05 }, 0.42)
-        .to('[data-eyebrow]', { opacity: 1, duration: 0.15 }, 0.58)
+        .set('[data-a]', { opacity: 1 }, 0.86)
+        .fromTo('[data-aw]', { yPercent: 115 }, { yPercent: 0, ease: EASE.out, duration: 0.12, stagger: 0.03 }, 0.86)
+        .to('[data-eyebrow]', { opacity: 1, duration: 0.06 }, 0.94)
         // Hold the finished frame for a beat...
-        .to({}, { duration: 0.2 }, 0.8)
+        .to({}, { duration: 0.1 }, 0.9)
         // ...then, as the next section slides up over the pinned stage, it recedes: a little
         // smaller, its corners rounding, and dimming.
         .to(
@@ -188,7 +197,21 @@ export function Hero({ video = HERO_VIDEO }) {
         )
         .fromTo('[data-shade]', { opacity: 0 }, { opacity: RECEDE.shade, ease: 'none', duration: curtainUnits(1, filmScreens, curtain) }, 1);
     },
-    [animated, spec.x, spec.y, spec.r0, spec.rFull, shift.x, shift.y, lens.from, lens.to, filmScreens, curtain],
+    [animated, spec.rFull, shift.x, shift.y, lens.from, lens.to, filmScreens, curtain],
+    sectionRef,
+  );
+
+  // The opening: once the loader has gone, the word PINGO drops in from the top of the screen and
+  // settles in the middle with a bounce, the film already playing through its letters.
+  useGsapContext(
+    () => {
+      if (!animated || !ready) return;
+      // A slow, smooth fall (no bounce), and the word starts big and close (--wd) and settles back to its
+      // size as it lands, which gives the drop some depth.
+      gsap.fromTo(stageRef.current, { '--dy': '-120vh' }, { '--dy': '0vh', duration: 3.6, ease: 'power2.inOut', delay: 0.2 });
+      gsap.fromTo(stageRef.current, { '--wd': 1.7 }, { '--wd': 1, duration: 3.2, ease: 'power3.out', delay: 0.2 });
+    },
+    [animated, ready],
     sectionRef,
   );
 
@@ -229,9 +252,12 @@ export function Hero({ video = HERO_VIDEO }) {
         data-hero-state={animated ? 'scrubbed' : 'static'}
         className="l-grain relative isolate h-[100svh] min-h-[36rem] overflow-hidden bg-l-ink"
         style={{
-          '--wx': `${spec.x}px`,
-          '--wy': `${spec.y}px`,
-          '--wr': `${animated ? spec.r0 : spec.rFull}px`,
+          '--wx': `${width / 2}px`,
+          '--wy': `${height / 2}px`,
+          '--ws': 1,
+          '--wd': 1,
+          '--wc': '0px',
+          '--dy': animated ? '-120vh' : '0vh',
         }}
       >
         {/* Everything on the stage lives in one wrapper, so the whole scene can recede as one when the
@@ -256,26 +282,19 @@ export function Hero({ video = HERO_VIDEO }) {
 
             {/* Keep the type readable once the window is open: dark on the left, and at the edges. */}
             <div
+              data-veil
               aria-hidden="true"
               className="absolute inset-0 bg-[linear-gradient(to_right,rgb(8_22_31/0.78),rgb(8_22_31/0.3)_48%,transparent_80%)] max-lg:hidden"
+              style={{ opacity: animated ? 0 : 1 }}
             />
             <div
+              data-veil
               aria-hidden="true"
               className="absolute inset-0 bg-[linear-gradient(to_bottom,rgb(8_22_31/0.7),transparent_26%,transparent_42%,rgb(8_22_31))]"
+              style={{ opacity: animated ? 0 : 1 }}
             />
           </div>
 
-          {/* A ring that rides the window's edge. */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute z-[2] rounded-full border border-l-teal/40"
-            style={{
-              left: 'calc(var(--wx) - var(--wr))',
-              top: 'calc(var(--wy) - var(--wr))',
-              width: 'calc(var(--wr) * 2)',
-              height: 'calc(var(--wr) * 2)',
-            }}
-          />
 
           <div className="relative z-20 mx-auto flex h-full w-full max-w-[90rem] flex-col justify-end px-4 pb-40 pt-28 sm:px-8 sm:pb-60 [@media(max-height:700px)]:pb-32">
             {/* The question, kept small, once the answer has taken over the headline. */}
@@ -290,7 +309,7 @@ export function Hero({ video = HERO_VIDEO }) {
 
             <h1 ref={headlineRef} className="relative font-display text-[clamp(3rem,12.5vw,11.5rem)] font-semibold leading-[0.86] text-l-bone">
               {/* Both halves are always in the page, so a screen reader hears the whole exchange. */}
-              <span data-q className={animated ? 'block' : 'sr-only'}>
+              <span data-q className={animated ? 'block' : 'sr-only'} style={{ opacity: animated ? 0 : undefined }}>
                 <span className="block">
                   <Word delay={200}>Where&apos;s</Word>
                   {' '}
@@ -309,6 +328,7 @@ export function Hero({ video = HERO_VIDEO }) {
               </span>
             </h1>
 
+            <div data-cta style={{ opacity: animated ? 0 : 1 }}>
             <div className="l-fade-in mt-8 flex flex-wrap items-center gap-3" style={{ '--d': '1100ms' }}>
               <a
                 href="#join"
@@ -325,6 +345,7 @@ export function Hero({ video = HERO_VIDEO }) {
                 <Car className="h-4 w-4" aria-hidden="true" />
                 I&apos;m a driver
               </a>
+            </div>
             </div>
           </div>
 

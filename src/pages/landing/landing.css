@@ -219,8 +219,37 @@ html.lenis:has(.landing) {
 /* Everything that is the scene is clipped to a circle centred on the shuttle. GSAP grows
    --wr as the visitor scrolls; --wx and --wy are the shuttle's position. */
 .landing .l-hero-window {
-  clip-path: circle(var(--wr, 150vmax) at var(--wx, 50%) var(--wy, 50%));
+  /* The window is the word PINGO: the film shows only through its letters. It is drawn here, in
+     code (a data-URI mask, strokes 24 units thick, 470 x 100 units). --ws grows it, --dy is where it is vertically (it drops in
+     from above), and a second mask layer, a circle growing from the middle (--wc), joins it so that
+     once the letters are huge the circle finishes opening the whole screen. */
+  --word: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 470 100'><g fill='black'><path fill-rule='evenodd' d='M0 0H46C68 0 80 14 80 32S68 64 46 64H24V100H0Z M24 20V44H44C52 44 56 40 56 32S52 20 44 20Z'/><rect x='100' width='24' height='100'/><path d='M148 0H172L214 62V0H238V100H214L172 38V100H148Z'/></g><g fill='none' stroke='black' stroke-width='24'><path d='M335.9 28.2A34 38 0 1 0 342 52H314'/><ellipse cx='424' cy='50' rx='34' ry='38'/></g></svg>");
+  --word-w: min(88vw, 1250px);
+  --word-r: 0.2128;
+  --ww: calc(var(--word-w) * var(--ws, 1) * var(--wd, 1));
+  --wh: calc(var(--ww) * var(--word-r));
+  -webkit-mask-image: var(--word), radial-gradient(circle at var(--wx, 50%) var(--wy, 50%), #000 var(--wc, 0px), transparent calc(var(--wc, 0px) + 1px));
+  mask-image: var(--word), radial-gradient(circle at var(--wx, 50%) var(--wy, 50%), #000 var(--wc, 0px), transparent calc(var(--wc, 0px) + 1px));
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: var(--ww) var(--wh), 100% 100%;
+  mask-size: var(--ww) var(--wh), 100% 100%;
+  -webkit-mask-position: 50% calc(50% + var(--dy, 0vh)), 0 0;
+  mask-position: 50% calc(50% + var(--dy, 0vh)), 0 0;
+
 }
+
+/* On a narrow screen the same one-line word simply takes almost the whole width. */
+@media (max-width: 767px) {
+  .landing .l-hero-window {
+    --word-w: 94vw;
+  }
+}
+
+/* Reduced motion: the finished frame, no word, no mask. */
+.landing [data-hero-state='static'] .l-hero-window {
+  -webkit-mask: none;
+  mask: none;}
 
 /* A word hidden behind a mask until the scroll sequence lifts it (same box as .l-word,
    but GSAP drives it, so no CSS animation). */

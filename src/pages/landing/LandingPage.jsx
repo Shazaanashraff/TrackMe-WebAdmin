@@ -66,7 +66,7 @@ export default function LandingPage({
       <LandingNav />
       <Cursor />
       <main>
-        <Hero />
+        <Hero ready={intro === 'done'} />
         <WhatSection />
         <ScrollStory />
         <JoinSection onDriverSubmit={onDriverSubmit} />

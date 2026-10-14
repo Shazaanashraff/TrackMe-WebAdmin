@@ -108,7 +108,7 @@ export function LandingNav() {
         >
           <a href="#top" className="flex min-w-0 items-center gap-2.5 rounded-full pr-2" aria-label="Pingo home">
             <span className="relative shrink-0">
-              <LogoMark className="h-9 w-9 rounded-full bg-l-bone text-base text-l-ink" />
+              <LogoMark className="h-9 w-9 rounded-xl bg-l-bone text-base text-l-ink" />
               {/* A live dot: the whole product is "where is it right now". */}
               <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
                 <span className="absolute inset-0 rounded-full bg-l-teal" style={{ animation: 'l-ping 2.4s ease-out infinite' }} />

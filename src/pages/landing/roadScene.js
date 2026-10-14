@@ -101,7 +101,7 @@ export function shuttleState(view, t) {
  * How many screens of scrolling the hero film is pinned for. A phone gets less: a small screen
  * covers the same distance in more thumb-flicks, so the same film is made shorter there.
  */
-export const HERO_SCREENS = { wide: 2.2, phone: 1.7 };
+export const HERO_SCREENS = { wide: 4.6, phone: 3.6 };
 export const PHONE_WIDTH = 768;
 export const heroScreens = (width) => (width < PHONE_WIDTH ? HERO_SCREENS.phone : HERO_SCREENS.wide);
 

@@ -11,6 +11,7 @@ import { gsap } from '../motion/gsapSetup';
 // A GSAP stand-in that records the timeline instead of running it.
 vi.mock('../motion/gsapSetup', () => {
   const calls = [];
+  const drops = [];
   const timeline = {};
   ['fromTo', 'to', 'set', 'from'].forEach((method) => {
     timeline[method] = vi.fn((...args) => { calls.push({ method, args }); return timeline; });
@@ -20,10 +21,12 @@ vi.mock('../motion/gsapSetup', () => {
     ScrollTrigger: { refresh: vi.fn() },
     gsap: {
       context: vi.fn((fn) => { fn(); return { revert: vi.fn() }; }),
+      fromTo: vi.fn((...args) => { drops.push(args); }),
       timeline: vi.fn((vars) => { timeline.vars = vars; return timeline; }),
       ticker: { add: vi.fn(), remove: vi.fn() },
     },
     __calls: calls,
+    __drops: drops,
     __timeline: timeline,
   };
 });
@@ -31,9 +34,9 @@ vi.mock('../motion/gsapSetup', () => {
 import * as setup from '../motion/gsapSetup';
 
 // With no film clip by default: the coded night road, which most of these cases are about.
-const renderHero = ({ reduced, video = null }) => render(
+const renderHero = ({ reduced, video = null, ready = true }) => render(
   <MotionContext.Provider value={{ lenis: null, reduced, canAnimate: !reduced, scrollTo: () => {} }}>
-    <Hero video={video} />
+    <Hero video={video} ready={ready} />
   </MotionContext.Provider>,
 );
 
@@ -43,15 +46,18 @@ const spec = () => heroWindow(window.innerWidth, window.innerHeight);
 beforeEach(() => {
   vi.clearAllMocks();
   setup.__calls.length = 0;
+  setup.__drops.length = 0;
 });
 
 describe('Hero (the finished frame, for reduced motion)', () => {
-  it('shows the finished frame at once: the window fully open, no scroll film', () => {
+  it('shows the finished frame at once: no word to open, no drop, no scroll film', () => {
     const { container } = renderHero({ reduced: true });
 
-    expect(stage(container)).toHaveAttribute('data-hero-state', 'static');
-    expect(stage(container).style.getPropertyValue('--wr')).toBe(`${spec().rFull}px`);
+    expect(stage(container)).toHaveAttribute('data-hero-state', 'static'); // the stylesheet drops the word's mask for this state
+    expect(stage(container).style.getPropertyValue('--dy')).toBe('0vh'); // nothing waiting above the screen
     expect(gsap.timeline).not.toHaveBeenCalled();
+    expect(setup.__drops).toHaveLength(0);
+    expect(container.querySelector('[data-cta]').style.opacity).toBe('1');
   });
 
   it('shows the answer, with the question kept small above it', () => {
@@ -74,13 +80,16 @@ describe('Hero (the finished frame, for reduced motion)', () => {
 });
 
 describe('Hero (the scroll film)', () => {
-  it('starts as a small porthole around the shuttle, with the question showing and the answer hidden', () => {
+  it('starts as the word PINGO waiting above the screen, with every word and button still hidden', () => {
     const { container } = renderHero({ reduced: false });
-    const win = spec();
 
     expect(stage(container)).toHaveAttribute('data-hero-state', 'scrubbed');
-    expect(stage(container).style.getPropertyValue('--wr')).toBe(`${win.r0}px`);
-    expect(stage(container).style.getPropertyValue('--wx')).toBe(`${win.x}px`);
+    expect(stage(container).style.getPropertyValue('--ws')).toBe('1'); // the word at its resting size
+    expect(stage(container).style.getPropertyValue('--wc')).toBe('0px'); // no circle of film yet
+    expect(stage(container).style.getPropertyValue('--dy')).toBe('-120vh'); // above the screen, about to drop
+    expect(container.querySelector('[data-q]').style.opacity).toBe('0');
+    expect(container.querySelector('[data-cta]').style.opacity).toBe('0');
+    expect(container.querySelector('[data-ticker]').style.opacity).toBe('0');
     expect(container.querySelector('[data-a]').style.opacity).toBe('0');
     expect(container.querySelector('[data-eyebrow]').style.opacity).toBe('0');
   });
@@ -104,14 +113,54 @@ describe('Hero (the scroll film)', () => {
     expect(gsap.timeline.mock.calls[0][0].scrollTrigger.refreshPriority).toBe(2);
   });
 
-  it('opens the window from the starting radius to one that covers the screen', () => {
+  it('grows the word, then opens a circle of film from the middle while the letters are still readable', () => {
     renderHero({ reduced: false });
     const win = spec();
-    const open = setup.__calls.find((c) => c.method === 'fromTo' && c.args[1]?.['--wr']);
+    const word = setup.__calls.find((c) => c.method === 'fromTo' && c.args[1]?.['--ws'] !== undefined);
+    const circle = setup.__calls.find((c) => c.method === 'fromTo' && c.args[1]?.['--wc'] !== undefined);
 
-    expect(open.args[1]['--wr']).toBe(`${win.r0}px`);
-    expect(open.args[2]['--wr']).toBe(`${win.rFull}px`);
-    expect(open.args[3]).toBe(0); // it starts the moment the film does
+    expect(word.args[1]['--ws']).toBe(1);
+    expect(word.args[2]['--ws']).toBeGreaterThan(3); // the letters grow past the edges
+    expect(word.args[3]).toBe(0); // it starts the moment the film does
+    expect(circle.args[1]['--wc']).toBe('0px');
+    expect(circle.args[2]['--wc']).toBe(`${win.rFull}px`); // large enough to cover every corner
+    expect(circle.args[3]).toBeGreaterThan(0);
+    expect(circle.args[3]).toBeLessThan(word.args[2].duration); // it starts before the word has finished growing
+  });
+
+  it('brings the words in only after the film has taken over: question, then buttons and drifting words', () => {
+    renderHero({ reduced: false });
+    const at = (target) => setup.__calls.find((c) => c.method === 'fromTo' && c.args[0] === target);
+    const circle = setup.__calls.find((c) => c.method === 'fromTo' && c.args[1]?.['--wc'] !== undefined);
+    const circleEnds = circle.args[3] + circle.args[2].duration;
+
+    expect(at('[data-veil]').args[3]).toBeGreaterThan(circle.args[3]); // the veil follows the circle
+    expect(at('[data-q]').args[1].opacity).toBe(0);
+    expect(at('[data-q]').args[2].opacity).toBe(1);
+    expect(at('[data-q]').args[3]).toBeGreaterThan(circle.args[3] + circle.args[2].duration * 0.5);
+    expect(at('[data-cta]').args[3]).toBeGreaterThan(at('[data-q]').args[3]);
+    expect(at('[data-ticker]').args[3]).toBeGreaterThanOrEqual(at('[data-cta]').args[3]);
+    expect(at('[data-cta]').args[3]).toBeGreaterThan(circleEnds - 0.2);
+  });
+
+  it('drops the word in from above, slowly and smoothly with no bounce, once the opening has finished', () => {
+    const { container } = renderHero({ reduced: false, ready: true });
+    const fall = setup.__drops.find(([, from]) => from['--dy'] !== undefined);
+    const depth = setup.__drops.find(([, from]) => from['--wd'] !== undefined);
+
+    expect(fall[0]).toBe(stage(container));
+    expect(fall[1]['--dy']).toBe('-120vh');
+    expect(fall[2]['--dy']).toBe('0vh');
+    expect(fall[2].duration).toBeGreaterThanOrEqual(3);
+    expect(fall[2].ease).not.toMatch(/bounce|elastic|back/);
+    // It starts big and close and settles to its size as it lands: depth.
+    expect(depth[1]['--wd']).toBeGreaterThan(1);
+    expect(depth[2]['--wd']).toBe(1);
+  });
+
+  it('waits for the opening: nothing falls while the loader is still playing', () => {
+    renderHero({ reduced: false, ready: false });
+    expect(setup.__drops).toHaveLength(0);
   });
 
   it('pushes the camera in as the window opens, from a zoomed-out start', () => {
@@ -146,13 +195,15 @@ describe('Hero (the scroll film)', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/where.s the shuttle\?\s*right\s*here\./i);
   });
 
-  it('keeps the buttons usable from the first frame: nothing is hidden behind the scroll', () => {
+  it('keeps the buttons in the page, faded up by the film (the nav keeps "Get the app" on the first screen)', () => {
     const { container } = renderHero({ reduced: false });
-    const rider = screen.getByRole('link', { name: /i'm a rider/i });
 
-    expect(rider).toBeInTheDocument();
-    expect(rider.closest('[style*="opacity: 0"]')).toBeNull();
-    expect(container.querySelector('a[href="#join"]')).not.toBeNull();
+    expect(screen.getByRole('link', { name: /i'm a rider/i })).toHaveAttribute('href', '#join');
+    expect(screen.getByRole('link', { name: /i'm a driver/i })).toHaveAttribute('href', '#join');
+    expect(container.querySelector('[data-cta]')).toContainElement(screen.getByRole('link', { name: /i'm a rider/i }));
+    const cta = setup.__calls.find((c) => c.method === 'fromTo' && c.args[0] === '[data-cta]');
+    expect(cta.args[1].opacity).toBe(0);
+    expect(cta.args[2].opacity).toBe(1);
   });
 
   it('speeds the road with scroll, via the GSAP ticker, and stops when it leaves', () => {
@@ -222,14 +273,15 @@ describe('Hero (with the film clip)', () => {
     expect(HERO_VIDEO_PUSH).toBeGreaterThan(1);
   });
 
-  it('starts with the scene slid so the bus is under the window, and slides it home as the window opens', () => {
+  it('never slides the clip: the word spans the screen, so the clip\'s own edge would show through the letters', () => {
     renderHero({ reduced: false, video: HERO_VIDEO });
     const zoom = sceneTween();
 
-    expect(Math.abs(zoom.args[1].x) + Math.abs(zoom.args[1].y)).toBeGreaterThan(0);
+    expect(zoom.args[1].x).toBe(0);
+    expect(zoom.args[1].y).toBe(0);
     expect(zoom.args[2].x).toBe(0);
     expect(zoom.args[2].y).toBe(0);
-    expect(zoom.args[3]).toBe(0); // together with the window
+    expect(zoom.args[3]).toBe(0); // together with the word
   });
 
   it('puts the colour tint over the window itself, not over the sliding scene', () => {

@@ -502,12 +502,12 @@ test.describe('Landing page — the hero film', () => {
 
   // Keep in step with HERO_SCREENS in roadScene.js: a phone gets a shorter film. After the film the
   // stage stays pinned for the curtain (1 screen, 0.8 on a phone) while the next section slides over it.
-  const screensFor = (page: Page) => (page.viewportSize()!.width < 768 ? 1.7 : 2.2);
+  const screensFor = (page: Page) => (page.viewportSize()!.width < 768 ? 3.6 : 4.6);
   const curtainFor = (page: Page) => (page.viewportSize()!.width < 768 ? 0.8 : 1);
 
   const stage = (page: Page) => page.locator('#top [data-hero-state]');
-  const radius = async (page: Page) =>
-    parseFloat(await stage(page).evaluate((el) => getComputedStyle(el).getPropertyValue('--wr')));
+  const variable = async (page: Page, name: string) =>
+    parseFloat(await stage(page).evaluate((el, n) => el.style.getPropertyValue(n), name));
   const opacityOf = (page: Page, selector: string) =>
     page.locator(selector).evaluate((el) => Number(getComputedStyle(el).opacity));
   const jumpTo = async (page: Page, fraction: number) => {
@@ -515,17 +515,36 @@ test.describe('Landing page — the hero film', () => {
     await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'instant' }), distance);
   };
 
-  test('starts as a small window around the shuttle, with the question showing and every button usable', async ({ page }) => {
+  test('at rest it is only the nav, the frame and the word PINGO: no words and no buttons yet', async ({ page }) => {
     await page.goto('/');
     await page.locator('#top h1').waitFor();
-    await page.waitForTimeout(500);
+    await expect.poll(() => variable(page, '--dy'), { timeout: 8000 }).toBeGreaterThan(-0.5); // the word has landed
 
     expect(await stage(page).getAttribute('data-hero-state')).toBe('scrubbed');
-    expect(await radius(page)).toBeLessThan(160);
-    expect(await opacityOf(page, '#top [data-q]')).toBeGreaterThan(0.9);
+    expect(await opacityOf(page, '#top [data-q]')).toBe(0);
+    expect(await opacityOf(page, '#top [data-cta]')).toBe(0);
     expect(await opacityOf(page, '#top [data-a]')).toBe(0);
-    await expect(page.getByRole('link', { name: /i'm a rider/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /i'm a driver/i })).toBeVisible();
+    await expect(page.locator('[data-nav-pill]')).toBeVisible();
+    // The film shows only through the word: the window carries a mask drawn in code.
+    const mask = await page.locator('#top [data-window]').evaluate((el) => getComputedStyle(el).maskImage);
+    expect(mask).toMatch(/svg/);
+    // The buttons stay in the page for keyboard and screen-reader users.
+    await expect(page.getByRole('link', { name: /i'm a rider/i })).toBeAttached();
+  });
+
+  test('the word drops in from the top slowly and smoothly: no bounce, never going back up', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#top h1').waitFor();
+    const samples: number[] = [];
+    for (let i = 0; i < 14; i += 1) {
+      samples.push(await variable(page, '--dy'));
+      await page.waitForTimeout(330);
+    }
+
+    expect(samples[0]).toBeLessThan(-30); // above the middle of the screen at first
+    expect(samples.at(-1)).toBeGreaterThan(-0.5); // and in the middle by the end
+    samples.slice(1).forEach((value, i) => expect(value).toBeGreaterThanOrEqual(samples[i] - 0.01)); // never rises again
+    expect(samples.filter((v) => v < -1).length).toBeGreaterThan(5); // it took a good while (seconds, not a flick)
   });
 
   test('is pinned while it plays, then lets go', async ({ page }) => {
@@ -540,30 +559,35 @@ test.describe('Landing page — the hero film', () => {
     await expect.poll(top).toBeLessThan(-50); // released: it has scrolled away
   });
 
-  test('plays as you scroll: the window opens, the question lifts, the answer rises in', async ({ page }) => {
+  test('plays as you scroll: the word grows, a circle of film opens, then the words arrive', async ({ page }) => {
     await page.goto('/');
     await page.locator('#top h1').waitFor();
-    await page.waitForTimeout(400);
-    const start = await radius(page);
+    await expect.poll(() => variable(page, '--dy'), { timeout: 8000 }).toBeGreaterThan(-0.5); // let the page settle: the word has landed
+    expect(await variable(page, '--ws')).toBe(1);
+    expect(await variable(page, '--wc')).toBe(0);
 
-    await jumpTo(page, 0.28);
-    await expect.poll(() => radius(page), { timeout: 5000 }).toBeGreaterThan(start * 2);
+    await jumpTo(page, 0.2);
+    await expect.poll(() => variable(page, '--ws'), { timeout: 6000 }).toBeGreaterThan(1.05); // the letters are growing
+    await expect.poll(() => variable(page, '--wc'), { timeout: 6000 }).toBeGreaterThan(20); // the circle has begun
+    expect(await opacityOf(page, '#top [data-q]')).toBeLessThan(0.05); // no words yet
 
-    await jumpTo(page, 0.78);
-    await expect.poll(() => opacityOf(page, '#top [data-a]'), { timeout: 5000 }).toBeGreaterThan(0.95);
-    expect(await opacityOf(page, '#top [data-q]')).toBeLessThan(0.05);
-    await expect.poll(() => opacityOf(page, '#top [data-eyebrow]'), { timeout: 5000 }).toBeGreaterThan(0.9);
+    await jumpTo(page, 0.82);
+    await expect.poll(() => opacityOf(page, '#top [data-q]'), { timeout: 6000 }).toBeGreaterThan(0.9);
+    await expect.poll(() => opacityOf(page, '#top [data-cta]'), { timeout: 6000 }).toBeGreaterThan(0.9);
+
+    await jumpTo(page, 1);
+    await expect.poll(() => opacityOf(page, '#top [data-a]'), { timeout: 6000 }).toBeGreaterThan(0.95);
+    await expect.poll(() => opacityOf(page, '#top [data-q]'), { timeout: 6000 }).toBeLessThan(0.05); // the question has lifted away
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Right');
   });
 
-  test('ends with a window that covers the whole screen', async ({ page }) => {
+  test('ends with a circle of film that covers the whole screen', async ({ page }) => {
     await page.goto('/');
     await page.locator('#top h1').waitFor();
 
     await jumpTo(page, 1);
     const { w, h } = { w: 1440, h: 900 };
-    // From the shuttle's spot the farthest corner is well under the screen's own diagonal.
-    await expect.poll(() => radius(page), { timeout: 6000 }).toBeGreaterThan(Math.hypot(w, h) * 0.55);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Right');
+    await expect.poll(() => variable(page, '--wc'), { timeout: 6000 }).toBeGreaterThan(Math.hypot(w, h) * 0.55);
   });
 
   test('the nav mark has no turning ring of text around it', async ({ page }) => {
@@ -579,21 +603,29 @@ test.describe('Landing page — the hero film', () => {
     await page.locator('#top h1').waitFor();
 
     expect(await stage(page).getAttribute('data-hero-state')).toBe('static');
-    expect(await radius(page)).toBeGreaterThan(1000);
+    expect(await page.locator('#top [data-window]').evaluate((el) => getComputedStyle(el).maskImage)).toBe('none');
     expect(await opacityOf(page, '#top [data-a]')).toBe(1);
+    expect(await opacityOf(page, '#top [data-cta]')).toBe(1);
     expect(await page.locator('.pin-spacer').count()).toBe(0); // nothing is pinned
     await expect(page.getByRole('link', { name: /i'm a rider/i })).toBeVisible();
   });
 
-  test('works on a phone: a small window above the headline, opening to fill the screen', async ({ page }) => {
+  test('works on a phone: the word on one line across the screen, then opening to fill it', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
     await page.locator('#top h1').waitFor();
-    await page.waitForTimeout(400);
+    await expect.poll(() => variable(page, '--dy'), { timeout: 8000 }).toBeGreaterThan(-0.5);
 
-    expect(await radius(page)).toBeLessThan(120);
+    const size = await page.locator('#top [data-window]').evaluate((el) => {
+      const [w, h] = getComputedStyle(el).maskSize.split(',')[0].trim().split(' ').map(parseFloat);
+      return { w, h };
+    });
+    expect(size.w).toBeGreaterThan(390 * 0.85); // nearly the whole width...
+    expect(size.w).toBeLessThanOrEqual(390 - 8); // ...but inside the screen
+    expect(size.w / size.h).toBeGreaterThan(4); // one line, not PIN over GO
+
     await jumpTo(page, 1);
-    await expect.poll(() => radius(page), { timeout: 6000 }).toBeGreaterThan(Math.hypot(390, 844) * 0.5);
+    await expect.poll(() => variable(page, '--wc'), { timeout: 6000 }).toBeGreaterThan(Math.hypot(390, 844) * 0.5);
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Right');
 
     const [scroll, client] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
@@ -1018,30 +1050,26 @@ test.describe('Landing page — the join section and the finale', () => {
 test.describe('Landing page — a phone, as a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 
-  test('has a shorter hero film than a desktop: 1.7 screens of scroll instead of 2.2', async ({ page }) => {
+  test('has a shorter hero film than a desktop: 3.6 screens of scroll instead of 4.6', async ({ page }) => {
     await page.goto('/');
     await page.locator('#top h1').waitFor();
     await page.waitForTimeout(600);
 
-    // One screen for the stage, 1.7 for the film and 0.8 for the curtain.
+    // One screen for the stage, 3.6 for the film and 0.8 for the curtain.
     const spacer = await page.locator('#top .pin-spacer').evaluate((el) => Math.round(el.getBoundingClientRect().height));
-    expect(Math.abs(spacer - 844 * (1 + 1.7 + 0.8))).toBeLessThanOrEqual(4);
+    expect(Math.abs(spacer - 844 * (1 + 3.6 + 0.8))).toBeLessThanOrEqual(4);
   });
 
-  test('opens the hero on the bus: the clip is slid so the porthole shows it, then slid home', async ({ page }) => {
+  test('leaves the clip where it is behind the word: sliding it would show its edge through the letters', async ({ page }) => {
     await page.goto('/');
     await page.locator('#top h1').waitFor();
     await page.waitForTimeout(600);
-    // The portrait cut shows nearly the whole frame, so the bus is already about centred sideways;
-    // it is slid UP to bring it into the window above the headline.
     const offset = () => page.locator('#top [data-scene]').evaluate((el) => {
       const m = new DOMMatrix(getComputedStyle(el).transform);
-      return Math.round(m.f);
+      return [Math.round(m.e), Math.round(m.f)];
     });
 
-    expect(await offset()).toBeLessThan(-100);
-    await page.evaluate(() => window.scrollTo({ top: Math.round(innerHeight * 1.7), behavior: 'instant' }));
-    await expect.poll(offset, { timeout: 6000 }).toBeGreaterThan(-10);
+    expect(await offset()).toEqual([0, 0]);
   });
 
   test('plays the portrait cut, not the wide one, with its own poster', async ({ page }) => {
@@ -1238,24 +1266,25 @@ for (const width of [320, 360, 390, 430, 768, 1024]) {
     });
 
     if (width < 768) {
-      test('puts the opening window in the gap between the nav and the headline, clear of both', async ({ page }) => {
+      test('draws the word PINGO on one line inside the screen, clear of the nav', async ({ page }) => {
         await page.goto('/');
         await page.locator('#top h1').waitFor();
-        await page.waitForTimeout(800);
+        await expect
+          .poll(() => page.locator('#top [data-hero-state]').evaluate((el) => parseFloat(el.style.getPropertyValue('--wd'))), { timeout: 8000 })
+          .toBeLessThan(1.001); // the drop has landed and the word is at its resting size
 
-        const gap = await page.evaluate(() => {
+        const word = await page.evaluate(() => {
+          const win = document.querySelector('#top [data-window]') as HTMLElement;
+          const [w, h] = getComputedStyle(win).maskSize.split(',')[0].trim().split(' ').map(parseFloat);
           const stage = document.querySelector('#top [data-hero-state]') as HTMLElement;
-          const style = getComputedStyle(stage);
-          const cy = parseFloat(style.getPropertyValue('--wy'));
-          const r = parseFloat(style.getPropertyValue('--wr'));
-          const stageTop = stage.getBoundingClientRect().top;
-          const h1Top = document.querySelector('#top h1')!.getBoundingClientRect().top - stageTop;
-          const navBottom = document.querySelector('[data-nav-pill]')!.getBoundingClientRect().bottom - stageTop;
-          return { top: cy - r, bottom: cy + r, h1Top, navBottom };
+          const centre = stage.getBoundingClientRect().height / 2;
+          const navBottom = document.querySelector('[data-nav-pill]')!.getBoundingClientRect().bottom;
+          return { w, h, top: centre - h / 2, navBottom };
         });
 
-        expect(gap.top).toBeGreaterThanOrEqual(gap.navBottom - 1);
-        expect(gap.bottom).toBeLessThanOrEqual(gap.h1Top + 1);
+        expect(word.w).toBeLessThanOrEqual(width - 8);
+        expect(word.w).toBeGreaterThan(width * 0.85);
+        expect(word.top).toBeGreaterThanOrEqual(word.navBottom);
       });
     }
 
