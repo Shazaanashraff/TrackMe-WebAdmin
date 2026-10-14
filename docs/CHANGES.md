@@ -28,6 +28,7 @@ when source under `src/` changed. One entry per session/PR is enough.
   - **Less to read.** Removed the hero line, the "Scroll" word, the point descriptions, the story step descriptions, "Get started" and "Pick the one that is you.", and the two panel descriptions. The shuttle countdown (`LiveEta`, `eta.js`) is removed.
   - **No hover colour changes** (points no longer turn dark, no pointer glow, no button colour swaps, no widening panel). 01 and 02 are now big solid sky-blue numerals. The rider half is a download area: two badges and a phone showing the live map.
   - **Footer:** the wordmark's line is taller and has room beneath it so the tail of the "g" is not cut off.
+  - **Bug fix (production only): every pinned scroll animation was dead on the deployed site.** `setupGsap()` ran from `MotionProvider`'s effect, which runs after its children's, so the hero and story created their ScrollTriggers before the plugin was registered; React's dev-only double effect hid it. GSAP now registers when `gsapSetup.js` is imported (regression test `gsapSetup.test.js`).
   - Removed dead code: `Badge`, `LiveEta`, `eta`, `buildStackedPlay`, `STACK_TILT`, the `l-spot` / `l-outline-ink` / `l-badge-idle` CSS.
 - **Why:** feedback that the nav did not look right live, the sections were too wordy and plain, 01/02 were hard to see, and the phone version felt stale when scrolling.
 - **Contract impact:** none.
