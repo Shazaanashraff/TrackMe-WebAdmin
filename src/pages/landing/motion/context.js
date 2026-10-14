@@ -14,5 +14,8 @@ export function useMotion() {
   return useContext(MotionContext);
 }
 
+/** True for a mouse or trackpad, where a cursor exists to follow. Not for a finger. */
+export const hasFinePointer = () => browserCanAnimate() && window.matchMedia('(pointer: fine)').matches;
+
 /** True where animation can run at all (a real browser, not jsdom or a very old one). */
 export const browserCanAnimate = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function';

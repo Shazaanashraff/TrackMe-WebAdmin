@@ -18,6 +18,27 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-10-14 — Landing page: new nav, phone-first motion, copy cuts, download area; tests brought up to date
+- **Branch:** feature/landing-journey
+- **Modules touched:** [LANDING](modules/LANDING.md)
+- **What changed:**
+  - **New nav.** A slimmer floating pill with a glint of mint running round its edge, a live dot on the "P" mark, four section ticks, a scroll-progress line along its bottom edge, and one button, "Get the app". It slides away on the way down and back on the way up. The spinning badge ring, the "Manager sign in" button (it stays in the footer) and the "Why Pingo" link are gone. On a phone a round button opens a full-screen menu out of its corner.
+  - **Phones get motion.** "How it works" is now pinned and played by scrolling on phones too (device above its copy, swaying between chapters; 4.8 screens instead of 6.5; the phone drawn at a fixed width and scaled). The three points' drawings play as their cards scroll through (road, key, bars) and the titles slide in. In "Rider or driver?" the question's words rise from behind masks, the halves come up one after the other and a phone climbs inside a sky-blue arch under the rider's badges.
+  - **Bug fix: the story started too early on phones.** The hero is rebuilt on a phone after it measures its headline, which put it after the story in ScrollTrigger's measuring order; the story was measured before the hero's pin existed. Both triggers now carry a `refreshPriority` (hero 2, story 1).
+  - **Less to read.** Removed the hero line, the "Scroll" word, the point descriptions, the story step descriptions, "Get started" and "Pick the one that is you.", and the two panel descriptions. The shuttle countdown (`LiveEta`, `eta.js`) is removed.
+  - **No hover colour changes** (points no longer turn dark, no pointer glow, no button colour swaps, no widening panel). 01 and 02 are now big solid sky-blue numerals. The rider half is a download area: two badges and a phone showing the live map.
+  - **Footer:** the wordmark's line is taller and has room beneath it so the tail of the "g" is not cut off.
+  - Removed dead code: `Badge`, `LiveEta`, `eta`, `buildStackedPlay`, `STACK_TILT`, the `l-spot` / `l-outline-ink` / `l-badge-idle` CSS.
+- **Why:** feedback that the nav did not look right live, the sections were too wordy and plain, 01/02 were hard to see, and the phone version felt stale when scrolling.
+- **Contract impact:** none.
+- **Tests:** unit suite brought up to date and green (94 files, 1188 tests): `LandingNav` (rewritten, adds the phone menu), `JoinSection` (rewritten), `ScrollStory` (phone film, reduced-motion stack), `storyFilm` (curtain length, compact sides, refresh priority), `Hero`, `Footer`, `LandingPage`, `TabEdge`, `Loader`, `chapterMath`; new `WhatSection.test.jsx`; deleted `Badge`, `LiveEta`, `eta` tests and the stacked-phone tests. `e2e/landing.spec.ts` updated and run. `npm run lint` 0 errors (28 baseline warnings); `npm run build` and `check:landing-budget` 74.3 KB of 120 KB.
+- **Docs updated:** `modules/LANDING.md`, `TESTING_GUIDE.md`.
+- **Follow-ups / known issues:**
+  - Pinned scrolling, the curtain and the address-bar resize still need a look on a real iPhone and a mid-range Android.
+  - The hero footage shows a real operator's livery ("OMNIRIDE"): confirm the rights before launch.
+  - Portal screenshots in the laptop still say "TRACKME MGR": retake once the portal is renamed.
+  - Download buttons say "Coming soon" until a release is registered; the driver email form has no backend endpoint yet.
+
 ## 2026-10-03 — App release registration + live download links on the landing page
 - **Branch:** feature/app-release-version-control
 - **Modules touched:** [APP_RELEASES](modules/APP_RELEASES.md) (new), [LANDING](modules/LANDING.md)
@@ -61,6 +82,194 @@ when source under `src/` changed. One entry per session/PR is enough.
     wired; `riderIos` stays on the static `APP_LINKS.ios` placeholder.
   - A visitor already on `/` when a release is retracted keeps the old link until they reload —
     no client-side invalidation on the public page.
+
+## 2026-10-13 — Landing page: renamed Pingo, curtain scroll, slower story, premium join section
+- **Branch:** feature/landing-journey
+- **Modules touched:** [LANDING](modules/LANDING.md)
+- **What changed:**
+  - **The site is renamed Pingo** (nav, badge ring, loader, footer wordmark, page title, nav link "Why Pingo"). The brand tile is a "P".
+  - **Curtain scroll.** The hero stays pinned while the paper section slides up over it, and the story stays pinned while the
+    "Rider or driver?" section slides up over it. The covered scene recedes (smaller, rounded corners, dimmer).
+  - **The tab edge now flattens** as the next section arrives, ending as a straight line (and it is taller: 32px, 20px on a phone).
+  - **The story's chapter swaps are slower and smoother:** 6.5 screens of scrolling instead of 5, a longer glide, a longer scrub lag,
+    softer easing.
+  - **The three points are a measured grid** with crosshairs, a small drawing in each cell, and a cell that turns dark on hover.
+  - **"Rider or driver?" is one drawn spread** on paper: crosshair grid, ghost numbers, a pointer-following glow; ink buttons; the
+    email form restyled for paper. (It was two coloured boxes.)
+  - **Footer:** "Pingo" wordmark, paper tab on top, the "g" no longer clipped.
+  - **Mobile:** the hairline frame no longer cuts through the headline; the curtain and the points grid were checked at 390px.
+- **Why:** feedback that the seam did not flatten, the scroll should layer sections like a curtain, the chapter swaps felt too quick, the
+  three points and the rider/driver choice looked like stacked boxes, and the product is now called Pingo.
+- **Contract impact:** none.
+- **Tests:** **not run and not updated**, on request (front-end only). Several suites and e2e specs are now stale; see the status note
+  in `modules/LANDING.md` section 6. Lint was clean; the dev server renders without errors.
+- **Docs updated:** this entry, `modules/LANDING.md`.
+- **Follow-ups / known issues:**
+  - **Update and run the tests** (list in LANDING.md section 6) before this is committed.
+  - The manager portal and the captures of it inside the laptop still say TrackMe; rename the portal, then re-take
+    `public/landing/portal-*.jpg`.
+  - The curtain is built on pin lengths and a CSS variable; check it on a real iPhone and Android (address-bar resizing re-measures
+    pinned scenes).
+
+## 2026-10-13 — Landing page: HD video and no side bar
+- **Branch:** feature/landing-journey
+- **Modules touched:** [LANDING](modules/LANDING.md)
+- **What changed:**
+  - **The hero video is now real HD.** The first version was a real-time screen recording of the playing clip
+    at 720p, which dropped frames and looked soft. It is now re-encoded frame by frame from the 4K original
+    (WebCodecs, H.264 High) at **1920x1080, 5 Mbps (9 MB)**, checked 1:1 against the original (lettering, window
+    frames and grass all hold up; 4.2 Mbps visibly softened the grass).
+  - **Phones get their own cut.** An upright phone now plays a **810x1440 portrait cut, 3.4 Mbps (6 MB)**, taken from the
+    4K frame by a virtual camera that follows the bus, instead of a thin slice of the wide clip stretched to
+    fit. A phone on its side, a tablet in landscape and every desktop get the wide cut. The clip is chosen by the
+    screen's shape (`pickClip`).
+  - Posters (shown while the video loads) and stills (for reduced motion) are WebP, from the same footage.
+  - **The track bar down the left side is gone** (the route line with the little shuttle). Its stop counter
+    ("02 / 04 ...") went with it, as it hung off the line. `RouteRail`, `journey.js` and their tests are removed.
+- **Why:** the video looked bad at the size people actually see it, and the side line was clutter.
+- **Contract impact:** none.
+- **Tests:** `heroVideo`, `HeroFilm`, `Hero` updated for the two clips; the route rail and journey suites removed; browser tests now
+  check the clips are really served at HD sizes, that a phone gets the portrait cut and a phone on its side the
+  wide one, and that nothing is fixed to the left edge of the screen. Vitest 1185 passed, Playwright 133 passed (one full run right after a production build had 9 failures in
+  unrelated specs that all passed alone and in two further full runs: dev-server contention), lint 0 errors (28
+  warnings, unchanged), landing chunk 71.6 KB gzipped of 120 KB.
+- **Docs updated:** this entry, `modules/LANDING.md`, `TESTING_GUIDE.md`.
+- **Follow-ups / known issues:**
+  - The video files total ~15 MB (9 + 6): a visitor downloads only the one for their screen. Still worth a look at a
+    slow connection; the poster covers the load.
+  - Same footage caveat as before: it shows a real operator's livery, so confirm the rights.
+
+## 2026-10-13 — Landing page: the film in the hero, a new palette, tabbed seams, finale and phones (stages 5 to 7)
+- **Branch:** feature/landing-journey
+- **Modules touched:** [LANDING](modules/LANDING.md)
+- **What changed:**
+  - **The supplied clip is now the hero's picture.** A daylight shot of a bus coming through a junction plays
+    inside the opening window (muted, looping, paused when off screen). The scene starts *slid* so the bus is
+    under the little window, then slides home as the window opens and pushes in a touch. Two files are
+    served (1280x720, 3.4 MB; 854x480, 1.5 MB for phones) plus a poster; reduced motion gets the poster only.
+    The coded night road stays as the fallback (`HERO_VIDEO = null`).
+  - **New palette, drawn from the film:** deep blue-green ink (`#08161f`), sunlit paper (`#f3f0e5`), sky blue
+    (`#1d56b0`, replaces the teal-green "petrol"), and the same mint for live things. Device screens, the
+    loader, the rail and every gradient follow.
+  - **Tabbed seams** between sections, like the reference site: the section above steps down a little in the
+    middle on soft S-shaped shoulders (`TabEdge`). Three of them: over the paper section, over the story, over
+    the join section. "Rider or driver?" now sits on a paper band.
+  - **A floating glass nav pill** replaces the full-width bar (brand, three links, one filled sign-in button).
+  - **Stage 5 detail:** the join panels open through a circle that grows from the question; the footer is a
+    finale where a circle of sky opens from the bottom edge and the giant wordmark fills in left to right,
+    both finishing at the very bottom of the page; a stop counter ("02 / 04  How it works") rides under the
+    route rail; a ring cursor trails the mouse and swells over anything pressable (mouse only).
+  - **Stage 6, phones:** each chapter now plays as it scrolls in (title words rise from masks, the device slides
+    in from its side and settles at its lean, the phone's own scene scrubs); the hero film is 1.7 screens on a
+    phone instead of 2.2; the opening window on a phone is placed in the *measured* gap between the nav and the
+    headline; the hero has short-screen variants for 320x640; touch targets and contrast checked.
+  - **Found and fixed by the audit:** on a 320x640 phone the headline's first line slid under the nav and the
+    window covered the countdown; a strip beside the sliding scene went untinted; low-contrast text on the sky
+    panel (4.1:1, now 5.3:1).
+  - New: `HeroFilm`, `heroVideo.js`, `TabEdge`, `Footer`, `Cursor`. Changed: `Hero`, `LandingNav`, `RouteRail`,
+    `JoinSection`, `WhatSection`, `ScrollStory`, `storyFilm.js`, `roadScene.js`, the palette in `landing.css`
+    and `tailwind.config.cjs` (`l-petrol` is now `l-sky`).
+- **Why:** stages 5 to 7 of rebuilding the landing page to an award-site standard, with the team's own footage
+  and a palette that suits it, and a phone experience that is designed rather than shrunk.
+- **Contract impact:** none.
+- **Tests:** new `heroVideo`, `HeroFilm`, `TabEdge`, `LandingNav`, `Footer`, `Cursor` suites; `Hero`, `roadScene`,
+  `RouteRail`, `JoinSection`, `LandingPage`, `ScrollStory`, `storyFilm` extended; jsdom media stubs added to
+  `src/test/setup.js`; `e2e/landing.spec.ts` loses the night-road canvas tests (replaced by clip tests) and gains
+  the look, cursor, wipes/finale, phone and six-width layout audits. Vitest 1191 passed, Playwright 135 passed,
+  lint 0 errors (28 warnings, unchanged), landing chunk 72.4 KB gzipped of 120 KB.
+- **Docs updated:** this entry, `modules/LANDING.md` (key files, data flow, sections 5, 6, 7), `TESTING_GUIDE.md`.
+- **Follow-ups / known issues:**
+  - **Confirm the footage may be used.** The bus is clearly marked "OMNIRIDE" with a phone number (a real US
+    transit service). Free stock licences usually allow commercial use but not implying endorsement. Swapping
+    the clip is a one-object change in `config.js`.
+  - **Test on a real iPhone and a mid-range Android.** Everything here was verified in desktop Chrome and its
+    phone emulation; pinned scenes, autoplay (Low Power Mode blocks it, the poster then shows) and the address
+    bar behave differently on real devices.
+  - The clip and poster add ~5 MB of static files. Fine on desktop; phones get the 1.5 MB one.
+  - The pull request for `feature/landing-journey` has not been opened, so none of this is on `main`.
+  - Still open from before: the driver email endpoint, the live download links, Vercel Git LFS.
+
+## 2026-10-13 — Landing page: "How it works" becomes a scroll-played film (stage 4)
+- **Branch:** feature/landing-journey
+- **Modules touched:** [LANDING](modules/LANDING.md)
+- **What changed:**
+  - **"How it works" is now one pinned film, played by scrolling** (ScrollTrigger, `scrub: 0.7`, five screens
+    of scroll for four chapters). It replaces the old sticky section that swapped each step on a CSS
+    transition. A phone rests on one side with its chapter's copy on the other; at each boundary the phone
+    glides across (leaning into the move), the old title lifts away, the screen changes and the new title
+    rises from behind its word masks. At the last boundary the phone dissolves and a laptop takes its place.
+  - **The screens now play as you scroll** instead of looping on their own: the shuttle drives its route
+    with the driven part lit, stops light as it passes and the arrival time falls from 4 min to "Here"; the
+    driver key is typed one character at a time, the button is pressed, and the screen settles on "Waiting for
+    approval"; riders arrive one by one and the second rider's shuttle closes in; the manager's portal pages
+    change and the chapter ends on a "Join request approved" toast (the manager side of the chapter before).
+  - Each chapter has a giant outlined number behind its copy, a "01 / 04" counter and a progress bar that
+    fills while the chapter plays. A soft teal glow follows the device.
+  - **Below `lg` (phones, tablets) nothing is pinned.** Each phone plays its own scene as it scrolls through
+    view, so mobile keeps its life (the map marker used to loop by itself) without a pin. Stage 6 is still the
+    place for a purpose-built phone choreography.
+  - **Reduced motion** gets plain chapters, no pin: stacked on a phone, alternating two-column rows on a wide
+    screen. Every screen rests on its finished state, so a static render is already complete.
+  - **Small windows fixed on the way:** the phone's width is now capped by the stage height (it ran off the
+    bottom at 1280x720) and the laptop by half the window (it was cropped at 1024px wide).
+  - New: `chapterMath.js` (the film's numbers), `storyFilm.js` (the timeline), a pure scene module per screen
+    (`screens/map.js`, `enroll.js`, `profiles.js`, `portal.js`, `play.js`). Removed: `sectionProgress`, the two
+    CSS transition helpers (`.l-device-move`, `.l-step-text`) and the screens' looping animations.
+- **Why:** stage 4 of rebuilding the landing page to an award-site standard. The reference sites tell their
+  story in pinned, scroll-tied scenes; this is ours, built from the product's own screens and flow
+  (see the track, join, manage journey) rather than copied.
+- **Contract impact:** none.
+- **Tests:** new `chapterMath`, `screens`, `storyFilm` (the **real GSAP timeline** driven by hand in jsdom,
+  including playing backwards) and `ScrollStory` suites; `story` loses `sectionProgress`; `e2e/landing.spec.ts`
+  gains a story-film describe (pin, one chapter at a time, glide, countdown, typing, laptop swap, backwards,
+  two small window sizes) and a without-the-film describe, and its old step helper now scrolls along the
+  film's timeline. Vitest 1081 passed, Playwright 90 passed, lint 0 errors (28 warnings, unchanged), landing
+  chunk 70.8 KB gzipped of 120 KB.
+- **Docs updated:** this entry, `modules/LANDING.md` (key files, data flow, sections 5, 6, 7),
+  `TESTING_GUIDE.md`.
+- **Follow-ups / known issues:**
+  - Not built yet (stages 5 to 7): circle wipes between sections, the stop counter and glass pill nav, cursor
+    details and the finale; a dedicated phone choreography; the final quality pass.
+  - The two pinned scenes (hero 2.2 screens, story 5 screens) add up to a lot of scrolling on a desktop.
+    Worth a look once all stages are in: the story's `STORY_SCREENS` is a single constant in `chapterMath.js`.
+  - Still open from before: the driver email endpoint, the live download links, Vercel Git LFS.
+
+## 2026-10-13 — Landing page: the hero becomes a scroll-played film (stage 3)
+- **Branch:** feature/landing-journey
+- **Modules touched:** [LANDING](modules/LANDING.md)
+- **What changed:**
+  - **The hero is now a short film played by scrolling.** The stage is pinned for ~2.2 screens
+    (ScrollTrigger, `scrub: 0.6`). It opens as a dark frame with the question "Where's the shuttle?" and a
+    small circular window around the shuttle; scrolling grows the window until it fills the screen, the
+    question lifts away, and the answer "Right here." rises in from behind masks, with the question left as a
+    small label. The camera pushes in as it opens, the frame fades, then the pin releases and the paper
+    section slides over. The countdown and both buttons are visible from the first frame.
+  - **The road reacts to scroll:** it rushes faster the faster you scroll, then eases back.
+  - **Rotating badge** in the nav (the brand mark with a ring of text that turns with scroll and slowly on its
+    own). **Frame** inset below the nav. The countdown pill now reads "Shuttle A" (the headline owns "Right
+    here.").
+  - Lane dashes fade near the camera so one passing never flashes a harsh bar.
+  - Reduced motion gets the finished frame (window open, answer shown, nothing pinned).
+  - New: `heroWindow()` (geometry), `useViewportSize` (steady through a phone's address bar), `Badge`.
+- **Why:** stage 3 of rebuilding the landing page to an award-site standard. The reference's signature is a
+  scroll-driven opening where a shape opens onto the scene; this is our version, built around the shuttle and
+  the product's own question and answer rather than copied.
+- **Bug found and fixed on the way:** Lenis measured the page before the hero's pin added its scroll distance,
+  so it believed the page ~2000px shorter than it is: nav glides stopped short and the bottom could not be
+  reached by wheel. Fixed by making Lenis re-measure on every ScrollTrigger refresh. A browser test now wheels
+  to the very end of the page.
+- **Contract impact:** none.
+- **Tests:** new `Hero`, `Badge`, `useViewportSize` suites; `roadScene` gains `heroWindow` cases; `MotionProvider`
+  gains the re-measure cases; `LiveEta` wording; `e2e/landing.spec.ts` gains the hero film specs and the
+  reach-the-bottom spec. Vitest 1004 passed, Playwright 77 passed, lint 0 errors (28 warnings, unchanged),
+  landing chunk 68.1 KB gzipped of 120 KB.
+- **Docs updated:** this entry, `modules/LANDING.md` (key files, sections 5, 6, 7), `TESTING_GUIDE.md`.
+- **Follow-ups / known issues:**
+  - Not built yet (stages 4 to 6): the pinned journey scenes for "How it works", circle wipes between
+    sections, the stop counter and glass pill nav, and the dedicated phone choreography.
+  - The film is pinned for ~2 screens on phones too. It works there (tested at 390x844), but stage 6 should
+    review how much scroll that costs a visitor on a small screen.
+  - Still open from before: the driver email endpoint, the live download links, Vercel Git LFS.
 
 ## 2026-10-13 — Landing page: motion foundation (smooth scroll, opening, tooling)
 - **Branch:** feature/landing-journey

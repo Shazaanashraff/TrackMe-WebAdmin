@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-// The same petrol "T" tile the portal sidebar uses, so the brand reads as one.
+// The brand tile: a "P" for Pingo, in the page's own primary colour.
 export function LogoMark({ className }) {
   return (
     <span
@@ -10,7 +10,7 @@ export function LogoMark({ className }) {
         className,
       )}
     >
-      T
+      P
     </span>
   );
 }

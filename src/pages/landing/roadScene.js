@@ -97,6 +97,50 @@ export function shuttleState(view, t) {
   };
 }
 
+/**
+ * How many screens of scrolling the hero film is pinned for. A phone gets less: a small screen
+ * covers the same distance in more thumb-flicks, so the same film is made shorter there.
+ */
+export const HERO_SCREENS = { wide: 2.2, phone: 1.7 };
+export const PHONE_WIDTH = 768;
+export const heroScreens = (width) => (width < PHONE_WIDTH ? HERO_SCREENS.phone : HERO_SCREENS.wide);
+
+/** The bottom of the floating nav pill, plus a margin: nothing of the hero's picture goes above this. */
+export const NAV_CLEARANCE = 80;
+const WINDOW_GAP = 14; // the air between the window and the headline under it
+
+/**
+ * The circular window the hero opens through. It is centred on the shuttle, starts as a
+ * small porthole (`r0`) and grows to `rFull`, large enough to cover the whole screen from
+ * that centre. On a wide screen the headline sits to its left, so the starting radius is
+ * held back until the window clears the type.
+ *
+ * `headlineTop` (portrait only, where the headline is under the window rather than beside it) is
+ * where the headline really starts on the stage, measured from the page. With it the window sits in
+ * the gap between the nav and the headline, centred in it and no bigger than it, however short the
+ * phone. Without it (0) the window is wherever the shuttle is.
+ */
+export function heroWindow(width, height, headlineTop = 0) {
+  const view = makeView(width, height);
+  const bus = shuttleState(view, 0);
+  const x = (bus.left + bus.right) / 2;
+  let y = (bus.top + bus.bottom) / 2;
+
+  const headlineEnd = view.portrait ? 0 : width * 0.66; // where the headline's last glyph ends, roughly
+  const room = view.portrait ? Infinity : x - headlineEnd - 12;
+  const wanted = Math.min(width, height) * (view.portrait ? 0.15 : 0.11);
+  let r0 = Math.max(56, Math.min(wanted, room));
+
+  if (view.portrait && headlineTop > 0) {
+    const space = headlineTop - WINDOW_GAP - NAV_CLEARANCE;
+    r0 = Math.max(32, Math.min(wanted, space / 2));
+    y = NAV_CLEARANCE + Math.max(space, 2 * r0) / 2;
+  }
+
+  const farthest = Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
+  return { x, y, r0, rFull: Math.ceil(farthest + 40) };
+}
+
 /** Tiny deterministic random numbers, so the skyline is the same every time. */
 export function mulberry32(seed) {
   let a = seed >>> 0;

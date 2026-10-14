@@ -40,7 +40,7 @@ describe('Loader', () => {
   it('announces itself as a status, with the counter at zero', () => {
     render(<Loader onDone={vi.fn()} />);
 
-    expect(screen.getByRole('status', { name: /loading trackme/i })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /loading pingo/i })).toBeInTheDocument();
     expect(screen.getByText('000')).toBeInTheDocument();
   });
 

@@ -1,9 +1,12 @@
+import { KEY, STATUS, STEPS, statusDotClass } from './enroll';
+
 // Illustrative "join a driver" screen. Generic sample content, not real data.
-const KEY = ['T', 'M', '4', 'F', '7', 'K'];
+// It rests on its finished state (key typed, request sent, waiting for approval); how scrolling
+// plays it from the start lives in enroll.js.
 
 export default function EnrollScreen() {
   return (
-    <div className="absolute inset-0 flex flex-col bg-gradient-to-b from-[#0b1a1e] to-[#07100f] px-4 pb-4 pt-12 text-white">
+    <div className="absolute inset-0 flex flex-col bg-gradient-to-b from-[#0c1c28] to-[#08161f] px-4 pb-4 pt-12 text-white">
       <p className="text-[9px] uppercase tracking-[0.18em] text-teal-300/80">Join a driver</p>
       <h3 className="font-display mt-1 text-[17px] font-semibold leading-tight">Enter your driver&apos;s key</h3>
       <p className="mt-1.5 text-[10px] leading-relaxed text-white/50">
@@ -14,21 +17,31 @@ export default function EnrollScreen() {
         {KEY.map((c, i) => (
           <div
             key={i}
-            className="flex aspect-square items-center justify-center rounded-lg border border-white/12 bg-white/[0.04] font-mono text-sm font-medium"
+            data-key-box
+            data-on="true"
+            className="flex aspect-square items-center justify-center rounded-lg border border-white/12 bg-white/[0.04] font-mono text-sm font-medium transition-colors data-[on=true]:border-teal-300/50"
           >
-            {c}
+            <span data-key-char>{c}</span>
           </div>
         ))}
       </div>
 
-      <div className="mt-4 rounded-xl bg-teal-400 py-2.5 text-center text-[11px] font-semibold text-[#04211d]">
-        Request to join
+      <div
+        data-button
+        data-on="true"
+        className="mt-4 rounded-xl bg-teal-400 py-2.5 text-center text-[11px] font-semibold text-[#04211d] data-[on=false]:opacity-40"
+      >
+        <span data-button-label>Request sent</span>
       </div>
 
       <ol className="mt-5 space-y-2.5">
-        {['Get the key from your driver', 'Send your request', 'Your manager approves'].map((text, i) => (
+        {STEPS.map((text, i) => (
           <li key={text} className="flex items-center gap-2.5 text-[10px] text-white/60">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full border border-teal-300/40 text-[9px] font-semibold text-teal-200">
+            <span
+              data-step-dot
+              data-done={i < 2 ? 'true' : 'false'}
+              className="flex h-5 w-5 items-center justify-center rounded-full border border-teal-300/40 text-[9px] font-semibold text-teal-200 transition-colors data-[done=true]:border-teal-300 data-[done=true]:bg-teal-300 data-[done=true]:text-[#04211d]"
+            >
               {i + 1}
             </span>
             {text}
@@ -39,13 +52,17 @@ export default function EnrollScreen() {
       <div className="mt-auto rounded-2xl border border-white/10 bg-white/[0.04] p-3">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-60" style={{ animation: 'l-ping 1.8s ease-out infinite' }} />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-300" />
+            <span
+              data-status-ping
+              className="absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-60"
+              style={{ animation: 'l-ping 1.8s ease-out infinite' }}
+            />
+            <span data-status-dot className={statusDotClass('waiting')} />
           </span>
-          <p className="text-[10px] font-medium">Waiting for approval</p>
+          <p data-status-title className="text-[10px] font-medium">{STATUS.waiting.title}</p>
         </div>
-        <p className="mt-1.5 text-[9px] leading-relaxed text-white/45">
-          This driver is private. Your fleet manager reviews every request.
+        <p data-status-note className="mt-1.5 text-[9px] leading-relaxed text-white/45">
+          {STATUS.waiting.note}
         </p>
       </div>
     </div>

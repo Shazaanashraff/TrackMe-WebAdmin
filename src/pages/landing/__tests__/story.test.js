@@ -1,26 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sectionProgress, sideForStep, stepFromProgress } from '../story';
-
-describe('sectionProgress', () => {
-  it('is 0 while the section top is still at or below the viewport top', () => {
-    expect(sectionProgress(0, 3600, 900)).toBe(0);
-    expect(sectionProgress(400, 3600, 900)).toBe(0);
-  });
-
-  it('is 1 once the sticky stage has used all of its travel', () => {
-    expect(sectionProgress(-2700, 3600, 900)).toBe(1);
-    expect(sectionProgress(-5000, 3600, 900)).toBe(1);
-  });
-
-  it('is proportional in between', () => {
-    expect(sectionProgress(-1350, 3600, 900)).toBeCloseTo(0.5);
-  });
-
-  it('never divides by zero when the section is not taller than the viewport', () => {
-    expect(sectionProgress(-100, 900, 900)).toBe(0);
-    expect(sectionProgress(-100, 500, 900)).toBe(0);
-  });
-});
+import { sideForStep, stepFromProgress } from '../story';
 
 describe('stepFromProgress', () => {
   it('splits progress into equal bands, one per step', () => {

@@ -1,12 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import {
   CARS,
+  HERO_SCREENS,
   LANE,
   SPEED,
   Z_FAR,
   Z_NEAR,
   carZ,
   hazeAlpha,
+  heroScreens,
+  NAV_CLEARANCE,
+  heroWindow,
   makeView,
   mulberry32,
   project,
@@ -236,3 +240,110 @@ describe('hazeAlpha', () => {
     expect(a).toEqual([...a].sort((x, y) => y - x));
   });
 });
+
+describe('heroWindow', () => {
+  it.each(SCREENS)('is centred on the shuttle, on screen, and big enough to cover it all at %ix%i', (w, h) => {
+    const win = heroWindow(w, h);
+    const bus = shuttleState(makeView(w, h), 0);
+
+    expect(win.x).toBeCloseTo((bus.left + bus.right) / 2);
+    expect(win.y).toBeCloseTo((bus.top + bus.bottom) / 2);
+    expect(win.x).toBeGreaterThan(0);
+    expect(win.x).toBeLessThan(w);
+
+    // Grown to rFull, the circle must cover every corner of the screen.
+    [[0, 0], [w, 0], [0, h], [w, h]].forEach(([cx, cy]) => {
+      expect(Math.hypot(cx - win.x, cy - win.y)).toBeLessThanOrEqual(win.rFull);
+    });
+  });
+
+  it.each(SCREENS)('starts as a real, smaller porthole at %ix%i', (w, h) => {
+    const win = heroWindow(w, h);
+    expect(win.r0).toBeGreaterThanOrEqual(56);
+    expect(win.r0).toBeLessThan(win.rFull / 3);
+  });
+
+  it('keeps the starting window clear of the headline on a wide screen', () => {
+    [[1920, 1080], [1440, 900], [1280, 720]].forEach(([w, h]) => {
+      const win = heroWindow(w, h);
+      // The headline's last glyph ends near 66% of the width; the window's left edge stays right of it.
+      expect(win.x - win.r0).toBeGreaterThanOrEqual(w * 0.66 - 1);
+    });
+  });
+
+  it('does not hold the window back on a phone, where the headline is below the shuttle', () => {
+    const win = heroWindow(390, 844);
+    expect(win.r0).toBeCloseTo(390 * 0.15);
+  });
+
+  it('is deterministic', () => {
+    expect(heroWindow(1440, 900)).toEqual(heroWindow(1440, 900));
+  });
+});
+
+describe('heroScreens (how long the hero film is)', () => {
+  it('is shorter on a phone, where the same distance is more thumb-flicks', () => {
+    expect(heroScreens(390)).toBe(HERO_SCREENS.phone);
+    expect(heroScreens(767)).toBe(HERO_SCREENS.phone);
+    expect(HERO_SCREENS.phone).toBeLessThan(HERO_SCREENS.wide);
+  });
+
+  it('is the full length from a tablet up', () => {
+    expect(heroScreens(768)).toBe(HERO_SCREENS.wide);
+    expect(heroScreens(1440)).toBe(HERO_SCREENS.wide);
+  });
+
+  it('is still long enough for the whole film to play (the window opens, then the answer rises)', () => {
+    expect(HERO_SCREENS.phone).toBeGreaterThanOrEqual(1.5);
+  });
+});
+
+describe('heroWindow with a measured headline (a phone, where the window sits above it)', () => {
+  // Width, height, and where the headline really starts on that phone (measured in a browser).
+  const PHONES = [
+    [320, 640, 218],
+    [360, 640, 210],
+    [390, 844, 330],
+    [430, 932, 380],
+  ];
+
+  it.each(PHONES)('sits in the gap between the nav and the headline on %sx%s, never over either', (w, h, headlineTop) => {
+    const win = heroWindow(w, h, headlineTop);
+
+    expect(win.y - win.r0).toBeGreaterThanOrEqual(NAV_CLEARANCE - 0.5); // clear of the nav pill
+    expect(win.y + win.r0).toBeLessThanOrEqual(headlineTop); // clear of the headline
+  });
+
+  it('is centred in that gap', () => {
+    const win = heroWindow(390, 844, 330);
+    const space = 330 - 14 - NAV_CLEARANCE;
+    expect(win.y).toBeCloseTo(NAV_CLEARANCE + space / 2);
+  });
+
+  it('shrinks to fit a short gap, but never vanishes', () => {
+    const tall = heroWindow(390, 844, 330);
+    const short = heroWindow(390, 844, 180);
+    expect(short.r0).toBeLessThan(tall.r0);
+    expect(short.r0).toBeGreaterThanOrEqual(32);
+  });
+
+  it('never rides up under the nav, even when there is no room at all', () => {
+    const win = heroWindow(320, 640, 100); // a gap that cannot hold even the smallest window
+    expect(win.y - win.r0).toBeGreaterThanOrEqual(NAV_CLEARANCE - 0.5);
+  });
+
+  it('still grows to cover every corner from wherever it starts', () => {
+    PHONES.forEach(([w, h, headlineTop]) => {
+      const win = heroWindow(w, h, headlineTop);
+      [[0, 0], [w, 0], [0, h], [w, h]].forEach(([cx, cy]) => {
+        expect(Math.hypot(cx - win.x, cy - win.y)).toBeLessThanOrEqual(win.rFull);
+      });
+    });
+  });
+
+  it('changes nothing without a measurement, nor on a wide screen where the headline is beside the window', () => {
+    expect(heroWindow(390, 844, 0)).toEqual(heroWindow(390, 844));
+    expect(heroWindow(1440, 900, 400)).toEqual(heroWindow(1440, 900));
+  });
+});
+

@@ -1,4 +1,6 @@
 // Illustrative managed-profiles screen. Generic sample content, not real data.
+// How scrolling plays it lives in profiles.js.
+
 const PROFILES = [
   { name: 'You', note: 'Account holder', tone: 'bg-teal-400/20 text-teal-200', badge: 'On the way' },
   { name: 'Nimal', note: 'Child · Grade 7', tone: 'bg-sky-400/20 text-sky-200', badge: 'At school' },
@@ -7,13 +9,13 @@ const PROFILES = [
 
 export default function ProfilesScreen() {
   return (
-    <div className="absolute inset-0 flex flex-col bg-gradient-to-b from-[#0b1a1e] to-[#07100f] px-4 pb-4 pt-12 text-white">
+    <div className="absolute inset-0 flex flex-col bg-gradient-to-b from-[#0c1c28] to-[#08161f] px-4 pb-4 pt-12 text-white">
       <p className="text-[9px] uppercase tracking-[0.18em] text-teal-300/80">Your riders</p>
       <h3 className="font-display mt-1 text-[17px] font-semibold leading-tight">Everyone, one login</h3>
 
       <ul className="mt-4 space-y-2">
         {PROFILES.map((p) => (
-          <li key={p.name} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-2.5">
+          <li key={p.name} data-rider className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-2.5">
             <span className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold ${p.tone}`}>
               {p.name[0]}
             </span>
@@ -26,18 +28,18 @@ export default function ProfilesScreen() {
         ))}
       </ul>
 
-      <div className="mt-3 rounded-2xl border border-dashed border-white/15 py-2.5 text-center text-[10px] text-white/55">
+      <div data-add className="mt-3 rounded-2xl border border-dashed border-white/15 py-2.5 text-center text-[10px] text-white/55">
         + Add a rider
       </div>
 
-      <div className="mt-auto rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+      <div data-shuttle className="mt-auto rounded-2xl border border-white/10 bg-white/[0.04] p-3">
         <p className="text-[9px] uppercase tracking-wider text-white/45">Nimal&apos;s shuttle</p>
         <div className="mt-1 flex items-end justify-between">
-          <p className="font-display text-xl font-semibold">6 min</p>
+          <p data-profile-eta className="font-display text-xl font-semibold">6 min</p>
           <span className="text-[9px] text-teal-300">On time</span>
         </div>
         <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-sky-300 to-teal-300" />
+          <div data-profile-bar className="h-full rounded-full bg-gradient-to-r from-sky-300 to-teal-300" style={{ width: '50%' }} />
         </div>
       </div>
     </div>

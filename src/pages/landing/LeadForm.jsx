@@ -45,9 +45,9 @@ export function LeadForm({ onSubmit }) {
     return (
       <p
         role="status"
-        className="flex items-start gap-3 rounded-2xl border border-teal-300/30 bg-teal-300/10 p-4 text-sm text-teal-100"
+        className="flex items-start gap-3 rounded-2xl border border-l-sky/30 bg-l-sky/10 p-4 text-sm text-l-ink"
       >
-        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-teal-300" aria-hidden="true" />
+        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-l-sky" aria-hidden="true" />
         Thanks. We&apos;ll email you the next steps for joining as a driver.
       </p>
     );
@@ -61,7 +61,7 @@ export function LeadForm({ onSubmit }) {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="relative">
-      <label htmlFor={fieldId} className="text-sm font-medium text-white/80">
+      <label htmlFor={fieldId} className="text-sm font-medium text-l-ink/75">
         Your email
       </label>
       <input
@@ -89,15 +89,15 @@ export function LeadForm({ onSubmit }) {
           aria-invalid={status === 'invalid'}
           aria-describedby={message ? `${fieldId}-msg` : undefined}
           className={cn(
-            'h-12 w-full shrink-0 rounded-full border sm:min-w-0 sm:flex-1 bg-white/5 px-5 text-base text-white placeholder:text-white/30',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-l-bone',
-            status === 'invalid' ? 'border-red-400/70' : 'border-l-bone/25',
+            'h-12 w-full shrink-0 rounded-full border bg-l-ink/[0.03] px-5 text-base text-l-ink placeholder:text-l-ink/35 sm:min-w-0 sm:flex-1',
+            'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-l-sky',
+            status === 'invalid' ? 'border-red-600/70' : 'border-l-ink/25',
           )}
         />
         <button
           type="submit"
           disabled={status === 'sending'}
-          className="group inline-flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-l-bone px-6 text-sm font-semibold text-l-ink transition-colors hover:bg-white disabled:opacity-60 sm:w-auto"
+          className="group inline-flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-l-ink px-6 text-sm font-semibold text-l-bone disabled:opacity-60 sm:w-auto"
         >
           {status === 'sending' ? 'Sending…' : 'Get driver access'}
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
@@ -107,7 +107,7 @@ export function LeadForm({ onSubmit }) {
         <p
           id={`${fieldId}-msg`}
           role={status === 'invalid' ? 'alert' : 'status'}
-          className={cn('mt-3 text-sm', status === 'invalid' || status === 'failed' ? 'text-red-300' : 'text-amber-200')}
+          className={cn('mt-3 text-sm', status === 'invalid' || status === 'failed' ? 'text-red-700' : 'text-amber-800')}
         >
           {message}
         </p>

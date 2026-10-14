@@ -3,14 +3,17 @@
    carries the `dark` class too), then adds the few extra depth values below. */
 
 .landing {
-  --l-ink: #07100f;
-  --l-bone: #efeadf;
-  --l-petrol: #0c5e58;
+  /* The palette is drawn from the hero film: the deep blue-green of shaded foliage and the sky's
+     shadow (ink), sunlit paper (bone), the sky itself, darkened until type can sit on it (sky),
+     and a mint (teal) that is the colour between that sky and the grass. */
+  --l-ink: #08161f;
+  --l-bone: #f3f0e5;
+  --l-sky: #1d56b0;
   --l-teal: #5eead4;
   /* The same colours as space-separated RGB channels, for Tailwind's opacity modifiers. */
-  --l-ink-rgb: 7 16 15;
-  --l-bone-rgb: 239 234 223;
-  --l-petrol-rgb: 12 94 88;
+  --l-ink-rgb: 8 22 31;
+  --l-bone-rgb: 243 240 229;
+  --l-sky-rgb: 29 86 176;
   --l-teal-rgb: 94 234 212;
   --l-line: rgb(255 255 255 / 0.09);
   --l-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
@@ -41,7 +44,7 @@ html:has(.landing) body,
 html:has(.landing) #root {
   overflow: visible;
   height: auto;
-  background-color: #07100f;
+  background-color: #08161f;
 }
 
 .landing .font-display {
@@ -159,17 +162,6 @@ html:has(.landing) #root {
   }
 }
 
-/* The sticky story moves the device between sides; the easing is the feel. */
-.landing .l-device-move {
-  transition: transform 1s var(--l-ease);
-  will-change: transform;
-}
-.landing .l-step-text {
-  transition:
-    opacity 0.7s var(--l-ease),
-    transform 0.9s var(--l-ease);
-}
-
 /* Outlined display type: giant words that are texture, not content. */
 .landing .l-outline {
   color: transparent;
@@ -186,8 +178,7 @@ html:has(.landing) #root {
   animation: l-spin 90s linear infinite;
 }
 
-/* The rider / driver split: stacked on a phone, side by side on a wide screen,
-   where the panel under the pointer (or holding focus) widens a little. */
+/* The rider / driver split: stacked on a phone, side by side on a wide screen. */
 .landing .l-split {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -195,21 +186,12 @@ html:has(.landing) #root {
 @media (min-width: 1024px) {
   .landing .l-split {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    transition: grid-template-columns 0.8s var(--l-ease);
-  }
-  .landing .l-split:has(.l-panel-a:hover),
-  .landing .l-split:has(.l-panel-a:focus-within) {
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-  }
-  .landing .l-split:has(.l-panel-b:hover),
-  .landing .l-split:has(.l-panel-b:focus-within) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
   }
 }
 
 /* Small floating label (the route rail's stop name). Flat, not frosted glass. */
 .landing .l-glass {
-  background: rgb(7 16 15 / 0.82);
+  background: rgb(8 22 31 / 0.82);
   border: 1px solid var(--l-line);
 }
 
@@ -231,4 +213,98 @@ html:has(.landing) #root {
 /* With Lenis driving the scroll, the browser's own smooth-scroll must step aside. */
 html.lenis:has(.landing) {
   scroll-behavior: auto;
+}
+
+/* ── The hero window ─────────────────────────────────────────────────────── */
+/* Everything that is the scene is clipped to a circle centred on the shuttle. GSAP grows
+   --wr as the visitor scrolls; --wx and --wy are the shuttle's position. */
+.landing .l-hero-window {
+  clip-path: circle(var(--wr, 150vmax) at var(--wx, 50%) var(--wy, 50%));
+}
+
+/* A word hidden behind a mask until the scroll sequence lifts it (same box as .l-word,
+   but GSAP drives it, so no CSS animation). */
+.landing .l-mask {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+
+/* ── Circle wipes ────────────────────────────────────────────────────────── */
+/* A section that opens through a circle. --r is animated by GSAP (0% = closed); with no motion it
+   is simply open. --x / --y say where the circle is centred. */
+.landing .l-wipe {
+  clip-path: circle(var(--r, 150%) at var(--x, 50%) var(--y, 0%));
+}
+
+/* ── The cursor ring ─────────────────────────────────────────────────────── */
+.landing .l-cursor-ring,
+.landing .l-cursor-dot {
+  position: fixed;
+  left: 0;
+  top: 0;
+  border-radius: 9999px;
+  opacity: 0;
+  will-change: transform;
+  transition:
+    opacity 0.25s ease,
+    width 0.3s var(--l-ease),
+    height 0.3s var(--l-ease),
+    background-color 0.3s ease;
+}
+.landing .l-cursor-ring {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgb(var(--l-bone-rgb) / 0.75);
+  mix-blend-mode: difference;
+}
+.landing .l-cursor-ring[data-visible='true'] {
+  opacity: 1;
+}
+.landing .l-cursor-ring[data-active='true'] {
+  width: 60px;
+  height: 60px;
+  background-color: rgb(var(--l-bone-rgb) / 0.14);
+}
+.landing .l-cursor-dot {
+  width: 6px;
+  height: 6px;
+  background: rgb(var(--l-teal-rgb));
+}
+.landing .l-cursor-dot[data-visible='true'] {
+  opacity: 1;
+}
+.landing .l-cursor-dot[data-active='true'] {
+  opacity: 0;
+}
+
+/* ── The nav pill's edge ─────────────────────────────────────────────────── */
+/* A hairline border with a glint of mint that runs round it. The angle is a registered custom
+   property so it can be animated; a browser without that just shows the plain hairline. */
+@property --l-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes l-angle {
+  to {
+    --l-angle: 360deg;
+  }
+}
+.landing .l-nav-glint::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background:
+    conic-gradient(from var(--l-angle), transparent 0 62%, rgb(var(--l-teal-rgb) / 0.9) 82%, transparent 100%),
+    linear-gradient(rgb(var(--l-bone-rgb) / 0.12), rgb(var(--l-bone-rgb) / 0.12));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: l-angle 7s linear infinite;
 }

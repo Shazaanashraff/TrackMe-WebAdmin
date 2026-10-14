@@ -14,6 +14,7 @@ vi.mock('lenis', () => {
       this.raf = vi.fn();
       this.destroy = vi.fn();
       this.scrollTo = vi.fn();
+      this.resize = vi.fn();
       instances.push(this);
     }
   }
@@ -22,7 +23,7 @@ vi.mock('lenis', () => {
 
 vi.mock('../motion/gsapSetup', () => ({
   gsap: { ticker: { add: vi.fn(), remove: vi.fn(), lagSmoothing: vi.fn() } },
-  ScrollTrigger: { update: vi.fn() },
+  ScrollTrigger: { update: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn() },
   setupGsap: vi.fn(),
   EASE: {},
 }));
@@ -73,6 +74,27 @@ describe('MotionProvider', () => {
     tick(2.5);
     expect(lenis.raf).toHaveBeenCalledWith(2500);
     expect(screen.getByTestId('state')).toHaveTextContent('full|lenis');
+  });
+
+  it('makes Lenis re-measure whenever ScrollTrigger does, so a pinned scene never leaves it short', () => {
+    stubMotion();
+    render(<MotionProvider><Probe /></MotionProvider>);
+
+    const [event, handler] = ScrollTrigger.addEventListener.mock.calls[0];
+    expect(event).toBe('refresh');
+    handler();
+
+    expect(instances()[0].resize).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops listening for ScrollTrigger refreshes on unmount', () => {
+    stubMotion();
+    const { unmount } = render(<MotionProvider><Probe /></MotionProvider>);
+    const handler = ScrollTrigger.addEventListener.mock.calls[0][1];
+
+    unmount();
+
+    expect(ScrollTrigger.removeEventListener).toHaveBeenCalledWith('refresh', handler);
   });
 
   it('gives visitors who prefer reduced motion the browser\'s own scrolling', () => {
@@ -143,13 +165,18 @@ describe('MotionProvider anchor links', () => {
   it('leaves ordinary links and modified clicks alone', () => {
     stubMotion();
     page();
-    // jsdom cannot navigate and says so on the console; that is not what is under test.
-    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Observe each click after the provider has seen it, then cancel it so jsdom never tries to
+    // navigate. `defaultPrevented` at that moment tells us whether the provider took it over.
+    const seen = [];
+    const observe = (event) => { seen.push(event.defaultPrevented); event.preventDefault(); };
+    document.addEventListener('click', observe);
 
-    expect(fireEvent.click(screen.getByText('sign in'))).toBe(true);
-    expect(fireEvent.click(screen.getByText('to join'), { ctrlKey: true })).toBe(true);
+    fireEvent.click(screen.getByText('sign in'));
+    fireEvent.click(screen.getByText('to join'), { ctrlKey: true });
+    document.removeEventListener('click', observe);
+
+    expect(seen).toEqual([false, false]);
     expect(instances()[0].scrollTo).not.toHaveBeenCalled();
-    quiet.mockRestore();
   });
 
   it('does not touch anchors at all when smooth scrolling is off', () => {

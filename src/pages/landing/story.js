@@ -1,17 +1,8 @@
-// Pure maths for the sticky "How it works" scroll story, kept apart from the
-// component so the step boundaries can be unit-tested without a browser.
+// Pure maths for the pinned "How it works" story, kept apart from the component so the
+// chapter boundaries can be unit-tested without a browser. (The finer timing inside a chapter
+// lives in chapterMath.js.)
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-
-/**
- * 0 when the section's top edge reaches the top of the viewport, 1 when its
- * sticky stage is about to scroll away (section height minus one viewport).
- */
-export function sectionProgress(top, height, viewportHeight) {
-  const travel = height - viewportHeight;
-  if (travel <= 0) return 0;
-  return clamp(-top / travel, 0, 1);
-}
 
 /** Which of `count` steps owns a given progress. The last step gets a dwell. */
 export function stepFromProgress(progress, count) {

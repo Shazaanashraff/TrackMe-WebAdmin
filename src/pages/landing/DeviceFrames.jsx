@@ -5,12 +5,12 @@ export function PhoneFrame({ children, className }) {
   return (
     <div
       className={cn(
-        'relative aspect-[9/18.5] w-[min(300px,76vw)] rounded-[2.8rem] border border-white/20 bg-[#02080a] p-[9px]',
+        'relative aspect-[9/18.5] w-[min(300px,76vw)] rounded-[2.8rem] border border-white/20 bg-[#02070b] p-[9px]',
         'shadow-[0_50px_100px_-40px_rgb(0_0_0/0.95),inset_0_0_0_1px_rgb(255_255_255/0.06)]',
         className,
       )}
     >
-      <div className="relative h-full w-full overflow-hidden rounded-[2.25rem] bg-[#0a1316]">
+      <div className="relative h-full w-full overflow-hidden rounded-[2.25rem] bg-[#0a1722]">
         <div
           aria-hidden="true"
           className="absolute left-1/2 top-2 z-30 h-[22px] w-[84px] -translate-x-1/2 rounded-full bg-black"
@@ -25,8 +25,8 @@ export function PhoneFrame({ children, className }) {
 export function LaptopFrame({ children, className }) {
   return (
     <div className={cn('relative w-[min(640px,92vw)]', className)}>
-      <div className="rounded-t-2xl border border-white/20 bg-[#02080a] p-[10px] shadow-[0_50px_100px_-40px_rgb(0_0_0/0.95)]">
-        <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-[#0a1316]">{children}</div>
+      <div className="rounded-t-2xl border border-white/20 bg-[#02070b] p-[10px] shadow-[0_50px_100px_-40px_rgb(0_0_0/0.95)]">
+        <div className="relative aspect-[16/10] overflow-hidden rounded-lg bg-[#0a1722]">{children}</div>
       </div>
       <div
         aria-hidden="true"

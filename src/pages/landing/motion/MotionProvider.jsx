@@ -29,12 +29,18 @@ export function MotionProvider({ children }) {
     const instance = new Lenis({ lerp: 0.09, smoothWheel: true, wheelMultiplier: 0.95 });
     // Lenis scrolls the real window, so ScrollTrigger keeps working; it only needs to be told when.
     instance.on('scroll', ScrollTrigger.update);
+    // A pinned scene adds scroll distance when ScrollTrigger measures it, which can be after
+    // Lenis took its own measurement. Without this Lenis believes the page is shorter than it
+    // is: glides stop short and the bottom of the page cannot be reached.
+    const onRefresh = () => instance.resize();
+    ScrollTrigger.addEventListener('refresh', onRefresh);
     const tick = (time) => instance.raf(time * 1000);
     gsap.ticker.add(tick);
     gsap.ticker.lagSmoothing(0);
     setLenis(instance);
 
     return () => {
+      ScrollTrigger.removeEventListener('refresh', onRefresh);
       gsap.ticker.remove(tick);
       instance.destroy();
       setLenis(null);

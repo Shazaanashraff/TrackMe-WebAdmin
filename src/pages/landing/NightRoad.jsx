@@ -115,7 +115,9 @@ function paintRoad(ctx, view, t) {
 
   // The centre line, streaming towards the camera.
   streamZs(t, 5.5).forEach((z) => {
-    const alpha = (0.08 + 0.6 * hazeAlpha(z)) * (view.portrait ? 0.45 : 1);
+    // Fade the dashes right at the camera so one passing never flashes a harsh bar.
+    const nearFade = Math.min(1, Math.max(0.15, (z - 0.9) / 3));
+    const alpha = (0.08 + 0.6 * hazeAlpha(z)) * (view.portrait ? 0.45 : 1) * nearFade;
     ctx.fillStyle = `rgba(${BONE},${alpha})`;
     quad(ctx, view, -0.07, 0.07, z, z + 2.3);
     ctx.fill();
@@ -339,12 +341,14 @@ function paintReticle(ctx, view, t, bus) {
   ctx.fillText('● LIVE', tx, ty + fs * 1.5);
 }
 
-function paintScene(ctx, view, backdrop, t) {
+// `t` is real time (the shuttle's bob, the reticle's pulse). `worldT` is how far the camera
+// has travelled, which the page speeds up when the visitor scrolls fast.
+function paintScene(ctx, view, backdrop, t, worldT = t) {
   ctx.clearRect(0, 0, view.width, view.height);
   ctx.drawImage(backdrop, 0, 0, view.width, view.height);
-  paintRoad(ctx, view, t);
-  paintLamps(ctx, view, t);
-  paintTraffic(ctx, view, t);
+  paintRoad(ctx, view, worldT);
+  paintLamps(ctx, view, worldT);
+  paintTraffic(ctx, view, worldT);
   const bus = paintShuttle(ctx, view, t);
   paintReticle(ctx, view, t, bus);
 }
@@ -356,7 +360,7 @@ function paintScene(ctx, view, backdrop, t) {
  * tab is hidden, and holds a single still frame for people who prefer reduced
  * motion.
  */
-export function NightRoad({ className }) {
+export function NightRoad({ className, speedRef }) {
   const canvasRef = useRef(null);
   const reduce = useMediaQuery('(prefers-reduced-motion: reduce)');
 
@@ -373,6 +377,8 @@ export function NightRoad({ className }) {
     let frame = 0;
     let visible = true;
     const startedAt = performance.now();
+    let lastNow = startedAt;
+    let worldT = 0;
 
     const resize = () => {
       const { clientWidth: width, clientHeight: height } = canvas;
@@ -395,8 +401,12 @@ export function NightRoad({ className }) {
         resize();
       }
       if (view && visible && !document.hidden) {
-        paintScene(ctx, view, backdrop, (now - startedAt) / 1000);
+        // Cap the step so coming back to a hidden tab does not teleport the road.
+        const dt = Math.min(0.1, Math.max(0, (now - lastNow) / 1000));
+        worldT += dt * Math.max(0.25, speedRef?.current ?? 1);
+        paintScene(ctx, view, backdrop, (now - startedAt) / 1000, worldT);
       }
+      lastNow = now;
       if (visible && !document.hidden) frame = requestAnimationFrame(tick);
     };
 
@@ -426,7 +436,7 @@ export function NightRoad({ className }) {
       watcher?.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [reduce]);
+  }, [reduce, speedRef]);
 
   return <canvas ref={canvasRef} aria-hidden="true" className={className} />;
 }

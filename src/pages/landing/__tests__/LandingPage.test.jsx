@@ -15,12 +15,14 @@ describe('LandingPage', () => {
     expect(screen.getByRole('link', { name: /i'm a driver/i })).toHaveAttribute('href', '#join');
   });
 
-  it('keeps a manager sign-in path in the nav and the footer', () => {
-    renderPage();
+  it('keeps the manager sign-in path in the footer, not in the nav', () => {
+    const { container } = renderPage();
 
     const links = screen.getAllByRole('link', { name: /manager sign in/i });
-    expect(links.length).toBeGreaterThanOrEqual(2);
-    links.forEach((link) => expect(link).toHaveAttribute('href', '/login'));
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute('href', '/login');
+    expect(container.querySelector('footer').contains(links[0])).toBe(true);
+    expect(within(screen.getByRole('banner')).queryByRole('link', { name: /sign in/i })).toBeNull();
   });
 
   it('is built from the sections the brief asks for, in order', () => {
@@ -30,7 +32,34 @@ describe('LandingPage', () => {
     expect(ids).toEqual(['top', 'what', 'how-it-works', 'join']);
   });
 
-  it('says what TrackMe is in one sentence and three short points', () => {
+  it('hangs a tab over the top of every section that follows a different one: ink, paper, ink, then paper', () => {
+    const { container } = renderPage();
+
+    const tabs = Array.from(container.querySelectorAll('[data-tab]'));
+    expect(tabs.map((t) => t.getAttribute('data-tab'))).toEqual(['ink', 'bone', 'ink', 'bone']);
+    // Each belongs to the section it hangs over: the paper section, the story, the join section and the footer.
+    expect(tabs.map((t) => t.closest('section, footer').id || t.closest('section, footer').tagName.toLowerCase()))
+      .toEqual(['what', 'how-it-works', 'join', 'footer']);
+  });
+
+  it('floats the navigation as a pill above everything, outside the main content', () => {
+    const { container } = renderPage();
+    const banner = screen.getByRole('banner');
+
+    expect(banner.querySelector('[data-nav-pill]')).not.toBeNull();
+    expect(container.querySelector('main').contains(banner)).toBe(false);
+  });
+
+  it('ends on the finale: a footer that opens a circle of sky and fills a giant wordmark', () => {
+    const { container } = renderPage();
+    const footer = container.querySelector('footer');
+
+    expect(footer.querySelector('[data-wipe]')).not.toBeNull();
+    expect(footer.querySelector('[data-fill]')).not.toBeNull();
+    expect(within(footer).getByRole('link', { name: /privacy policy/i })).toBeInTheDocument();
+  });
+
+  it('says what Pingo is in one sentence and three short points', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: /school runs, campus shuttles/i })).toBeInTheDocument();
   });
@@ -69,7 +98,7 @@ describe('LandingPage', () => {
   it('sets a branded document title while mounted and restores it after', () => {
     document.title = 'before';
     const { unmount } = renderPage();
-    expect(document.title).toMatch(/TrackMe/);
+    expect(document.title).toMatch(/Pingo/);
     unmount();
     expect(document.title).toBe('before');
   });

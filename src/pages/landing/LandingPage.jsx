@@ -1,43 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Cursor } from './Cursor';
+import { Footer } from './Footer';
 import { LandingNav } from './LandingNav';
-import { RouteRail } from './RouteRail';
 import { Hero } from './Hero';
 import { WhatSection } from './WhatSection';
 import { ScrollStory } from './ScrollStory';
 import { JoinSection } from './JoinSection';
-import { DRIVER_INTEREST_ENDPOINT, PRIVACY_URL } from './config';
+import { DRIVER_INTEREST_ENDPOINT } from './config';
 import { submitDriverInterest } from './driverInterest';
 import { MotionProvider } from './motion/MotionProvider';
 import { browserCanAnimate } from './motion/context';
 import { Loader } from './motion/Loader';
 import { markIntroSeen, readIntroSeen, shouldPlayIntro } from './motion/intro';
 import './landing.css';
-
-function Footer() {
-  return (
-    <footer className="overflow-hidden bg-l-ink px-4 pt-16 text-l-bone sm:px-8">
-      <div className="mx-auto flex max-w-[90rem] flex-wrap items-center justify-between gap-x-10 gap-y-4 border-t border-l-bone/15 pt-8 text-sm text-l-bone/60">
-        <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-8 gap-y-3">
-          <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="transition-colors hover:text-l-bone">
-            Privacy policy
-          </a>
-          <Link to="/login" className="transition-colors hover:text-l-bone">
-            Manager sign in
-          </Link>
-        </nav>
-        <p>© {new Date().getFullYear()} TrackMe</p>
-      </div>
-      {/* The wordmark, drawn huge and outlined, and clipped by the page edge. */}
-      <p
-        aria-hidden="true"
-        className="l-outline font-display mx-auto mt-10 max-w-[90rem] select-none text-center text-[clamp(4rem,22vw,24rem)] font-semibold leading-[0.78]"
-      >
-        TrackMe
-      </p>
-    </footer>
-  );
-}
 
 const sessionStore = () => {
   try {
@@ -74,7 +49,7 @@ export default function LandingPage({
 
   useEffect(() => {
     const previous = document.title;
-    document.title = 'TrackMe · Live shuttle tracking for Sri Lanka';
+    document.title = 'Pingo · Live shuttle tracking for Sri Lanka';
     return () => { document.title = previous; };
   }, []);
 
@@ -89,7 +64,7 @@ export default function LandingPage({
         Skip to content
       </a>
       <LandingNav />
-      <RouteRail />
+      <Cursor />
       <main>
         <Hero />
         <WhatSection />

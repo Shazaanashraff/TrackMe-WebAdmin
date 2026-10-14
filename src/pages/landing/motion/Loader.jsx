@@ -3,7 +3,7 @@ import { EASE, gsap } from './gsapSetup';
 import { useMotion } from './context';
 import { INTRO_MAX_MS, irisOrigin, padCount } from './intro';
 
-const WORD = 'TrackMe'.split('');
+const WORD = 'Pingo'.split('');
 const ROUTE = 'M10 112 C 130 112, 170 36, 290 56 S 470 128, 550 66 S 690 14, 790 34';
 // How far along the route (0..1) each stop lights up.
 const STOPS = [
@@ -92,13 +92,13 @@ export function Loader({ onDone }) {
     <div
       ref={rootRef}
       role="status"
-      aria-label="Loading TrackMe"
+      aria-label="Loading Pingo"
       className="l-loader fixed inset-0 z-[100] bg-l-ink text-l-bone"
       style={{ '--x': `${origin.x}%`, '--y': `${origin.y}%`, '--r': '0%' }}
     >
       <div data-content className="relative flex h-full w-full flex-col justify-between p-5 sm:p-10">
         <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.25em] text-l-bone/60">
-          <span>TrackMe</span>
+          <span>Pingo</span>
           <span className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-l-teal" style={{ animation: 'l-ping 1.8s ease-out infinite' }} />
             Live shuttle tracking
@@ -118,9 +118,9 @@ export function Loader({ onDone }) {
             <path d={ROUTE} stroke="rgb(239 234 223 / 0.14)" strokeWidth="1.5" strokeLinecap="round" />
             <path ref={pathRef} d={ROUTE} stroke="rgb(94 234 212)" strokeWidth="2" strokeLinecap="round" />
             {STOPS.map((stop) => (
-              <circle key={stop.at} data-stop cx={stop.x} cy={stop.y} r="5" fill="#07100f" stroke="rgb(94 234 212)" strokeWidth="2" />
+              <circle key={stop.at} data-stop cx={stop.x} cy={stop.y} r="5" fill="#08161f" stroke="rgb(94 234 212)" strokeWidth="2" />
             ))}
-            <circle ref={dotRef} cx="10" cy="112" r="7" fill="#efeadf" stroke="rgb(12 94 88)" strokeWidth="3" />
+            <circle ref={dotRef} cx="10" cy="112" r="7" fill="#f3f0e5" stroke="rgb(29 86 176)" strokeWidth="3" />
           </svg>
         </div>
 
