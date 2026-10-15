@@ -17,11 +17,10 @@ async function fetchLatestRelease({ app, platform }) {
   }
 }
 
-// Falls back to the static APP_LINKS placeholders (and therefore the
-// existing "Coming soon" button state) until a real release exists for
-// that app+platform — this never regresses the pre-existing behavior.
+// Starts on the static APP_LINKS APKs and switches to the latest registered release for that
+// app+platform once the API answers, so both apps are always downloadable.
 export function useAppDownloadLinks() {
-  const [links, setLinks] = useState({ riderAndroid: APP_LINKS.android, riderIos: APP_LINKS.ios, driverAndroid: null });
+  const [links, setLinks] = useState({ riderAndroid: APP_LINKS.android, riderIos: APP_LINKS.ios, driverAndroid: APP_LINKS.driver });
 
   useEffect(() => {
     let cancelled = false;
@@ -35,7 +34,7 @@ export function useAppDownloadLinks() {
       setLinks((prev) => ({
         ...prev,
         riderAndroid: riderAndroid?.downloadUrl || APP_LINKS.android,
-        driverAndroid: driverAndroid?.downloadUrl || null,
+        driverAndroid: driverAndroid?.downloadUrl || APP_LINKS.driver,
       }));
     })();
 

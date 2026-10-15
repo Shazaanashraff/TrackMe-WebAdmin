@@ -340,12 +340,11 @@ test.describe('Landing page — small phone', () => {
     expect(Math.abs(inputBox!.width - buttonBox!.width)).toBeLessThan(2);
   });
 
-  test('the rider badges are honest: Android and iPhone both say "Coming soon" until a release exists', async ({ page }) => {
+  test('both apps offer a direct download, with no "Coming soon"', async ({ page }) => {
     await page.goto('/#join');
-    await expect(page.getByRole('button', { name: /android/i })).toBeDisabled();
-    await expect(page.getByRole('button', { name: /iphone/i })).toBeDisabled();
-    await expect(page.getByText(/coming soon/i)).toHaveCount(2);
-    await expect(page.getByText(/google play|app store/i)).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /rider app/i })).toHaveAttribute('href', /rider-app.*\.apk$/);
+    await expect(page.getByRole('link', { name: /driver app/i })).toHaveAttribute('href', /driver-app.*\.apk$/);
+    await expect(page.getByText(/coming soon/i)).toHaveCount(0);
   });
 });
 

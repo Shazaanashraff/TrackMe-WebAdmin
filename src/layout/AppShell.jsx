@@ -156,7 +156,7 @@ export function AppShell({
 
   const isSuperAdmin = user?.role === 'super-admin';
   const navItems = isSuperAdmin ? SUPER_ADMIN_NAV : MANAGER_NAV;
-  const wordmark = isSuperAdmin ? 'TRACKME ADMIN' : 'TRACKME MGR';
+  const wordmark = isSuperAdmin ? 'PINGO ADMIN' : 'PINGO MGR';
 
   // Pending enrolment requests waiting on this manager. Super-admins own no
   // drivers, so the call is skipped for them entirely.

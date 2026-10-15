@@ -8,7 +8,7 @@ import { INTRO_KEY } from '../motion/intro';
 vi.mock('../motion/MotionProvider', () => ({ MotionProvider: ({ children }) => children }));
 vi.mock('../motion/Loader', () => ({
   Loader: ({ onDone }) => (
-    <div role="status" aria-label="Loading TrackMe">
+    <div role="status" aria-label="Loading Pingo">
       <button type="button" onClick={onDone}>finish opening</button>
     </div>
   ),
@@ -39,7 +39,7 @@ describe('LandingPage opening', () => {
     stubMotion();
     const { container } = renderPage();
 
-    expect(screen.getByRole('status', { name: /loading trackme/i })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /loading pingo/i })).toBeInTheDocument();
     expect(root(container)).toHaveAttribute('data-intro', 'playing');
   });
 
@@ -49,7 +49,7 @@ describe('LandingPage opening', () => {
 
     act(() => { screen.getByText('finish opening').click(); });
 
-    expect(screen.queryByRole('status', { name: /loading trackme/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: /loading pingo/i })).not.toBeInTheDocument();
     expect(root(container)).toHaveAttribute('data-intro', 'done');
     expect(window.sessionStorage.getItem(INTRO_KEY)).toBe('1');
   });
@@ -59,7 +59,7 @@ describe('LandingPage opening', () => {
     window.sessionStorage.setItem(INTRO_KEY, '1');
     const { container } = renderPage();
 
-    expect(screen.queryByRole('status', { name: /loading trackme/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: /loading pingo/i })).not.toBeInTheDocument();
     expect(root(container)).toHaveAttribute('data-intro', 'done');
   });
 
@@ -67,14 +67,14 @@ describe('LandingPage opening', () => {
     stubMotion({ reduce: true });
     const { container } = renderPage();
 
-    expect(screen.queryByRole('status', { name: /loading trackme/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: /loading pingo/i })).not.toBeInTheDocument();
     expect(root(container)).toHaveAttribute('data-intro', 'done');
   });
 
   it('skips the opening where animation is unavailable', () => {
     const { container } = renderPage();
 
-    expect(screen.queryByRole('status', { name: /loading trackme/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: /loading pingo/i })).not.toBeInTheDocument();
     expect(root(container)).toHaveAttribute('data-intro', 'done');
   });
 
@@ -85,7 +85,7 @@ describe('LandingPage opening', () => {
 
     try {
       expect(() => renderPage()).not.toThrow();
-      expect(screen.getByRole('status', { name: /loading trackme/i })).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: /loading pingo/i })).toBeInTheDocument();
     } finally {
       Object.defineProperty(window, 'sessionStorage', original);
     }

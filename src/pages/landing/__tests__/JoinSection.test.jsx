@@ -95,11 +95,11 @@ describe('JoinSection — the question and the two numbered halves', () => {
     expect(container.querySelector('[data-wipe]')).toBeNull();
   });
 
-  it('draws the rider half as the download area: both store badges and a phone showing the live map', () => {
+  it('draws the rider half as the download area: the rider app badge and a phone showing the live map', () => {
     const { container } = render(<JoinSection />);
     const [rider] = container.querySelectorAll('[data-panel]');
 
-    expect(rider.querySelectorAll('button')).toHaveLength(2);
+    expect(rider.querySelectorAll('button, a[href]')).toHaveLength(1);
     // Decorative: a phone rising from the bottom edge (wide) and under the badges inside an arch (phone).
     expect(rider.querySelectorAll('[aria-hidden="true"] [data-map-screen], [aria-hidden="true"] [data-route]').length).toBeGreaterThan(0);
     expect(rider.querySelector('[data-arch]')).not.toBeNull();
@@ -144,46 +144,36 @@ describe('JoinSection — the question and the two numbered halves', () => {
 });
 
 describe('JoinSection — app download links', () => {
-  it('renders disabled "Coming soon" rider buttons while no real release exists', () => {
-    useAppDownloadLinks.mockReturnValue({ riderAndroid: null, riderIos: null, driverAndroid: null });
-    render(<JoinSection />);
-
-    expect(screen.getByRole('button', { name: /iphone/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /android/i })).toBeDisabled();
-    expect(screen.getAllByText(/coming soon/i)).toHaveLength(2);
-  });
-
-  it('renders real rider store links once the API returns releases', () => {
+  it('shows a direct download for both the rider app and the driver app, with no "Coming soon" and no iPhone badge', () => {
     useAppDownloadLinks.mockReturnValue({
       riderAndroid: '/downloads/rider-app-1.0.0.apk',
-      riderIos: 'https://testflight.apple.com/join/abc123',
-      driverAndroid: null,
-    });
-    render(<JoinSection />);
-
-    expect(screen.getByRole('link', { name: /iphone/i })).toHaveAttribute('href', 'https://testflight.apple.com/join/abc123');
-    expect(screen.getByRole('link', { name: /android/i })).toHaveAttribute('href', '/downloads/rider-app-1.0.0.apk');
-  });
-
-  it('shows no direct driver download link when no driver build exists', () => {
-    useAppDownloadLinks.mockReturnValue({ riderAndroid: null, riderIos: null, driverAndroid: null });
-    render(<JoinSection />);
-
-    expect(screen.queryByText(/download the driver app/i)).not.toBeInTheDocument();
-  });
-
-  it('shows a direct driver download link once a driver build exists, without touching the LeadForm', () => {
-    useAppDownloadLinks.mockReturnValue({
-      riderAndroid: null,
       riderIos: null,
       driverAndroid: '/downloads/driver-app-1.0.0.apk',
     });
     render(<JoinSection />);
 
-    const link = screen.getByRole('link', { name: /download the driver app/i });
-    expect(link).toHaveAttribute('href', '/downloads/driver-app-1.0.0.apk');
-    // The LeadForm is still the primary CTA, unchanged.
+    expect(screen.getByRole('link', { name: /rider app/i })).toHaveAttribute('href', '/downloads/rider-app-1.0.0.apk');
+    expect(screen.getByRole('link', { name: /driver app/i })).toHaveAttribute('href', '/downloads/driver-app-1.0.0.apk');
+    expect(screen.queryByText(/coming soon/i)).toBeNull();
+    expect(screen.queryByText(/iphone/i)).toBeNull();
+  });
+
+  it('keeps the driver email form alongside the driver download', () => {
+    useAppDownloadLinks.mockReturnValue({
+      riderAndroid: '/downloads/rider-app-1.0.0.apk',
+      riderIos: null,
+      driverAndroid: '/downloads/driver-app-1.0.0.apk',
+    });
+    render(<JoinSection />);
+
     expect(screen.getByLabelText('Your email')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /get driver access/i })).toBeInTheDocument();
+  });
+
+  it('falls back to a disabled badge only if a link is genuinely missing', () => {
+    useAppDownloadLinks.mockReturnValue({ riderAndroid: null, riderIos: null, driverAndroid: null });
+    render(<JoinSection />);
+
+    expect(screen.getAllByText(/coming soon/i)).toHaveLength(2);
   });
 });

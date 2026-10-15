@@ -1,7 +1,7 @@
 import { createTheme } from '@mui/material/styles';
 
 /**
- * TrackMe SOFT UI THEME — light + dark
+ * Pingo SOFT UI THEME — light + dark
  *
  * Single source of truth for color/space/radius/shadow/type tokens. Pages should read these via
  * `theme.palette.*` / `theme.custom.*` and `sx` callbacks instead of hardcoding hex literals.

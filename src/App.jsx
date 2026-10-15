@@ -120,7 +120,7 @@ export function LoginShell({ auth, setAuth }) {
     try {
       const response = await adminApi.login(email, password);
       if (!['super-admin', 'admin'].includes(response?.user?.role)) {
-        throw new Error('Access denied. This portal is reserved for authorized TrackMe administrative accounts.');
+        throw new Error('Access denied. This portal is reserved for authorized Pingo administrative accounts.');
       }
 
       const normalizedAuth = writeStoredAuth({

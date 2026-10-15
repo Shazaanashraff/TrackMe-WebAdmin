@@ -112,7 +112,7 @@ export function ActivateAccountPage() {
       title={isInvite ? 'Activate your account' : 'Reset your password'}
       subtitle={
         isInvite
-          ? `Set a password for ${email} to finish activating your TrackMe manager account.`
+          ? `Set a password for ${email} to finish activating your Pingo manager account.`
           : `Choose a new password for ${email}.`
       }
     >

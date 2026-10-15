@@ -1,4 +1,4 @@
-# web-admin — TrackMe Admin Portal
+# web-admin — Pingo Admin Portal
 
 React 18 + Vite portal for **managers** and **super-admins**: fleet, drivers, routes, live
 tracking, and operations.

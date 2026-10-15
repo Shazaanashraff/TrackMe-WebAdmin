@@ -762,7 +762,7 @@ export function StyleGuidePage() {
 
           <div className="border-t border-border pt-8 pb-4">
             <p className="text-xs text-muted-foreground text-center">
-              Atlas Design System · TrackMe web-admin · dev only ·{' '}
+              Atlas Design System · Pingo web-admin · dev only ·{' '}
               <span className="font-mono">{mode}</span> theme
             </p>
           </div>

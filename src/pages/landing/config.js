@@ -31,9 +31,14 @@ export const HERO_VIDEO = {
   },
 };
 
-// Store listings for the passenger app. `null` renders a "Coming soon" button
-// rather than a link that goes nowhere.
-export const APP_LINKS = { ios: null, android: null };
+// Direct APK downloads for both apps, served from /public/downloads. A release registered by a
+// super-admin (see useAppDownloadLinks) overrides these. `ios: null` -- there is no iOS build, so
+// no iOS badge is shown.
+export const APP_LINKS = {
+  ios: null,
+  android: '/downloads/rider-app-1.0.0.apk',
+  driver: '/downloads/driver-app-1.0.0.apk',
+};
 
 // Where the driver email form POSTs, relative to the API base URL (e.g.
 // '/api/leads/driver'). `null` = no backend endpoint exists yet, so the form

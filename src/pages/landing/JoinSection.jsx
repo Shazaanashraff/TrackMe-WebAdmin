@@ -1,5 +1,5 @@
 import { Fragment, useRef } from 'react';
-import { Apple, Smartphone } from 'lucide-react';
+import { Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Cross } from './GridMarks';
@@ -15,7 +15,8 @@ import { useGsapContext } from './motion/useGsapContext';
 import MapScreen from './screens/MapScreen';
 
 // One store badge: the platform's mark, a small line above the name. With no link yet it is a plain,
-// disabled badge that says "Coming soon" rather than a button that goes nowhere.
+// disabled badge that says "Coming soon" rather than a button that goes nowhere (a fallback only:
+// both apps normally have a direct download).
 function StoreButton({ href, label, sub, Icon }) {
   const body = (
     <>
@@ -84,7 +85,7 @@ function Numeral({ children }) {
  * it arrives (see curtain.js).
  */
 export function JoinSection({ onDriverSubmit }) {
-  const { riderAndroid, riderIos, driverAndroid } = useAppDownloadLinks();
+  const { riderAndroid, driverAndroid } = useAppDownloadLinks();
   const sectionRef = useRef(null);
   const { reduced } = useMotion();
   const mobile = useMediaQuery('(max-width: 767px)');
@@ -152,8 +153,7 @@ export function JoinSection({ onDriverSubmit }) {
                 I&apos;m a rider
               </h3>
               <div className="relative mt-auto flex flex-col gap-3 pt-12 sm:flex-row sm:items-start lg:flex-col">
-                <StoreButton href={riderIos} sub="Get it on" label="iPhone" Icon={Apple} />
-                <StoreButton href={riderAndroid} sub="Direct download" label="Android" Icon={Smartphone} />
+                <StoreButton href={riderAndroid} sub="Android · direct download" label="Rider app" Icon={Smartphone} />
               </div>
 
               {/* On a phone: the same phone, rising inside a sky-blue arch under the buttons. Decorative. */}
@@ -191,16 +191,9 @@ export function JoinSection({ onDriverSubmit }) {
               <h3 className="font-display relative mt-8 text-[clamp(2.6rem,5vw,4.6rem)] font-semibold leading-none">
                 I&apos;m a driver
               </h3>
-              <div className="relative mt-auto pt-12">
+              <div className="relative mt-auto flex flex-col gap-6 pt-12">
+                <StoreButton href={driverAndroid} sub="Android · direct download" label="Driver app" Icon={Smartphone} />
                 <LeadForm onSubmit={onDriverSubmit} />
-                {driverAndroid && (
-                  <p className="mt-4 text-sm text-l-ink/60">
-                    Already approved?{' '}
-                    <a href={driverAndroid} className="font-medium text-l-sky underline underline-offset-2">
-                      Download the driver app
-                    </a>
-                  </p>
-                )}
               </div>
             </div>
           </div>

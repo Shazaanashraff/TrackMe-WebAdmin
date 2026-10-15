@@ -24,7 +24,7 @@ describe('useAppDownloadLinks', () => {
       expect(result.current.riderAndroid).toBe(APP_LINKS.android);
     });
     expect(result.current.riderIos).toBe(APP_LINKS.ios);
-    expect(result.current.driverAndroid).toBeNull();
+    expect(result.current.driverAndroid).toBe(APP_LINKS.driver);
   });
 
   it('falls back to the APP_LINKS statics when the fetch itself throws', async () => {
@@ -35,7 +35,7 @@ describe('useAppDownloadLinks', () => {
     await waitFor(() => {
       expect(result.current.riderAndroid).toBe(APP_LINKS.android);
     });
-    expect(result.current.driverAndroid).toBeNull();
+    expect(result.current.driverAndroid).toBe(APP_LINKS.driver);
   });
 
   it('picks up real downloadUrl values when the API returns a release', async () => {
@@ -63,7 +63,7 @@ describe('useAppDownloadLinks', () => {
     expect(result.current.driverAndroid).toBe('/downloads/driver-app-1.0.0.apk');
   });
 
-  it('keeps driverAndroid null when the API returns no release for it', async () => {
+  it('keeps the static driver APK when the API returns no release for it', async () => {
     global.fetch.mockImplementation((url) => {
       if (url.includes('app=rider')) {
         return Promise.resolve({
@@ -79,6 +79,6 @@ describe('useAppDownloadLinks', () => {
     await waitFor(() => {
       expect(result.current.riderAndroid).toBe('/downloads/rider-app-1.0.0.apk');
     });
-    expect(result.current.driverAndroid).toBeNull();
+    expect(result.current.driverAndroid).toBe(APP_LINKS.driver);
   });
 });

@@ -57,7 +57,7 @@ describe('LoginPage', () => {
     expect(screen.queryByText(/live for every route/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/active routes? tracked live/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/contact admin/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/secure access for trackme/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/secure access for pingo/i)).not.toBeInTheDocument();
   });
 
   it('shows the crossed-out eye while the password is hidden, and the open eye once revealed', async () => {

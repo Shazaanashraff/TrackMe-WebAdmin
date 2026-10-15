@@ -86,13 +86,13 @@ describe('LandingPage', () => {
     expect(within(join).getByRole('button', { name: /get driver access/i })).toBeInTheDocument();
   });
 
-  it('does not link store buttons anywhere until real store URLs exist', () => {
+  it('offers a direct download for both apps instead of "Coming soon"', () => {
     renderPage();
 
     const join = document.getElementById('join');
-    expect(within(join).getByRole('button', { name: /iphone/i })).toBeDisabled();
-    expect(within(join).getByRole('button', { name: /android/i })).toBeDisabled();
-    expect(within(join).getAllByText(/coming soon/i)).toHaveLength(2);
+    expect(within(join).getByRole('link', { name: /rider app/i })).toHaveAttribute('href', expect.stringMatching(/rider-app.*\.apk$/));
+    expect(within(join).getByRole('link', { name: /driver app/i })).toHaveAttribute('href', expect.stringMatching(/driver-app.*\.apk$/));
+    expect(within(join).queryByText(/coming soon/i)).toBeNull();
   });
 
   it('sets a branded document title while mounted and restores it after', () => {
