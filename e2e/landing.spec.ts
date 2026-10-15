@@ -340,11 +340,12 @@ test.describe('Landing page — small phone', () => {
     expect(Math.abs(inputBox!.width - buttonBox!.width)).toBeLessThan(2);
   });
 
-  test('both apps offer a direct download, with no "Coming soon"', async ({ page }) => {
+  test('both apps offer an Android download; iPhone says "Coming soon" until a release is registered', async ({ page }) => {
     await page.goto('/#join');
-    await expect(page.getByRole('link', { name: /rider app/i })).toHaveAttribute('href', /rider-app.*\.apk$/);
-    await expect(page.getByRole('link', { name: /driver app/i })).toHaveAttribute('href', /driver-app.*\.apk$/);
-    await expect(page.getByText(/coming soon/i)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /iphone/i })).toHaveCount(2);
+    await expect(page.getByText(/coming soon/i)).toHaveCount(2);
+    await expect(page.getByRole('link', { name: /android.*rider app/i })).toHaveAttribute('href', /rider-app.*\.apk$/);
+    await expect(page.getByRole('link', { name: /android.*driver app/i })).toHaveAttribute('href', /driver-app.*\.apk$/);
   });
 });
 

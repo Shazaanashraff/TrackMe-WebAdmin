@@ -1,5 +1,5 @@
 import { Fragment, useRef } from 'react';
-import { Smartphone } from 'lucide-react';
+import { Apple, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Cross } from './GridMarks';
@@ -85,7 +85,7 @@ function Numeral({ children }) {
  * it arrives (see curtain.js).
  */
 export function JoinSection({ onDriverSubmit }) {
-  const { riderAndroid, driverAndroid } = useAppDownloadLinks();
+  const { riderAndroid, riderIos, driverAndroid, driverIos } = useAppDownloadLinks();
   const sectionRef = useRef(null);
   const { reduced } = useMotion();
   const mobile = useMediaQuery('(max-width: 767px)');
@@ -153,6 +153,7 @@ export function JoinSection({ onDriverSubmit }) {
                 I&apos;m a rider
               </h3>
               <div className="relative mt-auto flex flex-col gap-3 pt-12 sm:flex-row sm:items-start lg:flex-col">
+                <StoreButton href={riderIos} sub="iPhone · TestFlight" label="Rider app" Icon={Apple} />
                 <StoreButton href={riderAndroid} sub="Android · direct download" label="Rider app" Icon={Smartphone} />
               </div>
 
@@ -192,7 +193,10 @@ export function JoinSection({ onDriverSubmit }) {
                 I&apos;m a driver
               </h3>
               <div className="relative mt-auto flex flex-col gap-6 pt-12">
-                <StoreButton href={driverAndroid} sub="Android · direct download" label="Driver app" Icon={Smartphone} />
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start lg:flex-col xl:flex-row">
+                  <StoreButton href={driverIos} sub="iPhone · TestFlight" label="Driver app" Icon={Apple} />
+                  <StoreButton href={driverAndroid} sub="Android · direct download" label="Driver app" Icon={Smartphone} />
+                </div>
                 <LeadForm onSubmit={onDriverSubmit} />
               </div>
             </div>

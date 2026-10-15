@@ -86,13 +86,14 @@ describe('LandingPage', () => {
     expect(within(join).getByRole('button', { name: /get driver access/i })).toBeInTheDocument();
   });
 
-  it('offers a direct download for both apps instead of "Coming soon"', () => {
+  it('offers Android downloads for both apps; iPhone waits for a registered release', () => {
     renderPage();
 
     const join = document.getElementById('join');
-    expect(within(join).getByRole('link', { name: /rider app/i })).toHaveAttribute('href', expect.stringMatching(/rider-app.*\.apk$/));
-    expect(within(join).getByRole('link', { name: /driver app/i })).toHaveAttribute('href', expect.stringMatching(/driver-app.*\.apk$/));
-    expect(within(join).queryByText(/coming soon/i)).toBeNull();
+    expect(within(join).getByRole('link', { name: /android.*rider app/i })).toHaveAttribute('href', expect.stringMatching(/rider-app.*\.apk$/));
+    expect(within(join).getByRole('link', { name: /android.*driver app/i })).toHaveAttribute('href', expect.stringMatching(/driver-app.*\.apk$/));
+    // iPhone badges say "Coming soon" until an iOS release is registered.
+    expect(within(join).getAllByText(/coming soon/i)).toHaveLength(2);
   });
 
   it('sets a branded document title while mounted and restores it after', () => {

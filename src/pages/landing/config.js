@@ -32,10 +32,12 @@ export const HERO_VIDEO = {
 };
 
 // Direct APK downloads for both apps, served from /public/downloads. A release registered by a
-// super-admin (see useAppDownloadLinks) overrides these. `ios: null` -- there is no iOS build, so
-// no iOS badge is shown.
+// super-admin (see useAppDownloadLinks) overrides these. The iOS entries are `null` until an iOS
+// release (e.g. a TestFlight URL) is registered on the Releases page; the badge shows
+// "Coming soon" until then.
 export const APP_LINKS = {
   ios: null,
+  driverIos: null,
   android: '/downloads/rider-app-1.0.0.apk',
   driver: '/downloads/driver-app-1.0.0.apk',
 };

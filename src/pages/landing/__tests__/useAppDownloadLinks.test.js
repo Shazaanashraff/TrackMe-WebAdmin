@@ -63,6 +63,24 @@ describe('useAppDownloadLinks', () => {
     expect(result.current.driverAndroid).toBe('/downloads/driver-app-1.0.0.apk');
   });
 
+  it('picks up registered iOS (TestFlight) releases for both apps', async () => {
+    global.fetch.mockImplementation((url) => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({
+        release: url.includes('platform=ios')
+          ? { downloadUrl: `https://testflight.apple.com/join/${url.includes('app=rider') ? 'rider' : 'driver'}` }
+          : null,
+      }),
+    }));
+
+    const { result } = renderHook(() => useAppDownloadLinks());
+
+    await waitFor(() => {
+      expect(result.current.riderIos).toBe('https://testflight.apple.com/join/rider');
+    });
+    expect(result.current.driverIos).toBe('https://testflight.apple.com/join/driver');
+  });
+
   it('keeps the static driver APK when the API returns no release for it', async () => {
     global.fetch.mockImplementation((url) => {
       if (url.includes('app=rider')) {

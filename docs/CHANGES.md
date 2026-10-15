@@ -23,12 +23,12 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Modules touched:** [LANDING](modules/LANDING.md), [APP_RELEASES](modules/APP_RELEASES.md)
 - **What changed:**
   - User-facing "TrackMe" is now "Pingo": page title/meta, sidebar wordmarks (PINGO ADMIN / PINGO MGR), login, activation and password-reset text, access-denied message. Test emails (`@trackme.com`), storage keys, repo names and the privacy URL are unchanged.
-  - Landing "Rider or driver?": the "Coming soon" badges are gone. The rider half shows a Rider app download, the driver half a Driver app download above the email form; the iPhone badge is removed (no iOS build). `APP_LINKS` defaults to the bundled APKs and a registered release still overrides them.
+  - Landing "Rider or driver?": the "Coming soon" badges are gone. The rider half shows a Rider app download, the driver half a Driver app download above the email form; each half also has an iPhone badge that links to a registered iOS release (e.g. TestFlight URL via the Releases page) and says "Coming soon" until one exists. `APP_LINKS` defaults Android to the bundled APKs and a registered release overrides them.
 - **Why:** the brand is Pingo (pingo.lk) and both apps are ready to download.
 - **Contract impact:** none.
 - **Tests:** `JoinSection`, `LandingPage`, `useAppDownloadLinks` unit tests and `e2e/landing.spec.ts` updated; wordmark and message tests renamed.
 - **Docs updated:** this entry.
-- **Follow-ups / known issues:** an iOS build would need its own badge.
+- **Follow-ups / known issues:** no iOS build exists in the repos yet; register the TestFlight URLs for rider and driver on the Releases page (platform iOS) and the badges go live.
 
 ## 2026-10-14 — Landing page: new nav, phone-first motion, copy cuts, download area; tests brought up to date
 - **Branch:** feature/landing-journey
