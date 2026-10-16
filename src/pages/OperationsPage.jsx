@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Activity, Bus as VehicleIcon, CheckCircle, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
-import { StatCard } from '@/components/shared/stat-card';
 import { DataTable } from '@/components/shared/data-table';
 import { AsyncSection } from '@/components/shared/async-section';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { RelativeTime } from '@/components/shared/relative-time';
-import { Money } from '@/components/shared/money';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { StaleChip } from '@/components/shared/stale-chip';
@@ -29,6 +26,7 @@ import {
   useUpdateVehicle,
 } from '@/hooks/use-operations';
 import { SERVICE_TYPES } from '@/lib/serviceTypes';
+import { auditActionLabel, requestTypeLabel, sentenceCase } from '@/lib/labels';
 
 // The backend's getAuditLogs clamps `limit` to 200 server-side
 // (superAdminController.js) and has no skip/cursor param yet — so "load more"
@@ -71,20 +69,11 @@ export function OperationsPage() {
   const auditLogs = auditQ.data?.data || [];
   const detail = detailQ.data?.data;
 
-  const stats = useMemo(() => ({
-    total: overview.length,
-    active: overview.filter((o) => o.isActive).length,
-    pending: requests.filter((r) => r.status === 'PENDING').length,
-    audit: auditLogs.length,
-  }), [overview, requests, auditLogs]);
-
   const detailStats = useMemo(() => {
     const vehicles = detail?.vehicles || [];
     return {
       total: vehicles.length,
       active: vehicles.filter((b) => b.isActive).length,
-      bookings: vehicles.reduce((s, b) => s + (b.bookingMetrics?.totalBookings || 0), 0),
-      revenue: vehicles.reduce((s, b) => s + (b.bookingMetrics?.totalRevenue || 0), 0),
     };
   }, [detail]);
 
@@ -120,7 +109,6 @@ export function OperationsPage() {
   const overviewColumns = useMemo(() => [
     { id: 'manager', header: 'Manager', accessorKey: 'managerName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
     { id: 'vehicles', header: 'Vehicles', accessorFn: (row) => row.fleet?.totalVehicles ?? 0, cell: (i) => i.getValue() },
-    { id: 'bookings', header: 'Bookings', accessorFn: (row) => row.bookings?.totalBookings ?? 0, cell: (i) => i.getValue() },
     // isActive is the manager account's active/suspended flag, not a live
     // connection signal — matches the label ManagersPage already uses for the
     // same field (issue #14).
@@ -129,15 +117,13 @@ export function OperationsPage() {
 
   const vehicleColumns = useMemo(() => [
     { id: 'name', header: 'Vehicle', accessorKey: 'vehicleName', cell: (i) => <span className="font-medium">{i.getValue()}</span> },
-    { id: 'service', header: 'Service', accessorKey: 'serviceType', cell: (i) => <Badge variant="secondary">{i.getValue() || 'PUBLIC'}</Badge> },
+    { id: 'service', header: 'Service', accessorKey: 'serviceType', cell: (i) => <Badge variant="secondary">{sentenceCase(i.getValue() || 'PUBLIC')}</Badge> },
     // isActive is the vehicle's deliberate-deactivation flag — the backend has
     // no separate live-connection signal here, so labeling it "Online"/"Offline"
     // implied a real-time state this data can't back up, and conflated a
     // deliberately deactivated vehicle with one that's simply disconnected
     // (issue #14). "Active"/"Deactivated" reads the field honestly.
     { id: 'state', header: 'State', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'active' : 'deactivated'} /> },
-    { id: 'rating', header: 'Rating', accessorKey: 'reviewMetrics', cell: (i) => i.getValue()?.averageRating?.toFixed(1) ?? 'None' },
-    { id: 'bookings', header: 'Bookings', accessorKey: 'bookingMetrics', cell: (i) => i.getValue()?.totalBookings ?? 0 },
     {
       id: 'actions', header: '', accessorKey: '_id', enableSorting: false,
       cell: (i) => (
@@ -149,7 +135,7 @@ export function OperationsPage() {
   ], [isOnline]);
 
   const requestColumns = useMemo(() => [
-    { id: 'type', header: 'Type', accessorKey: 'type' },
+    { id: 'type', header: 'Request', accessorKey: 'type', cell: (i) => requestTypeLabel(i.getValue()) },
     { id: 'manager', header: 'Manager', accessorKey: 'managerId', cell: (i) => i.getValue()?.name || 'None' },
     {
       id: 'vehicleId',
@@ -191,8 +177,7 @@ export function OperationsPage() {
   const auditColumns = useMemo(() => [
     { id: 'time', header: 'Time', accessorKey: 'createdAt', cell: (i) => i.getValue() ? <RelativeTime date={i.getValue()} /> : 'None' },
     { id: 'manager', header: 'Manager', accessorKey: 'managerId', cell: (i) => i.getValue()?.name || 'None' },
-    { id: 'action', header: 'Action', accessorKey: 'action' },
-    { id: 'entity', header: 'Entity', accessorKey: 'entityType' },
+    { id: 'action', header: 'Action', accessorKey: 'action', cell: (i) => auditActionLabel(i.getValue()) },
     { id: 'actor', header: 'Actor', accessorKey: 'actorId', cell: (i) => i.getValue()?.email || 'None' },
   ], []);
 
@@ -215,26 +200,44 @@ export function OperationsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Operations"
-        description="Supervise manager performance, review requests, and track operation-level activity."
-      />
+      <PageHeader title="Operations" className="mb-0" />
 
-      {/* Summary stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Managers" value={stats.total} icon={Activity} isLoading={overviewQ.isLoading} stale={!isOnline} asOf={overviewQ.dataUpdatedAt} />
-        <StatCard label="Active Managers" value={stats.active} icon={CheckCircle} isLoading={overviewQ.isLoading} stale={!isOnline} asOf={overviewQ.dataUpdatedAt} />
-        <StatCard label="Pending Requests" value={stats.pending} icon={ClipboardList} isLoading={requestsQ.isLoading} stale={!isOnline} asOf={requestsQ.dataUpdatedAt} />
-        <StatCard label="Audit Records" value={stats.audit} icon={VehicleIcon} isLoading={auditQ.isLoading} stale={!isOnline} asOf={auditQ.dataUpdatedAt} />
-      </div>
+      {/* Requests first: it is the only block here that waits on a decision. */}
+      <Card>
+        <CardHeader className="flex-row items-center justify-between">
+          <CardTitle className="text-base">Vehicle requests</CardTitle>
+          <div className="flex items-center gap-3">
+            <StaleChip updatedAt={requestsQ.dataUpdatedAt} offline={!isOnline} loud={requestStatus === 'PENDING' && !isOnline} />
+            <Select value={requestStatus} onValueChange={setRequestStatus}>
+              <SelectTrigger className="w-32 h-8 text-xs" aria-label="Filter requests by status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="APPROVED">Approved</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <DataTable
+            columns={requestColumns}
+            data={requests}
+            isLoading={requestsQ.isLoading}
+            error={requestsQ.error}
+            onRetry={requestsQ.refetch}
+            emptyTitle="No requests"
+            emptyDescription="Nothing matches this filter."
+          />
+        </CardContent>
+      </Card>
 
-      {/* Managers overview + detail */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Overview table */}
+      {/* Managers + detail */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Operations Managers</CardTitle>
-            <CardDescription>Click a row to view manager detail</CardDescription>
+            <CardTitle className="text-base">Managers</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <DataTable
@@ -249,13 +252,12 @@ export function OperationsPage() {
           </CardContent>
         </Card>
 
-        {/* Detail panel */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Manager Detail</CardTitle>
-            <CardDescription>
-              {detail?.manager ? `${detail.manager.name} · ${detail.manager.email}` : 'Select a manager to view details'}
-            </CardDescription>
+            <CardTitle className="text-base">Manager detail</CardTitle>
+            {detail?.manager ? (
+              <CardDescription>{`${detail.manager.name} · ${detail.manager.email}`}</CardDescription>
+            ) : null}
           </CardHeader>
           <CardContent className="pt-0 space-y-4">
             <AsyncSection
@@ -264,14 +266,12 @@ export function OperationsPage() {
               data={selectedManagerId ? detail : null}
               onRetry={detailQ.refetch}
               emptyTitle="No manager selected"
-              emptyDescription="Click a row in the managers table to view their detail."
+              emptyDescription="Pick a manager to see their vehicles."
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+              <div className="grid grid-cols-2 gap-2 mb-4">
                 {[
-                  { label: 'Total Vehicles', value: detailStats.total },
-                  { label: 'Active Vehicles', value: detailStats.active },
-                  { label: 'Bookings', value: detailStats.bookings },
-                  { label: 'Revenue', value: <Money amount={detailStats.revenue} /> },
+                  { label: 'Total vehicles', value: detailStats.total },
+                  { label: 'Active vehicles', value: detailStats.active },
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-lg border border-border bg-surface-muted px-3 py-2">
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
@@ -290,47 +290,10 @@ export function OperationsPage() {
         </Card>
       </div>
 
-      {/* Pending requests */}
-      <Card>
-        <CardHeader className="flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-base">Vehicle Requests</CardTitle>
-            <CardDescription>Pending vehicle account requests from managers</CardDescription>
-          </div>
-          <div className="flex items-center gap-3">
-            <StaleChip updatedAt={requestsQ.dataUpdatedAt} offline={!isOnline} loud={requestStatus === 'PENDING' && !isOnline} />
-          <Select value={requestStatus} onValueChange={setRequestStatus}>
-            <SelectTrigger className="w-32 h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="PENDING">Pending</SelectItem>
-              <SelectItem value="APPROVED">Approved</SelectItem>
-              <SelectItem value="REJECTED">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <DataTable
-            columns={requestColumns}
-            data={requests}
-            isLoading={requestsQ.isLoading}
-            error={requestsQ.error}
-            onRetry={requestsQ.refetch}
-            emptyTitle="No requests"
-            emptyDescription="There are no vehicle requests matching the current filter."
-          />
-        </CardContent>
-      </Card>
-
       {/* Audit logs */}
       <Card>
         <CardHeader className="flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-base">Audit Log</CardTitle>
-            <CardDescription>Recent operation-level actions</CardDescription>
-          </div>
+          <CardTitle className="text-base">Activity</CardTitle>
           {managerFilterOptions.length > 0 && (
             <Select value={auditManagerId || '_all'} onValueChange={handleAuditManagerChange}>
               <SelectTrigger className="w-40 h-8 text-xs" aria-label="Filter audit log by manager">
@@ -352,7 +315,7 @@ export function OperationsPage() {
             isLoading={auditQ.isLoading}
             error={auditQ.error}
             onRetry={auditQ.refetch}
-            emptyTitle="No audit records"
+            emptyTitle="No activity yet"
           />
           {!auditQ.isLoading && !auditQ.error && auditLogs.length > 0 && (
             canLoadMoreAudit ? (
@@ -363,9 +326,7 @@ export function OperationsPage() {
               </div>
             ) : atAuditLimitCap ? (
               <p className="text-xs text-muted-foreground text-center pt-3">
-                Showing the most recent {AUDIT_LIMIT_MAX} entries — the most this view can
-                currently retrieve. Reaching further back needs server-side cursor pagination
-                (tracked as a backend follow-up, see docs/modules/OPERATIONS.md).
+                Showing the latest {AUDIT_LIMIT_MAX} entries.
               </p>
             ) : null
           )}

@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, UserCheck, UserX, X } from 'lucide-react';
+import { MoreHorizontal, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
-import { StatCard } from '@/components/shared/stat-card';
 import { DataTable } from '@/components/shared/data-table';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { StaleChip } from '@/components/shared/stale-chip';
@@ -14,6 +13,9 @@ import { useOnlineStatus } from '@/hooks/use-online-status';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   useManagers,
   useCreateManager,
@@ -89,12 +91,6 @@ export function ManagersPage() {
   const [toggleErrors, setToggleErrors] = useState({});
 
   const rows = managersQ.data?.data || [];
-
-  const stats = useMemo(() => {
-    const total = rows.length;
-    const active = rows.filter((r) => r.isActive !== false).length;
-    return { total, active, inactive: total - active };
-  }, [rows]);
 
   const submitting = createM.isPending || updateM.isPending;
 
@@ -247,39 +243,29 @@ export function ManagersPage() {
               <Button size="sm" variant="ghost" onClick={() => navigate(`/operations?managerId=${row._id}`)}>
                 View
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!isOnline}
-                title={isOnline ? undefined : 'Unavailable offline'}
-                onClick={() => openEdit(row)}
-              >
-                Edit
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={toggling || !isOnline}
-                title={isOnline ? undefined : 'Unavailable offline'}
-                onClick={() => handleToggleStatus(row)}
-              >
-                {isInactive ? 'Activate' : 'Deactivate'}
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                disabled={!isInactive || deleteM.isPending || !isOnline}
-                title={
-                  !isOnline
-                    ? 'Unavailable offline'
-                    : isInactive
-                      ? undefined
-                      : 'Deactivate this manager before deleting'
-                }
-                onClick={() => { setDeleteError(null); setDeleteTarget(row); }}
-              >
-                Delete
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon" variant="ghost" aria-label={`Actions for ${row.name}`}>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem disabled={!isOnline} onSelect={() => openEdit(row)}>
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled={toggling || !isOnline} onSelect={() => handleToggleStatus(row)}>
+                    {isInactive ? 'Activate' : 'Deactivate'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={!isInactive || deleteM.isPending || !isOnline}
+                    title={isOnline && !isInactive ? 'Deactivate this manager before deleting' : undefined}
+                    className="text-destructive focus:text-destructive"
+                    onSelect={() => { setDeleteError(null); setDeleteTarget(row); }}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             {toggleError && (
               <div className="flex items-center gap-1.5 text-xs text-status-danger">
@@ -304,7 +290,7 @@ export function ManagersPage() {
     <div className="space-y-6">
       <PageHeader
         title="Managers"
-        description="Maintain manager accounts, update access status, and rotate credentials securely."
+        className="mb-0"
         actions={
           <Button onClick={openCreate} disabled={!isOnline} title={isOnline ? undefined : 'Unavailable offline'}>
             <Plus className="h-4 w-4 mr-1.5" />
@@ -312,12 +298,6 @@ export function ManagersPage() {
           </Button>
         }
       />
-
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard label="Total Managers" value={stats.total} icon={Users} isLoading={managersQ.isLoading} stale={!isOnline} asOf={managersQ.dataUpdatedAt} />
-        <StatCard label="Active Managers" value={stats.active} icon={UserCheck} isLoading={managersQ.isLoading} stale={!isOnline} asOf={managersQ.dataUpdatedAt} />
-        <StatCard label="Inactive Managers" value={stats.inactive} icon={UserX} isLoading={managersQ.isLoading} stale={!isOnline} asOf={managersQ.dataUpdatedAt} />
-      </div>
 
       {rows.length > 0 && (
         <div className="flex justify-end">

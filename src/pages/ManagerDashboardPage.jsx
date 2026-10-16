@@ -6,6 +6,7 @@ import { CardSkeleton } from '@/components/shared/card-skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { LiveIndicator } from '@/components/shared/live-indicator';
+import { SummaryCard } from '@/components/shared/summary-card';
 import { PaymentsPreview } from '@/components/manager/payments-preview';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useManagerDashboard } from '@/hooks/use-dashboard';
@@ -17,32 +18,6 @@ import { trackingState, useManagerFleetLive } from '@/hooks/use-tracking';
 // ever created outside the sandbox seed. They read zero forever on live data,
 // and they contradict the shuttle model, where riders enrol with a driver by
 // key rather than booking a seat. See docs/CHANGES.md 2026-09-23.
-function Figure({ label, value }) {
-  return (
-    <div>
-      <p className="text-xs uppercase tracking-wide font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-foreground">{value}</p>
-    </div>
-  );
-}
-
-function VehicleSummary({ fleet, pending }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-wrap items-center gap-x-10 gap-y-4 p-4 sm:p-5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-muted">
-            <VehicleIcon className="h-5 w-5 text-muted-foreground" aria-hidden />
-          </div>
-          <h2 className="font-heading text-base font-semibold">Vehicles</h2>
-        </div>
-        <Figure label="Total" value={fleet.totalVehicles ?? 0} />
-        <Figure label="Active" value={fleet.activeVehicles ?? 0} />
-        {pending > 0 && <Figure label="Pending" value={pending} />}
-      </CardContent>
-    </Card>
-  );
-}
 
 function RunningVehicles() {
   const fleetQ = useManagerFleetLive();
@@ -119,7 +94,15 @@ export function ManagerDashboardPage() {
         emptyDescription="Add your first vehicle and this fills in."
         loadingFallback={<CardSkeleton />}
       >
-        <VehicleSummary fleet={d?.fleet || {}} pending={d?.pendingRequests ?? 0} />
+        <SummaryCard
+          title="Vehicles"
+          icon={VehicleIcon}
+          figures={[
+            { label: 'Total', value: d?.fleet?.totalVehicles ?? 0 },
+            { label: 'Active', value: d?.fleet?.activeVehicles ?? 0 },
+            { label: 'Pending', value: d?.pendingRequests ?? 0, hidden: !d?.pendingRequests },
+          ]}
+        />
       </AsyncSection>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

@@ -139,12 +139,20 @@ describe('OperationsPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: /operations/i })).toBeInTheDocument();
   });
 
-  it('shows all four stat card labels', () => {
+  it('shows no stat cards, and lists the vehicle requests before the managers', () => {
     setup();
-    expect(screen.getByText('Total Managers')).toBeInTheDocument();
-    expect(screen.getByText('Active Managers')).toBeInTheDocument();
-    expect(screen.getByText('Pending Requests')).toBeInTheDocument();
-    expect(screen.getByText('Audit Records')).toBeInTheDocument();
+    expect(screen.queryByText('Total Managers')).not.toBeInTheDocument();
+    expect(screen.queryByText('Audit Records')).not.toBeInTheDocument();
+    const requests = screen.getByText('Vehicle requests');
+    const managers = screen.getByText('Managers');
+    expect(requests.compareDocumentPosition(managers) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('has no bookings, revenue or rating anywhere', () => {
+    setup();
+    expect(screen.queryByText(/booking/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/revenue/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /rating/i })).not.toBeInTheDocument();
   });
 
   it('shows loading skeletons when fetching', () => {
@@ -216,24 +224,6 @@ describe('OperationsPage', () => {
     const afterFirstClick = managerCellOrder();
 
     await user.click(screen.getByRole('button', { name: /vehicles/i }));
-    const afterSecondClick = managerCellOrder();
-
-    expect(afterFirstClick).not.toEqual(afterSecondClick);
-    expect([afterFirstClick, afterSecondClick]).toContainEqual(['Bob', 'Alice']);
-    expect([afterFirstClick, afterSecondClick]).toContainEqual(['Alice', 'Bob']);
-  });
-
-  it('sorts by Bookings using the numeric booking count, not the object reference', async () => {
-    const { user } = setup();
-    const managerCellOrder = () => screen.getAllByRole('row')
-      .slice(1)
-      .map((row) => (row.textContent.includes('Alice Smith') ? 'Alice' : 'Bob'));
-
-    // Alice Smith has 20 bookings, Bob Jones has 5.
-    await user.click(screen.getByRole('button', { name: /bookings/i }));
-    const afterFirstClick = managerCellOrder();
-
-    await user.click(screen.getByRole('button', { name: /bookings/i }));
     const afterSecondClick = managerCellOrder();
 
     expect(afterFirstClick).not.toEqual(afterSecondClick);
@@ -322,7 +312,8 @@ describe('OperationsPage', () => {
 
   it('renders pending request rows in the Vehicle Requests table', () => {
     setup({ requests: [REQ_A] });
-    expect(screen.getByText('NEW_VEHICLE')).toBeInTheDocument();
+    expect(screen.getByText('New vehicle')).toBeInTheDocument();
+    expect(screen.queryByText('NEW_VEHICLE')).not.toBeInTheDocument();
     expect(screen.getByText('VEHICLE-001')).toBeInTheDocument();
     expect(screen.getByText('Expanding fleet')).toBeInTheDocument();
   });
@@ -427,8 +418,8 @@ describe('OperationsPage', () => {
 
   it('renders audit log rows', () => {
     setup({ audit: [AUDIT_A] });
-    expect(screen.getByText('VEHICLE_UPDATED')).toBeInTheDocument();
-    expect(screen.getByText('Vehicle')).toBeInTheDocument();
+    expect(screen.getByText('Vehicle updated')).toBeInTheDocument();
+    expect(screen.queryByText('VEHICLE_UPDATED')).not.toBeInTheDocument();
     expect(screen.getByText('admin@co.com')).toBeInTheDocument();
   });
 
@@ -459,7 +450,7 @@ describe('OperationsPage', () => {
     expect(useAuditLogs).toHaveBeenLastCalledWith({ limit: 120, managerId: '' });
   });
 
-  it('reaches the 200-row cap after enough clicks and shows the "most it can retrieve" note instead of a button', async () => {
+  it('reaches the 200-row cap after enough clicks and shows a plain note instead of a button', async () => {
     useOperationsOverview.mockReturnValue({ data: { data: [MGR_A, MGR_B] }, isLoading: false, error: null, refetch: vi.fn() });
     useOperationManagerDetail.mockReturnValue({ data: undefined, isLoading: false, error: null, refetch: vi.fn() });
     usePendingVehicleRequests.mockReturnValue({ data: { data: [] }, isLoading: false, error: null, refetch: vi.fn() });
@@ -493,7 +484,8 @@ describe('OperationsPage', () => {
 
     expect(useAuditLogs).toHaveBeenLastCalledWith({ limit: 200, managerId: '' });
     expect(screen.queryByRole('button', { name: /load older activity/i })).toBeNull();
-    expect(screen.getByText(/most this view can currently retrieve/i)).toBeInTheDocument();
+    expect(screen.getByText(/showing the latest 200 entries/i)).toBeInTheDocument();
+    expect(screen.queryByText(/backend follow-up/i)).not.toBeInTheDocument();
   });
 
   it('resets the audit limit back to 60 when the manager filter changes', async () => {

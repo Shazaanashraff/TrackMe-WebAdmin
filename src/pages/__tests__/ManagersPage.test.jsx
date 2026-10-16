@@ -41,6 +41,15 @@ function makeMutation(overrides = {}) {
   };
 }
 
+// Edit, Activate/Deactivate and Delete live in each row's actions menu.
+async function openMenu(user, name) {
+  await user.click(screen.getByRole('button', { name: `Actions for ${name}` }));
+}
+async function pickMenuItem(user, rowName, itemName) {
+  await openMenu(user, rowName);
+  await user.click(await screen.findByRole('menuitem', { name: itemName }));
+}
+
 function defaultHooks({
   rows = [MGR_A, MGR_B],
   loading = false,
@@ -75,14 +84,12 @@ describe('ManagersPage', () => {
     expect(screen.getByRole('button', { name: /add manager/i })).toBeInTheDocument();
   });
 
-  it('shows stat cards with correct counts', () => {
+  it('shows no stat cards or page description above the table', () => {
     setup();
-    expect(screen.getByText('Total Managers')).toBeInTheDocument();
-    expect(screen.getByText('Active Managers')).toBeInTheDocument();
-    expect(screen.getByText('Inactive Managers')).toBeInTheDocument();
-    // Total=2, Active=1, Inactive=1 — values may appear multiple times (table + cards)
-    expect(screen.getAllByText('2').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('Total Managers')).not.toBeInTheDocument();
+    expect(screen.queryByText('Active Managers')).not.toBeInTheDocument();
+    expect(screen.queryByText('Inactive Managers')).not.toBeInTheDocument();
+    expect(screen.queryByText(/maintain manager accounts/i)).not.toBeInTheDocument();
   });
 
   it('renders manager rows in the table', () => {
@@ -240,8 +247,7 @@ describe('ManagersPage', () => {
 
   it('does not mark the edit dialog password fields as required (they are optional resets)', async () => {
     const { user } = setup();
-    const editBtns = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editBtns[0]);
+    await pickMenuItem(user, 'Alice Smith', 'Edit');
     await screen.findByRole('dialog');
 
     expect(screen.getByLabelText(/manager name/i)).toHaveAttribute('aria-required', 'true');
@@ -252,8 +258,7 @@ describe('ManagersPage', () => {
 
   it('opens edit dialog pre-filled with manager data', async () => {
     const { user } = setup();
-    const editBtns = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editBtns[0]);
+    await pickMenuItem(user, 'Alice Smith', 'Edit');
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByDisplayValue('Alice Smith')).toBeInTheDocument();
@@ -264,8 +269,7 @@ describe('ManagersPage', () => {
     const updateMut = makeMutation();
     const { user } = setup({ updateMut });
 
-    const editBtns = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editBtns[0]);
+    await pickMenuItem(user, 'Alice Smith', 'Edit');
     await screen.findByRole('dialog');
 
     const nameInput = screen.getByDisplayValue('Alice Smith');
@@ -282,8 +286,7 @@ describe('ManagersPage', () => {
     const resetPwMut = makeMutation({ mutateAsync: vi.fn().mockResolvedValue({}) });
     const { user } = setup({ resetPwMut });
 
-    const editBtns = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editBtns[0]);
+    await pickMenuItem(user, 'Alice Smith', 'Edit');
     await screen.findByRole('dialog');
 
     await user.type(screen.getByLabelText(/^new password$/i), 'BrandNew1!');
@@ -300,8 +303,7 @@ describe('ManagersPage', () => {
     const resetPwMut = makeMutation();
     const { user } = setup({ resetPwMut });
 
-    const editBtns = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editBtns[0]);
+    await pickMenuItem(user, 'Alice Smith', 'Edit');
     await screen.findByRole('dialog');
 
     // Password is optional on edit, so the action stays disabled until one is typed.
@@ -313,8 +315,7 @@ describe('ManagersPage', () => {
     const statusMut = makeMutation();
     const { user } = setup({ statusMut });
 
-    const deactivateBtns = screen.getAllByRole('button', { name: /deactivate/i });
-    await user.click(deactivateBtns[0]);
+    await pickMenuItem(user, 'Alice Smith', 'Deactivate');
 
     expect(statusMut.mutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ managerId: 'm1', payload: { isActive: false } }),
@@ -327,8 +328,7 @@ describe('ManagersPage', () => {
     });
     const { user } = setup({ statusMut });
 
-    const deactivateBtns = screen.getAllByRole('button', { name: /deactivate/i });
-    await user.click(deactivateBtns[0]);
+    await pickMenuItem(user, 'Alice Smith', 'Deactivate');
 
     expect(await screen.findByText('Manager has an active bus assignment')).toBeInTheDocument();
   });
@@ -339,8 +339,7 @@ describe('ManagersPage', () => {
     });
     const { user } = setup({ statusMut });
 
-    const deactivateBtns = screen.getAllByRole('button', { name: /deactivate/i });
-    await user.click(deactivateBtns[0]);
+    await pickMenuItem(user, 'Alice Smith', 'Deactivate');
     await screen.findByText('Network error');
 
     await user.click(screen.getByRole('button', { name: /dismiss error/i }));
@@ -355,29 +354,31 @@ describe('ManagersPage', () => {
     });
     const { user } = setup({ statusMut });
 
-    const deactivateBtns = screen.getAllByRole('button', { name: /deactivate/i });
-    await user.click(deactivateBtns[0]);
+    await pickMenuItem(user, 'Alice Smith', 'Deactivate');
     await screen.findByText('Server unavailable');
 
-    await user.click(screen.getByRole('button', { name: /deactivate/i }));
+    await pickMenuItem(user, 'Alice Smith', 'Deactivate');
     expect(screen.queryByText('Server unavailable')).not.toBeInTheDocument();
   });
 
   // Deleting is irreversible, so the button only unlocks once a manager has been
   // deactivated — MGR_A is active, MGR_B is not.
   describe('Delete manager', () => {
-    const deleteButtons = () => screen.getAllByRole('button', { name: /^delete$/i });
+    const openDeleteMenu = async (user, name) => {
+      await openMenu(user, name);
+      return screen.findByRole('menuitem', { name: 'Delete' });
+    };
 
-    it('disables Delete for an active manager and enables it for a deactivated one', () => {
-      setup();
-      const [activeRowDelete, inactiveRowDelete] = deleteButtons();
-      expect(activeRowDelete).toBeDisabled();
-      expect(inactiveRowDelete).toBeEnabled();
+    it('disables Delete for an active manager and enables it for a deactivated one', async () => {
+      const { user } = setup();
+      expect(await openDeleteMenu(user, 'Alice Smith')).toHaveAttribute('aria-disabled', 'true');
+      await user.keyboard('{Escape}');
+      expect(await openDeleteMenu(user, 'Bob Jones')).not.toHaveAttribute('aria-disabled', 'true');
     });
 
-    it('explains why Delete is unavailable while the manager is active', () => {
-      setup();
-      expect(deleteButtons()[0]).toHaveAttribute(
+    it('explains why Delete is unavailable while the manager is active', async () => {
+      const { user } = setup();
+      expect(await openDeleteMenu(user, 'Alice Smith')).toHaveAttribute(
         'title',
         expect.stringMatching(/deactivate/i),
       );
@@ -387,7 +388,7 @@ describe('ManagersPage', () => {
       const deleteMut = makeMutation();
       const { user } = setup({ deleteMut });
 
-      await user.click(deleteButtons()[1]);
+      await pickMenuItem(user, 'Bob Jones', 'Delete');
 
       expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
       expect(deleteMut.mutateAsync).not.toHaveBeenCalled();
@@ -397,7 +398,7 @@ describe('ManagersPage', () => {
       const deleteMut = makeMutation();
       const { user } = setup({ deleteMut });
 
-      await user.click(deleteButtons()[1]);
+      await pickMenuItem(user, 'Bob Jones', 'Delete');
       const dialog = await screen.findByRole('alertdialog');
       await user.click(within(dialog).getByRole('button', { name: /delete manager/i }));
 
@@ -408,7 +409,7 @@ describe('ManagersPage', () => {
       const deleteMut = makeMutation();
       const { user } = setup({ deleteMut });
 
-      await user.click(deleteButtons()[1]);
+      await pickMenuItem(user, 'Bob Jones', 'Delete');
       const dialog = await screen.findByRole('alertdialog');
       await user.click(within(dialog).getByRole('button', { name: /cancel/i }));
 
@@ -418,7 +419,7 @@ describe('ManagersPage', () => {
     it('warns that the deletion cannot be undone', async () => {
       const { user } = setup();
 
-      await user.click(deleteButtons()[1]);
+      await pickMenuItem(user, 'Bob Jones', 'Delete');
       const dialog = await screen.findByRole('alertdialog');
 
       expect(within(dialog).getByText(/cannot be undone/i)).toBeInTheDocument();
@@ -432,7 +433,7 @@ describe('ManagersPage', () => {
       });
       const { user } = setup({ deleteMut });
 
-      await user.click(deleteButtons()[1]);
+      await pickMenuItem(user, 'Bob Jones', 'Delete');
       const dialog = await screen.findByRole('alertdialog');
       await user.click(within(dialog).getByRole('button', { name: /delete manager/i }));
 
@@ -459,22 +460,23 @@ describe('ManagersPage', () => {
     }
     afterEach(() => setOnline(true));
 
-    it('disables Add / Edit / Activate-Deactivate / Delete while offline, leaving View usable', () => {
+    it('disables Add and every row action while offline, leaving View usable', async () => {
       setOnline(false);
-      setup();
+      const { user } = setup();
       expect(screen.getByRole('button', { name: /add manager/i })).toBeDisabled();
-      expect(screen.getAllByRole('button', { name: /^edit$/i })[0]).toBeDisabled();
-      expect(screen.getAllByRole('button', { name: /deactivate|activate/i })[0]).toBeDisabled();
-      // MGR_B is already inactive, so its Delete is enabled online; offline it's disabled too.
-      const deleteBtns = screen.getAllByRole('button', { name: /^delete$/i });
-      deleteBtns.forEach((b) => expect(b).toBeDisabled());
       expect(screen.getAllByRole('button', { name: /view/i })[0]).not.toBeDisabled();
+
+      await openMenu(user, 'Bob Jones');
+      for (const name of ['Edit', 'Activate', 'Delete']) {
+        expect(await screen.findByRole('menuitem', { name })).toHaveAttribute('aria-disabled', 'true');
+      }
     });
 
-    it('keeps the actions enabled when online', () => {
-      setup();
+    it('keeps the actions enabled when online', async () => {
+      const { user } = setup();
       expect(screen.getByRole('button', { name: /add manager/i })).not.toBeDisabled();
-      expect(screen.getAllByRole('button', { name: /^edit$/i })[0]).not.toBeDisabled();
+      await openMenu(user, 'Alice Smith');
+      expect(await screen.findByRole('menuitem', { name: 'Edit' })).not.toHaveAttribute('aria-disabled', 'true');
     });
   });
 });

@@ -1,216 +1,157 @@
-import { BarChart3, BookMarked, Bus as VehicleIcon, Star, Users } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
+import { Bus as VehicleIcon, ChevronRight, ClipboardList } from 'lucide-react';
 import { PageHeader } from '@/components/shared/page-header';
-import { StatCard } from '@/components/shared/stat-card';
 import { AsyncSection } from '@/components/shared/async-section';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { TableSkeleton } from '@/components/shared/table-skeleton';
-import { ErrorState } from '@/components/shared/error-state';
+import { CardSkeleton } from '@/components/shared/card-skeleton';
+import { EmptyState } from '@/components/shared/empty-state';
+import { FleetByManagerChart } from '@/components/shared/fleet-by-manager-chart';
+import { RelativeTime } from '@/components/shared/relative-time';
+import { SummaryCard } from '@/components/shared/summary-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSuperAdminDashboard } from '@/hooks/use-dashboard';
 import { useOperationsOverview, usePendingVehicleRequests } from '@/hooks/use-operations';
-import { useOnlineStatus } from '@/hooks/use-online-status';
 
-function SnapshotRow({ label, value, highlight = false }) {
+// The chart shows the biggest fleets first and stops at ten rows, so it stays
+// readable once there are many managers. The Managers page has the full list.
+const CHART_ROWS = 10;
+
+// No bookings or ratings here, deliberately. Nothing in the product creates a
+// booking or a review, so both read zero forever on live data (the backend
+// sends 0, not null, for a missing average). The manager overview dropped them
+// for the same reason.
+
+const REQUEST_LABEL = {
+  CREATE_VEHICLE_ACCOUNT: 'New vehicle',
+  DELETE_VEHICLE: 'Remove vehicle',
+};
+
+function requestVehicleName(request) {
+  const payload = request.payload;
+  return payload?.vehicle?.vehicleName || payload?.vehicleSnapshot?.vehicleName || request.vehicleId;
+}
+
+function PendingRequests({ requestsQ }) {
+  const requests = (requestsQ.data?.data || []).slice(0, 5);
+
   return (
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className={cn('text-sm font-medium tabular-nums', highlight && 'text-status-warning')}>
-        {value}
-      </span>
-    </div>
+    <Card className="self-start">
+      <CardHeader>
+        <CardTitle className="text-base">Waiting for approval</CardTitle>
+        <CardDescription>Vehicle requests from managers.</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {requestsQ.isLoading ? (
+          <CardSkeleton lines={3} />
+        ) : requests.length === 0 ? (
+          <EmptyState
+            icon={ClipboardList}
+            title="Nothing waiting"
+            description="New requests show up here."
+          />
+        ) : (
+          <ul className="space-y-2">
+            {requests.map((request) => (
+              <li key={request._id}>
+                <Link
+                  to="/operations"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-3 transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {REQUEST_LABEL[request.type] || 'Request'}: {requestVehicleName(request)}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {request.managerId?.name || 'A manager'}
+                      {request.createdAt ? <> · <RelativeTime date={request.createdAt} /></> : null}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
 export function DashboardPage() {
-  const isOnline = useOnlineStatus();
   const dashQ = useSuperAdminDashboard();
   const opsQ = useOperationsOverview();
   const pendingQ = usePendingVehicleRequests({ status: 'PENDING' });
 
   const m = dashQ.data?.data;
-  // Offline with a cached payload: show the last-known numbers greyed with an
-  // "as of" time rather than a red dash on every card, and drop the page-level
-  // error — the app-wide OfflineBanner already says why, once.
-  const dashStale = !isOnline && Boolean(m);
-  const dashErrored = dashQ.isError && !dashStale;
-  const totalManagers = m?.managers?.totalManagers ?? 0;
-  const activeVehicles = m?.vehicles?.activeVehicles ?? 0;
-  const confirmedBookings = m?.bookings?.confirmedBookings ?? 0;
-  const rawAvgRating = m?.reviews?.averageRating;
-  const avgRatingNum = Number(rawAvgRating);
-  // Some Mongo aggregation pipelines serialize Decimal128 as a string, so a plain
-  // null-check isn't enough to guarantee toFixed is safe to call.
-  const hasAvgRating = rawAvgRating != null && Number.isFinite(avgRatingNum);
-  const inactiveVehicles = m?.vehicles?.inactiveVehicles ?? 0;
   const pendingCount = (pendingQ.data?.data || []).length;
-  const operations = (opsQ.data?.data || []).slice(0, 6);
+
+  const chartRows = (opsQ.data?.data || [])
+    .map((op) => ({
+      name: op.managerName || 'Unnamed',
+      active: op.fleet?.activeVehicles ?? 0,
+      inactive: op.fleet?.inactiveVehicles ?? 0,
+    }))
+    .filter((row) => row.active + row.inactive > 0)
+    .sort((a, b) => (b.active + b.inactive) - (a.active + a.inactive))
+    .slice(0, CHART_ROWS);
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="Fleet operations overview: managers, vehicles, bookings and performance."
-      />
+      <PageHeader title="Dashboard" className="mb-0" />
 
-      {/* KPI stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Managers"
-          value={totalManagers}
-          icon={Users}
-          isLoading={dashQ.isLoading}
-          isError={dashErrored}
-          stale={dashStale}
-          asOf={dashQ.dataUpdatedAt}
-        />
-        <StatCard
-          label="Active Vehicles"
-          value={activeVehicles}
+      {/* AsyncSection keeps the last-known numbers on screen when a refetch
+          fails or the connection drops, and says why. */}
+      <AsyncSection
+        isLoading={dashQ.isLoading}
+        error={dashQ.error}
+        data={m}
+        onRetry={dashQ.refetch}
+        emptyTitle="No fleet data yet"
+        loadingFallback={<CardSkeleton />}
+      >
+        <SummaryCard
+          title="Fleet"
           icon={VehicleIcon}
-          isLoading={dashQ.isLoading}
-          isError={dashErrored}
-          stale={dashStale}
-          asOf={dashQ.dataUpdatedAt}
+          figures={[
+            { label: 'Managers', value: m?.managers?.totalManagers ?? 0, href: '/managers' },
+            { label: 'Active vehicles', value: m?.vehicles?.activeVehicles ?? 0 },
+            {
+              label: 'Inactive',
+              value: m?.vehicles?.inactiveVehicles ?? 0,
+              hidden: !m?.vehicles?.inactiveVehicles,
+            },
+            {
+              label: 'Pending requests',
+              value: pendingCount,
+              href: '/operations',
+              hidden: pendingCount === 0,
+            },
+          ]}
         />
-        <StatCard
-          label="Confirmed Bookings"
-          value={confirmedBookings}
-          icon={BookMarked}
-          isLoading={dashQ.isLoading}
-          isError={dashErrored}
-          stale={dashStale}
-          asOf={dashQ.dataUpdatedAt}
-        />
-        <StatCard
-          label="Avg Rating"
-          value={hasAvgRating ? avgRatingNum.toFixed(1) : 'None'}
-          icon={Star}
-          isLoading={dashQ.isLoading}
-          isError={dashErrored}
-          stale={dashStale}
-          asOf={dashQ.dataUpdatedAt}
-        />
-      </div>
+      </AsyncSection>
 
-      {dashErrored && (
-        <ErrorState error={dashQ.error} onRetry={dashQ.refetch} />
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Active routes overview — takes 2/3 width */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Active Routes</CardTitle>
-            <CardDescription>
-              {opsQ.isLoading
-                ? 'Loading…'
-                : `${operations.length} route${operations.length !== 1 ? 's' : ''} in operations`}
-            </CardDescription>
+            <CardTitle className="text-base">Vehicles by manager</CardTitle>
+            <CardDescription>Active and inactive vehicles for the largest fleets.</CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
             <AsyncSection
               isLoading={opsQ.isLoading}
               error={opsQ.error}
-              data={operations}
+              data={chartRows}
               onRetry={opsQ.refetch}
-              emptyTitle="No active routes"
-              emptyDescription="Operations appear here once managers have active routes."
-              loadingFallback={<TableSkeleton cols={3} rows={4} />}
+              emptyTitle="No vehicles yet"
+              emptyDescription="Fleets appear here once managers add vehicles."
+              loadingFallback={<CardSkeleton lines={5} />}
             >
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left text-xs font-semibold uppercase tracking-wider text-table-header-foreground py-2 pr-4">
-                        Route / Manager
-                      </th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wider text-table-header-foreground py-2 pr-4">
-                        Status
-                      </th>
-                      <th className="text-right text-xs font-semibold uppercase tracking-wider text-table-header-foreground py-2">
-                        Fleet
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {operations.map((op, i) => (
-                      <tr
-                        key={op._id || i}
-                        className="border-b border-border/50 last:border-0 hover:bg-surface-muted/50 transition-colors"
-                      >
-                        <td className="py-3 pr-4">
-                          <p className="font-medium text-foreground truncate max-w-[200px]">
-                            {op.routeName || op.name || 'Unnamed'}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {op.managerName || op.manager || 'System managed'}
-                          </p>
-                        </td>
-                        <td className="py-3 pr-4">
-                          <StatusBadge status={op.isActive !== false ? 'online' : 'offline'} />
-                        </td>
-                        <td className="py-3 text-right font-mono text-muted-foreground text-xs">
-                          {op.activeVehicles ?? op.vehicles ?? 0} vehicles
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <FleetByManagerChart rows={chartRows} />
             </AsyncSection>
           </CardContent>
         </Card>
 
-        {/* Fleet snapshot — 1/3 width */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Fleet Snapshot</CardTitle>
-            <CardDescription>Current activity at a glance</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-3">
-            <AsyncSection
-              isLoading={dashQ.isLoading}
-              error={dashQ.error}
-              onRetry={dashQ.refetch}
-              data={m}
-              emptyTitle="No metrics"
-            >
-              <div className="space-y-3">
-                <SnapshotRow
-                  label="Pending vehicle requests"
-                  value={pendingQ.isLoading ? '…' : pendingCount}
-                  highlight={pendingCount > 0}
-                />
-                <SnapshotRow
-                  label="Inactive vehicles"
-                  value={inactiveVehicles}
-                  highlight={inactiveVehicles > 0}
-                />
-                <SnapshotRow
-                  label="Confirmed bookings"
-                  value={confirmedBookings}
-                />
-                <SnapshotRow
-                  label="Average fleet rating"
-                  value={hasAvgRating ? `${avgRatingNum.toFixed(1)} / 5` : 'No ratings yet'}
-                />
-              </div>
-            </AsyncSection>
-          </CardContent>
-        </Card>
+        <PendingRequests requestsQ={pendingQ} />
       </div>
-
-      {/* Analytics placeholder — time-series data not available from current API. Kept
-          compact (issue #15): a full-height empty card for a feature that doesn't exist
-          yet dominated the dashboard's visible space. */}
-      <Card>
-        <CardContent className="py-3 flex items-center gap-2.5">
-          <BarChart3 className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span className="text-sm font-medium text-foreground">Analytics</span>
-          <span className="text-xs text-muted-foreground">Not enough data yet</span>
-        </CardContent>
-      </Card>
     </div>
   );
 }

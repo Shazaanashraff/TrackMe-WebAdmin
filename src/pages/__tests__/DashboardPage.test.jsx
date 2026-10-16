@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { DashboardPage } from '../DashboardPage';
 
@@ -16,28 +16,41 @@ import { useOperationsOverview, usePendingVehicleRequests } from '@/hooks/use-op
 
 const METRICS = {
   managers: { totalManagers: 4 },
-  vehicles: { activeVehicles: 10, inactiveVehicles: 1 },
+  vehicles: { activeVehicles: 10, inactiveVehicles: 3 },
   bookings: { confirmedBookings: 25 },
-  reviews: { averageRating: 4.2 },
+  reviews: { averageRating: 0 },
 };
 
-function makeOp(id, name = 'Route A', active = true) {
-  return { _id: id, routeName: name, managerName: 'Mgr', isActive: active, activeVehicles: 3 };
+function makeOp(id, name, active = 3, inactive = 1) {
+  return { managerId: id, managerName: name, fleet: { totalVehicles: active + inactive, activeVehicles: active, inactiveVehicles: inactive } };
 }
 
-function defaultHooks({ metrics = METRICS, ops = [], pending = [], loading = false, error = null } = {}) {
+const REQUESTS = [
+  {
+    _id: 'r1', type: 'CREATE_VEHICLE_ACCOUNT', vehicleId: 'BUS-9',
+    managerId: { name: 'Nimal Perera' }, payload: { vehicle: { vehicleName: 'Evening Run' } },
+  },
+  {
+    _id: 'r2', type: 'DELETE_VEHICLE', vehicleId: 'BUS-2',
+    managerId: { name: 'Kasun Fernando' }, payload: { vehicleSnapshot: { vehicleName: 'Old Bus' } },
+  },
+];
+
+function defaultHooks({
+  metrics = METRICS, ops = [makeOp('m1', 'Nimal Perera')], pending = REQUESTS,
+  loading = false, error = null, opsError = null,
+} = {}) {
   useSuperAdminDashboard.mockReturnValue({
     data: metrics ? { data: metrics } : undefined,
     isLoading: loading,
     isError: Boolean(error),
     error,
-    dataUpdatedAt: metrics ? Date.parse('2026-08-27T09:02:00.000Z') : 0,
     refetch: vi.fn(),
   });
   useOperationsOverview.mockReturnValue({
-    data: { data: ops },
+    data: opsError ? undefined : { data: ops },
     isLoading: loading,
-    error: null,
+    error: opsError,
     refetch: vi.fn(),
   });
   usePendingVehicleRequests.mockReturnValue({
@@ -52,122 +65,97 @@ function setup(opts) {
 }
 
 describe('DashboardPage', () => {
-  it('renders the page heading', () => {
+  it('renders the page heading without a description', () => {
     setup();
-    expect(screen.getByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.queryByText(/fleet operations overview/i)).toBeNull();
   });
 
-  it('shows loading skeletons for stat cards while fetching', () => {
+  it('shows loading skeletons while fetching', () => {
     setup({ loading: true, metrics: null });
     expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
   });
 
-  it('renders real KPI values without fabricated percentages', () => {
+  it('puts managers, vehicles and pending requests in one Fleet card', () => {
     setup();
-    // Stat card labels confirm the right sections are rendered
-    expect(screen.getByText('Total Managers')).toBeInTheDocument();
-    expect(screen.getByText('Active Vehicles')).toBeInTheDocument();
-    expect(screen.getByText('Confirmed Bookings')).toBeInTheDocument();
-    expect(screen.getByText('Avg Rating')).toBeInTheDocument();
-
-    // Values from METRICS fixture appear somewhere on the page
-    expect(screen.getAllByText('4').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('10').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('25').length).toBeGreaterThan(0);
-
-    // Must NOT fabricate percentage deltas or fake timestamps
-    expect(screen.queryByText(/\+18%/)).toBeNull();
-    expect(screen.queryByText(/\+24%/)).toBeNull();
-    expect(screen.queryByText(/updated \d+ min ago/i)).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Fleet' })).toBeInTheDocument();
+    expect(screen.getByText('Managers')).toBeInTheDocument();
+    expect(screen.getByText('Active vehicles')).toBeInTheDocument();
+    expect(screen.getByText('Inactive')).toBeInTheDocument();
+    expect(screen.getByText('Pending requests')).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByText('10')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
   });
 
-  it('names the empty state when average rating is absent', () => {
-    setup({ metrics: { ...METRICS, reviews: undefined } });
-    expect(screen.getByText('None')).toBeInTheDocument();
+  it('hides inactive and pending when there are none', () => {
+    setup({
+      metrics: { ...METRICS, vehicles: { activeVehicles: 10, inactiveVehicles: 0 } },
+      pending: [],
+    });
+    expect(screen.queryByText('Inactive')).toBeNull();
+    expect(screen.queryByText('Pending requests')).toBeNull();
   });
 
-  // Some Mongo aggregation pipelines serialize Decimal128 as a string — a plain
-  // null-check let that reach .toFixed() directly and throw (issue #64).
-  it('does not crash when averageRating is a stringified number', () => {
-    setup({ metrics: { ...METRICS, reviews: { averageRating: '4.2' } } });
-    expect(screen.getByText('Avg Rating')).toBeInTheDocument();
-    expect(screen.getAllByText('4.2').length).toBeGreaterThan(0);
+  it('links managers and pending requests to the pages that hold them', () => {
+    setup();
+    expect(screen.getByRole('link', { name: /managers/i })).toHaveAttribute('href', '/managers');
+    expect(screen.getByRole('link', { name: /pending requests/i })).toHaveAttribute('href', '/operations');
   });
 
-  it('shows error banner when dashboard query fails', () => {
+  // Nothing creates a booking or a review, so both read zero forever, and the
+  // backend sends 0 (not null) for a missing average. They must not return.
+  it('shows no booking or rating figures', () => {
+    setup();
+    expect(screen.queryByText(/booking/i)).toBeNull();
+    expect(screen.queryByText(/rating/i)).toBeNull();
+    expect(screen.queryByText(/analytics/i)).toBeNull();
+  });
+
+  it('holds the chart behind a skeleton, then mounts it so the bars animate in', () => {
+    vi.useFakeTimers();
+    try {
+      setup();
+      expect(document.querySelectorAll('[data-chart]')).toHaveLength(0);
+      expect(document.querySelectorAll('[aria-hidden].animate-pulse')).toHaveLength(1);
+
+      act(() => { vi.advanceTimersByTime(600); });
+      expect(document.querySelectorAll('[data-chart]')).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('names the empty state when no manager has a vehicle', () => {
+    setup({ ops: [makeOp('m1', 'Nimal Perera', 0, 0)] });
+    expect(screen.getByText('No vehicles yet')).toBeInTheDocument();
+  });
+
+  it('lists waiting requests in plain words and links to Operations', () => {
+    setup();
+    expect(screen.getByText(/New vehicle: Evening Run/)).toBeInTheDocument();
+    expect(screen.getByText(/Remove vehicle: Old Bus/)).toBeInTheDocument();
+    expect(screen.queryByText('CREATE_VEHICLE_ACCOUNT')).toBeNull();
+    expect(screen.getByRole('link', { name: /Evening Run/ })).toHaveAttribute('href', '/operations');
+  });
+
+  it('says nothing is waiting when there are no requests', () => {
+    setup({ pending: [] });
+    expect(screen.getByText('Nothing waiting')).toBeInTheDocument();
+  });
+
+  it('shows the error state when the dashboard query fails', () => {
     setup({ error: new Error('Server error'), metrics: null });
     expect(screen.getAllByText(/failed to load/i).length).toBeGreaterThan(0);
   });
 
-  // The KPI cards used to keep rendering computed '0's during a fetch error,
-  // which reads as real data at a glance (issue #51).
-  it('shows an error placeholder on every KPI card during a fetch error, not "0"', () => {
-    setup({ error: new Error('Server error'), metrics: null });
-    expect(screen.getAllByText('—').length).toBe(4);
-    expect(screen.queryByText('0')).toBeNull();
-  });
-
-  // Issue #26: DashboardPage runs three independent queries in parallel — a
-  // failure in one shouldn't take the others down with it, and the failed
-  // one's error should show only where it failed, not as a page-wide banner.
-  it('renders KPI cards normally when only the operations query fails, showing that error only in the table', () => {
-    defaultHooks({ metrics: METRICS });
-    useOperationsOverview.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: Object.assign(new Error('Internal server error'), { status: 500 }),
-      refetch: vi.fn(),
-    });
-    render(<MemoryRouter><DashboardPage /></MemoryRouter>);
-
-    // The KPI cards still rendered their real values.
-    expect(screen.getByText('4')).toBeInTheDocument(); // totalManagers
-    expect(screen.queryByText('—')).toBeNull(); // the isError placeholder from issue #51 — not triggered here
-
-    // Exactly one error surface (the operations table's own, not a page-wide
-    // banner duplicating it) — the KPI section's own dashQ.isError banner
-    // never renders since only opsQ failed.
+  // Issue #26: the queries are independent, so one failing must not take the
+  // others down with it.
+  it('keeps the Fleet card when only the operations query fails, showing that error only in the chart card', () => {
+    setup({ opsError: Object.assign(new Error('Internal server error'), { status: 500 }) });
+    expect(screen.getByText('Active vehicles')).toBeInTheDocument();
     expect(screen.getAllByText('Failed to load')).toHaveLength(1);
-    expect(screen.getByText('Server error. Please try again in a moment.')).toBeInTheDocument();
-  });
-
-  it('renders operations table rows', () => {
-    setup({ ops: [makeOp('1', 'Colombo–Kandy'), makeOp('2', 'Galle–Matara')] });
-    expect(screen.getByText('Colombo–Kandy')).toBeInTheDocument();
-    expect(screen.getByText('Galle–Matara')).toBeInTheDocument();
-  });
-
-  it('shows online badge for active routes, offline for inactive', () => {
-    setup({ ops: [makeOp('1', 'R1', true), makeOp('2', 'R2', false)] });
-    expect(screen.getByText('Online')).toBeInTheDocument();
-    expect(screen.getByText('Offline')).toBeInTheDocument();
-  });
-
-  it('shows empty state when no operations are returned', () => {
-    setup({ ops: [] });
-    expect(screen.getByText('No active routes')).toBeInTheDocument();
-  });
-
-  it('shows fleet snapshot rows', () => {
-    setup({ pending: [{ id: 'p1' }, { id: 'p2' }] });
-    expect(screen.getByText('Pending vehicle requests')).toBeInTheDocument();
-    expect(screen.getByText('Inactive vehicles')).toBeInTheDocument();
-  });
-
-  it('shows analytics placeholder with no fabricated numbers', () => {
-    setup();
-    expect(screen.getByText('Not enough data yet')).toBeInTheDocument();
-  });
-
-  it('keeps the analytics placeholder compact, not a full-height empty card (issue #15)', () => {
-    setup();
-    const placeholder = screen.getByText('Not enough data yet');
-    // The old placeholder padded a large centered block (py-10) with a big icon and two
-    // paragraphs of copy; issue #15 asked for this to stop dominating the page. A slim
-    // single-row treatment has no "py-10" ancestor between the text and its Card.
-    const card = placeholder.closest('.py-3');
-    expect(card).toBeInTheDocument();
-    expect(placeholder.closest('.py-10')).toBeNull();
   });
 
   describe('offline', () => {
@@ -176,21 +164,13 @@ describe('DashboardPage', () => {
     }
     afterEach(() => setOnline(true));
 
-    it('offline with a cached payload shows the real numbers with an "as of" line, not red dashes or a page error', () => {
+    it('offline with a cached payload keeps the real numbers and says it is showing saved information', () => {
       setOnline(false);
-      // A background refetch failed while offline, but the persisted payload is still here.
       setup({ error: new Error('Failed to fetch') });
 
-      expect(screen.getAllByText('4').length).toBeGreaterThan(0); // totalManagers, real value
-      expect(screen.queryByText('—')).toBeNull();
+      expect(screen.getByText('4')).toBeInTheDocument();
+      expect(screen.getByText(/offline — showing saved information/i)).toBeInTheDocument();
       expect(screen.queryByText('Failed to load')).toBeNull();
-      expect(screen.getAllByText(/^as of /i).length).toBe(4);
-    });
-
-    it('still shows the red error treatment when online (offline path did not swallow real failures)', () => {
-      setup({ error: new Error('Server error'), metrics: null });
-      expect(screen.getAllByText('—')).toHaveLength(4);
-      expect(screen.getAllByText(/failed to load/i).length).toBeGreaterThan(0);
     });
   });
 });
