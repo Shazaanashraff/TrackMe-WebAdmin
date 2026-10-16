@@ -10,9 +10,6 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { CardSkeleton } from '@/components/shared/card-skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { getGoogleMapsApiKey } from '@/lib/googleMaps';
 import { trackingState, useManagerFleetTracking } from '@/hooks/use-tracking';
@@ -235,21 +232,13 @@ function SelectedVehicleDetails({ record }) {
         <div className="flex items-start justify-between gap-4">
           <dt className="text-muted-foreground">Route</dt>
           <dd className="max-w-[60%] truncate text-right font-mono text-xs text-foreground">
-            {record.vehicle?.routeId || 'Not assigned'}
+            {record.vehicle?.routeId || '—'}
           </dd>
         </div>
         <div className="flex items-start justify-between gap-4">
           <dt className="text-muted-foreground">Last position</dt>
-          <dd>{lastUpdate ? <RelativeTime date={lastUpdate} /> : <span className="text-muted-foreground">Never</span>}</dd>
+          <dd title={location ? `${Number(location.lat).toFixed(5)}, ${Number(location.lng).toFixed(5)}` : undefined}>{lastUpdate ? <RelativeTime date={lastUpdate} /> : <span className="text-muted-foreground">Never</span>}</dd>
         </div>
-        {location ? (
-          <div className="flex items-start justify-between gap-4">
-            <dt className="text-muted-foreground">Coordinates</dt>
-            <dd className="font-mono text-xs tabular-nums text-foreground">
-              {Number(location.lat).toFixed(5)}, {Number(location.lng).toFixed(5)}
-            </dd>
-          </div>
-        ) : null}
       </dl>
     </div>
   );
@@ -319,20 +308,6 @@ export function ManagerTrackingPage() {
       <PageHeader
         title="Live tracking"
         description={pageDescription}
-        actions={fleet.length ? (
-          <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
-            <SelectTrigger aria-label="Select vehicle" className="w-full sm:w-56">
-              <SelectValue placeholder="Select vehicle" />
-            </SelectTrigger>
-            <SelectContent>
-              {fleet.map((record) => (
-                <SelectItem key={record.vehicleId} value={record.vehicleId}>
-                  {record.vehicle?.vehicleName || record.vehicleId}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : null}
       />
 
       {tracking.socketError ? (
@@ -431,22 +406,18 @@ export function ManagerTrackingPage() {
                   className="flex h-full min-h-[260px] sm:min-h-[420px] flex-col items-center justify-center gap-2 bg-surface-muted px-6 text-center"
                 >
                   <MapPin aria-hidden className="size-8 text-muted-foreground" />
-                  <p className="font-semibold text-foreground">Google Maps unavailable</p>
+                  <p className="font-semibold text-foreground">Map unavailable</p>
                   <p className="max-w-sm text-sm text-muted-foreground">
-                    Set VITE_GOOGLE_MAPS_KEY to display live fleet positions.
+                    Live positions can&rsquo;t be shown right now. Try again later.
                   </p>
                 </div>
               )}
 
-              <div className="absolute right-3 top-3 z-[500] rounded-lg border border-border bg-surface px-3 py-2">
-                <LiveIndicator state={tracking.connected ? 'live' : 'offline'} />
-              </div>
             </div>
 
             <aside aria-label="Fleet vehicles" className="flex min-h-0 flex-col bg-surface">
               <div className="border-b border-border px-4 py-3">
-                <p className="text-sm font-semibold text-foreground">Fleet vehicles</p>
-                <p className="text-xs text-muted-foreground">Select one for live updates</p>
+                <p className="text-sm font-semibold text-foreground">Vehicles</p>
               </div>
               <div className="max-h-64 overflow-y-auto lg:max-h-none lg:flex-1">
                 {fleet.map((record) => (

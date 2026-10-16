@@ -34,22 +34,16 @@ const TABS = [
 const EMPTY_STATE = {
   PENDING: {
     title: 'No pending requests',
-    description: 'Requests appear here when someone redeems a private driver\'s enrollment key.',
+    description: 'Requests appear here when someone uses a private driver\'s enrollment key.',
   },
   ACTIVE: {
     title: 'Nobody is enrolled yet',
-    description: 'Riders appear here once they redeem a driver\'s enrollment key, or once you approve their request.',
+    description: 'Riders appear here once they join with a driver\'s key or you approve them.',
   },
   REJECTED: {
     title: 'No declined requests',
-    description: 'Requests you decline are kept here. The rider can ask again later.',
+    description: 'Requests you decline are kept here.',
   },
-};
-
-const DESCRIPTION = {
-  PENDING: 'Passengers waiting to join a private driver. They stay unenrolled until you approve.',
-  ACTIVE: 'Everyone currently riding with your drivers, including riders who joined without needing approval.',
-  REJECTED: 'Requests you have declined. Declining does not stop the rider asking again.',
 };
 
 const formatWhen = (value) => {
@@ -167,6 +161,8 @@ export function ManagerRequestsPage() {
         enableSorting: false,
         cell: (i) => {
           const passenger = i.getValue();
+          const email = passenger?.email || passenger?.account?.email;
+          const phone = passenger?.account?.phoneNumber;
           // A rider the account holder added has no contact details of their
           // own, so saying whose profile it is matters as much as the name.
           const managed = passenger?.isManagedProfile
@@ -179,23 +175,7 @@ export function ManagerRequestsPage() {
                 <div className="text-xs font-mono text-muted-foreground">{passenger.riderCode}</div>
               )}
               {managed && <div className="text-xs text-muted-foreground">{managed}</div>}
-            </div>
-          );
-        },
-      },
-      {
-        id: 'account',
-        header: 'Account',
-        accessorKey: 'passenger',
-        enableSorting: false,
-        cell: (i) => {
-          const passenger = i.getValue();
-          const email = passenger?.email || passenger?.account?.email;
-          const phone = passenger?.account?.phoneNumber;
-          if (!email && !phone) return <span className="text-muted-foreground">None</span>;
-          return (
-            <div>
-              {email && <div>{email}</div>}
+              {email && <div className="text-xs text-muted-foreground">{email}</div>}
               {phone && <div className="text-xs text-muted-foreground">{phone}</div>}
             </div>
           );
@@ -222,16 +202,18 @@ export function ManagerRequestsPage() {
         header: 'Driver',
         accessorKey: 'driver',
         enableSorting: false,
-        cell: (i) => i.getValue()?.name || <span className="text-muted-foreground">Unknown</span>,
-      },
-      {
-        id: 'driverCode',
-        header: 'Driver ID',
-        accessorKey: 'driver',
-        enableSorting: false,
-        cell: (i) => (i.getValue()?.driverCode
-          ? <span className="font-mono text-xs">{i.getValue().driverCode}</span>
-          : <span className="text-muted-foreground">None</span>),
+        cell: (i) => {
+          const driver = i.getValue();
+          if (!driver?.name) return <span className="text-muted-foreground">—</span>;
+          return (
+            <div>
+              <span className="font-medium">{driver.name}</span>
+              {driver.driverCode && (
+                <div className="text-xs font-mono text-muted-foreground">{driver.driverCode}</div>
+              )}
+            </div>
+          );
+        },
       },
     ];
 
@@ -441,7 +423,7 @@ export function ManagerRequestsPage() {
 
   return (
     <>
-      <PageHeader title="Enrollments" description={DESCRIPTION[status]} />
+      <PageHeader title="Enrollments" className="mb-4" />
 
       {/* The picker states what is filtered and clears it, so the old
           "Showing one driver: X" caption and "Show all drivers" button are
@@ -476,7 +458,7 @@ export function ManagerRequestsPage() {
             <StaleChip
               updatedAt={requestsQ.dataUpdatedAt}
               offline={!isOnline}
-              loud={status === 'PENDING'}
+              loud={status === 'PENDING' && !isOnline}
               label={status === 'PENDING' ? 'Queue as of' : 'Updated'}
             />
           </div>
@@ -492,13 +474,6 @@ export function ManagerRequestsPage() {
           </TabsList>
         </Tabs>
       </div>
-
-      {status === 'PENDING' && !isOnline && requests.length > 0 && (
-        <p className="mb-4 rounded-lg border border-status-warning/30 bg-status-warning/10 px-3 py-2 text-sm text-status-warning">
-          Offline — this queue may have changed since it was last loaded. Approve and
-          decline are disabled until you reconnect.
-        </p>
-      )}
 
       <DataTable
         columns={columns}

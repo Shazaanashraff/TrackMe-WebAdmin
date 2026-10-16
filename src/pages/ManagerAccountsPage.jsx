@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MoreHorizontal, Users, UserCheck, UserX, Lock, MapPin } from 'lucide-react';
+import { Plus, MoreHorizontal, Users, Lock, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/shared/page-header';
-import { StatCard } from '@/components/shared/stat-card';
 import { DataTable } from '@/components/shared/data-table';
 import { LiveIndicator } from '@/components/shared/live-indicator';
 import { StaleChip } from '@/components/shared/stale-chip';
@@ -18,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -298,13 +297,6 @@ export function ManagerAccountsPage() {
 
   const setField = (field) => (event) =>
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
-
-  const stats = useMemo(() => {
-    const total = drivers.length;
-    const active = drivers.filter((d) => d.isActive !== false && d.setupComplete).length;
-    const needsSetup = drivers.filter((d) => d.isActive !== false && !d.setupComplete).length;
-    return { total, active, needsSetup };
-  }, [drivers]);
 
   const submitting = createM.isPending || updateM.isPending;
 
@@ -633,21 +625,22 @@ export function ManagerAccountsPage() {
       id: 'name',
       header: 'Driver',
       accessorKey: 'name',
-      cell: (info) => <span className="font-medium text-foreground">{info.getValue()}</span>,
-    },
-    {
-      id: 'driverCode',
-      header: 'Driver ID',
-      accessorKey: 'driverCode',
-      cell: (info) => (info.getValue()
-        ? <code className="whitespace-nowrap text-xs">{info.getValue()}</code>
-        : <span className="text-muted-foreground">Not issued</span>),
-    },
-    {
-      id: 'email',
-      header: 'Email',
-      accessorKey: 'email',
-      cell: (info) => info.getValue() || <span className="text-muted-foreground">None</span>,
+      cell: (info) => {
+        const driver = info.row.original;
+        return (
+          <div>
+            <span className="font-medium text-foreground">{driver.name}</span>
+            <div className="text-xs">
+              {driver.driverCode
+                ? <code className="whitespace-nowrap">{driver.driverCode}</code>
+                : <span className="text-muted-foreground">No ID yet</span>}
+              {driver.phoneNumber && (
+                <span className="text-muted-foreground tabular-nums">{` · ${driver.phoneNumber}`}</span>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
     {
       id: 'organization',
@@ -667,12 +660,6 @@ export function ManagerAccountsPage() {
           </span>
         );
       },
-    },
-    {
-      id: 'phoneNumber',
-      header: 'Phone',
-      accessorKey: 'phoneNumber',
-      cell: (info) => info.getValue() || 'None',
     },
     {
       id: 'vehicle',
@@ -835,7 +822,7 @@ export function ManagerAccountsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Drivers"
-        description="Manage driver accounts, their assigned vehicles, and passenger enrollment keys."
+        className="mb-0"
         actions={
           <Button
             variant={onboarding ? 'outline' : 'default'}
@@ -1172,38 +1159,23 @@ export function ManagerAccountsPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <StatCard label="Total Drivers" value={stats.total} icon={Users} isLoading={driversQ.isLoading} stale={!isOnline} asOf={driversQ.dataUpdatedAt} />
-        <StatCard label="Active" value={stats.active} icon={UserCheck} isLoading={driversQ.isLoading} stale={!isOnline} asOf={driversQ.dataUpdatedAt} />
-        <StatCard label="Setup Required" value={stats.needsSetup} icon={UserX} isLoading={driversQ.isLoading} stale={!isOnline} asOf={driversQ.dataUpdatedAt} />
-      </div>
-
-      <Card>
-        <CardHeader className="flex-row items-start justify-between gap-3">
-          <div>
-            <CardTitle className="text-base">Driver directory</CardTitle>
-            <CardDescription>
-              Every driver you manage, with their assigned vehicle and enrollment key.
-            </CardDescription>
-          </div>
+      {drivers.length > 0 && (
+        <div className="flex justify-end">
           <StaleChip updatedAt={driversQ.dataUpdatedAt} offline={!isOnline} />
-        </CardHeader>
-        {/* Tighter side padding on a phone: this DataTable is the only one
-            nested inside a Card, so it starts 48px narrower than the others. */}
-        <CardContent className="px-3 sm:px-6">
-          <DataTable
-            columns={columns}
-            data={drivers}
-            isLoading={driversQ.isLoading}
-            error={driversQ.error}
-            onRetry={driversQ.refetch}
-            emptyTitle="No drivers yet"
-            emptyDescription="Add your first driver to get started."
-            totalCount={drivers.length}
-            renderMobileCard={renderMobileCard}
-          />
-        </CardContent>
-      </Card>
+        </div>
+      )}
+
+      <DataTable
+        columns={columns}
+        data={drivers}
+        isLoading={driversQ.isLoading}
+        error={driversQ.error}
+        onRetry={driversQ.refetch}
+        emptyTitle="No drivers yet"
+        emptyDescription="Add your first driver to get started."
+        totalCount={drivers.length}
+        renderMobileCard={renderMobileCard}
+      />
 
       <FormDialog
         open={dialogOpen}

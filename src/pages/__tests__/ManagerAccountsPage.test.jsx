@@ -165,13 +165,23 @@ describe('ManagerAccountsPage: driver directory', () => {
     expect(screen.getByText('Royal College')).toBeInTheDocument();
   });
 
+  it('keeps the directory to the columns a manager scans, with no stat cards or card heading', () => {
+    setup();
+
+    expect(screen.queryByText('Total Drivers')).not.toBeInTheDocument();
+    expect(screen.queryByText('Driver directory')).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /email/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /^phone/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /driver id/i })).not.toBeInTheDocument();
+  });
+
   it('names the empty state rather than leaving a blank cell', () => {
     setup({ drivers: [DRIVERS[1]] });
 
     expect(screen.getByText('DRV-8H2N-5TRW')).toBeInTheDocument();
-    // Email, organization and phone are all empty for this driver. Written out
-    // as words: the UI carries no em dashes.
-    expect(screen.getAllByText('None').length).toBeGreaterThanOrEqual(3);
+    // Organization is empty for this driver. Written out as words: the UI
+    // carries no em dashes.
+    expect(screen.getAllByText('None').length).toBeGreaterThanOrEqual(1);
   });
 
   it('identifies the vehicle by its plate alone, not its internal ID', () => {

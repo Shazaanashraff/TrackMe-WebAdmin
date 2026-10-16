@@ -32,10 +32,9 @@ describe('ManagerSettingsPage', () => {
     expect(screen.getByRole('button', { name: /change password/i })).toBeInTheDocument();
   });
 
-  it('labels the not-yet-implemented items as coming soon, not "under development"', () => {
+  it('lists no roadmap items', () => {
     setup();
-    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
-    expect(screen.queryByText(/under development/i)).toBeNull();
+    expect(screen.queryByText(/coming soon/i)).toBeNull();
   });
 
   it('does not show fabricated metric stats', () => {

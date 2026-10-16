@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,57 +39,46 @@ export function AccountSettingsPanel({ user, onUserUpdate }) {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>Your name and login email for this account.</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <form className="space-y-4" onSubmit={handleSaveName}>
-            <div className="space-y-1.5">
-              <Label htmlFor="settings-name" required>Name</Label>
-              <Input
-                id="settings-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                aria-required="true"
-              />
-            </div>
+    <Card className="max-w-xl">
+      <CardHeader>
+        <CardTitle>Account</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 space-y-6">
+        <form className="space-y-4" onSubmit={handleSaveName}>
+          <div className="space-y-1.5">
+            <Label htmlFor="settings-name" required>Name</Label>
+            <Input
+              id="settings-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              aria-required="true"
+            />
+          </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="settings-email">Email</Label>
-              <Input id="settings-email" value={user?.email || ''} disabled readOnly />
-              <p className="text-xs text-muted-foreground">
-                Contact a super-admin to change your login email.
-              </p>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="settings-email">Email</Label>
+            <Input id="settings-email" value={user?.email || ''} disabled readOnly />
+          </div>
 
-            {error ? (
-              <Alert variant="danger">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
+          {error ? (
+            <Alert variant="danger">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
 
-            {!isOnline ? (
-              <Alert variant="warning">
-                <AlertDescription>You need a connection to save profile changes.</AlertDescription>
-              </Alert>
-            ) : null}
+          {!isOnline ? (
+            <Alert variant="warning">
+              <AlertDescription>You need a connection to save profile changes.</AlertDescription>
+            </Alert>
+          ) : null}
 
-            <Button type="submit" disabled={isUnchanged || updateProfileM.isPending || !isOnline}>
-              {updateProfileM.isPending ? 'Saving…' : 'Save changes'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          <Button type="submit" disabled={isUnchanged || updateProfileM.isPending || !isOnline}>
+            {updateProfileM.isPending ? 'Saving…' : 'Save changes'}
+          </Button>
+        </form>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Password</CardTitle>
-          <CardDescription>Reset your password using the same recovery flow as sign-in.</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0">
+        <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+          <span className="text-sm font-medium">Password</span>
           <Button
             type="button"
             variant="outline"
@@ -97,8 +86,8 @@ export function AccountSettingsPanel({ user, onUserUpdate }) {
           >
             Change password
           </Button>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

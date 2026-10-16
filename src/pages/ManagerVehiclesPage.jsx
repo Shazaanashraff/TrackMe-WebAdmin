@@ -286,7 +286,7 @@ export function ManagerVehiclesPage() {
       enableSorting: false,
       cell: (i) => (i.getValue()?.name
         ? i.getValue().name
-        : <span className="text-muted-foreground">—</span>),
+        : <span className="text-muted-foreground">Unassigned</span>),
     },
     {
       id: 'organization',
@@ -295,7 +295,7 @@ export function ManagerVehiclesPage() {
       enableSorting: false,
       cell: (i) => (i.getValue()?.name
         ? i.getValue().name
-        : <span className="text-muted-foreground">—</span>),
+        : <span className="text-muted-foreground">None</span>),
     },
     {
       id: 'route',
@@ -303,7 +303,7 @@ export function ManagerVehiclesPage() {
       accessorKey: 'routeId',
       cell: (i) => {
         const routeId = i.getValue();
-        if (!routeId) return <span className="text-muted-foreground">—</span>;
+        if (!routeId) return <span className="text-muted-foreground">Not set</span>;
         const routeName = i.row.original.routeName;
         return routeName ? `${routeName} (${routeId})` : routeId;
       },
@@ -345,7 +345,7 @@ export function ManagerVehiclesPage() {
     const orgName = vehicle.organization?.name;
     const routeLabel = vehicle.routeId
       ? (vehicle.routeName ? `${vehicle.routeName} (${vehicle.routeId})` : vehicle.routeId)
-      : '—';
+      : 'Not set';
 
     return (
       <div className="space-y-2">
@@ -366,7 +366,7 @@ export function ManagerVehiclesPage() {
           <div className="flex justify-between gap-3">
             <dt className="text-muted-foreground">Driver</dt>
             <dd className={cn('text-right', !driverName && 'text-muted-foreground')}>
-              {driverName || '—'}
+              {driverName || 'Unassigned'}
             </dd>
           </div>
           <div className="flex justify-between gap-3">
@@ -382,7 +382,7 @@ export function ManagerVehiclesPage() {
           <div className="flex justify-between gap-3">
             <dt className="text-muted-foreground">Organization</dt>
             <dd className={cn('text-right', !orgName && 'text-muted-foreground')}>
-              {orgName || '—'}
+              {orgName || 'None'}
             </dd>
           </div>
         </dl>

@@ -106,7 +106,7 @@ function setup({
   driversError = null,
 } = {}) {
   useEnrollmentRequests.mockReturnValue({
-    data: { data: requests }, isLoading, error: null, refetch: vi.fn(),
+    data: { data: requests }, isLoading, error: null, refetch: vi.fn(), dataUpdatedAt: Date.now(),
   });
   useManagerDrivers.mockReturnValue({
     data: drivers ? { data: drivers } : undefined,
@@ -141,9 +141,16 @@ describe('ManagerRequestsPage', () => {
     expect(screen.getAllByText('Kamal Perera')).toHaveLength(2);
   });
 
-  it('shows the passenger\'s own email in the Account column', () => {
+  it('shows the passenger\'s own email under the passenger name', () => {
     setup();
     expect(screen.getByText('nimal@t.com')).toBeInTheDocument();
+  });
+
+  it('shows one Driver column and no separate Account or Driver ID columns', () => {
+    setup();
+    expect(screen.getByRole('columnheader', { name: /^driver$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /account/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: /driver id/i })).not.toBeInTheDocument();
   });
 
   it('labels each organization field instead of showing the raw key', () => {
@@ -211,7 +218,7 @@ describe('ManagerRequestsPage', () => {
       expect(screen.getByText('TMR-KH6L-Y9TP')).toBeInTheDocument();
     });
 
-    it('falls back to the owning account\'s email and phone in the Account column', () => {
+    it('falls back to the owning account\'s email and phone under the passenger name', () => {
       setup({ requests: [MANAGED_REQUEST] });
       expect(screen.getByText('shazaan@t.com')).toBeInTheDocument();
       expect(screen.getByText('0771234567')).toBeInTheDocument();
@@ -356,16 +363,16 @@ describe('ManagerRequestsPage', () => {
       expect(reject.mutate).not.toHaveBeenCalled();
     });
 
-    it('warns that the pending queue may be out of date while offline', () => {
+    it('flags the pending queue as possibly out of date while offline', () => {
       setOnline(false);
       setup();
-      expect(screen.getByText(/this queue may have changed since it was last loaded/i)).toBeInTheDocument();
+      expect(screen.getByText(/queue as of/i)).toBeInTheDocument();
     });
 
     it('leaves the actions enabled when online', () => {
       setup();
       expect(screen.getAllByRole('button', { name: /approve/i })[0]).not.toBeDisabled();
-      expect(screen.queryByText(/this queue may have changed/i)).toBeNull();
+      expect(screen.queryByText(/queue as of/i)).toBeNull();
     });
   });
 });

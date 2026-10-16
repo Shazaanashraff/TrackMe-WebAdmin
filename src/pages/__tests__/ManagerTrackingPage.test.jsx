@@ -124,12 +124,19 @@ describe('ManagerTrackingPage', () => {
     expect(screen.getAllByText('Kamal Perera')).toHaveLength(2);
   });
 
-  it('shows configuration guidance when the Google Maps key is missing', () => {
+  it('shows a neutral notice, not setup instructions, when the Google Maps key is missing', () => {
     getGoogleMapsApiKey.mockReturnValue('');
     renderPage();
 
-    expect(screen.getByTestId('google-map-unavailable')).toHaveTextContent('VITE_GOOGLE_MAPS_KEY');
+    expect(screen.getByTestId('google-map-unavailable')).toHaveTextContent(/map unavailable/i);
+    expect(screen.getByTestId('google-map-unavailable')).not.toHaveTextContent('VITE_GOOGLE_MAPS_KEY');
     expect(screen.queryByTestId('fleet-map')).not.toBeInTheDocument();
+  });
+
+  it('picks a vehicle from the list only, with no duplicate dropdown or floating live badge', () => {
+    renderPage();
+    expect(screen.queryByRole('combobox', { name: /select vehicle/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/select one for live updates/i)).not.toBeInTheDocument();
   });
 
   it('selects a different vehicle from the fleet list', async () => {

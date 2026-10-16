@@ -18,12 +18,27 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-10-16 — Manager pages cleanup: tracking, drivers, enrollments, settings
+- **Branch:** claude/manager-pages-cleanup
+- **Modules touched:** [TRACKING](modules/TRACKING.md), [BUSES](modules/BUSES.md), [ENROLLMENT_REQUESTS](modules/ENROLLMENT_REQUESTS.md), [SETTINGS](modules/SETTINGS.md)
+- **What changed:**
+  - Live tracking: removed the duplicate vehicle dropdown and the floating socket badge, shortened the list heading, moved coordinates into a tooltip on "Last position", and replaced the "set VITE_GOOGLE_MAPS_KEY" message with a neutral "Map unavailable".
+  - Drivers: removed the stat cards and the card heading/subtitle, folded Driver ID and phone under the driver name, dropped the Email and Phone columns (still in Edit driver). Status and the actions menu fit at 1440px again.
+  - Enrollments: no per-tab subtitle, one Driver column (name with ID), contact details under the rider's name, the "queue as of" chip and offline note only show when offline.
+  - Settings (both roles): one Account card with a Password row; the "Coming soon" roadmap card and subtitle are gone.
+  - Vehicles empty cells go back to words ("Unassigned", "None", "Not set"); the UI avoids em dashes.
+- **Why:** manager portal cleanup from the page audit.
+- **Contract impact:** none.
+- **Tests:** `ManagerTrackingPage`, `ManagerAccountsPage`, `ManagerRequestsPage`, `ManagerSettingsPage`, `SettingsPage` unit tests updated.
+- **Docs updated:** this entry.
+- **Follow-ups / known issues:** the socket-disconnected banner on Live tracking is unchanged. Add and Edit driver are still two different forms, and "View password" is unchanged.
+
 ## 2026-10-16 — Manager overview rebuilt; Vehicles page trimmed
 - **Branch:** claude/magical-goldberg-47veeb
 - **Modules touched:** [DASHBOARD](modules/DASHBOARD.md), [BUSES](modules/BUSES.md)
 - **What changed:**
   - Manager Overview: the three stat cards are one Vehicles card (total, active, pending hidden at zero); the page description is gone. Two thirds is a Payments "Coming soon" preview (sample monthly received/expenses chart and expense breakdown, amounts masked until the eye button is pressed); one third lists vehicles on a journey, each linking to Live tracking with that vehicle selected.
-  - Vehicles page: title is "Vehicles" with no subtitle, the repeated stat cards are removed, each row shows the vehicle name with its plate beneath (Vehicle ID moved to a read-only field in the edit dialog), Edit and "Delete Req" are icon buttons with tooltips, empty cells use an em dash, service is sentence case.
+  - Vehicles page: title is "Vehicles" with no subtitle, the repeated stat cards are removed, each row shows the vehicle name with its plate beneath (Vehicle ID moved to a read-only field in the edit dialog), Edit and "Delete Req" are icon buttons with tooltips, service is sentence case.
   - Add Vehicle is one step and collects vehicle details only; it points to the Drivers page for drivers.
 - **Why:** cleanup of the manager portal from the page audit.
 - **Contract impact:** none. The overview now also reads `GET /api/manager/vehicles/live`.
