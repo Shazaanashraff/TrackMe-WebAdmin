@@ -5,11 +5,14 @@ import { DataTable } from '@/components/shared/data-table';
 import { AsyncSection } from '@/components/shared/async-section';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -47,25 +50,33 @@ function validateForm(form) {
   return null;
 }
 
+const platformLabel = (value) => PLATFORMS.find((p) => p.value === value)?.label || value;
+
 function buildReleaseColumns({ onToggleStatus, togglingId }) {
   return [
-    { id: 'version', header: 'Version', accessorKey: 'version' },
-    { id: 'platform', header: 'Platform', accessorKey: 'platform' },
-    { id: 'versionCode', header: 'Version Code', accessorKey: 'versionCode' },
+    {
+      id: 'version',
+      header: 'Version',
+      accessorKey: 'version',
+      cell: (i) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium">{i.getValue()}</span>
+          <span className="text-xs text-muted-foreground">build {i.row.original.versionCode}</span>
+          {i.row.original.mandatory ? <Badge variant="pending">Mandatory</Badge> : null}
+        </div>
+      ),
+    },
+    { id: 'platform', header: 'Platform', accessorKey: 'platform', cell: (i) => platformLabel(i.getValue()) },
     {
       id: 'createdAt',
       header: 'Registered',
       accessorKey: 'createdAt',
       cell: (i) => {
         const value = i.getValue();
-        return value ? new Date(value).toLocaleString() : '—';
+        return value
+          ? new Date(value).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+          : 'Unknown';
       },
-    },
-    {
-      id: 'mandatory',
-      header: 'Mandatory',
-      accessorKey: 'mandatory',
-      cell: (i) => (i.getValue() ? <Badge variant="pending">Mandatory</Badge> : <Badge variant="secondary">Optional</Badge>),
     },
     { id: 'status', header: 'Status', accessorKey: 'isActive', cell: (i) => <StatusBadge status={i.getValue() ? 'active' : 'deactivated'} /> },
     {
@@ -95,6 +106,7 @@ export function AppReleasesPage() {
   const [app, setApp] = useState('driver');
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState(null);
+  const [formOpen, setFormOpen] = useState(false);
 
   const historyQ = useAppReleaseHistory(app);
   const createM = useCreateAppRelease();
@@ -125,6 +137,7 @@ export function AppReleasesPage() {
       });
       toast('Release registered successfully');
       setForm(EMPTY_FORM);
+      setFormOpen(false);
     } catch (err) {
       setFormError(err?.message || 'Failed to register release');
     }
@@ -147,101 +160,28 @@ export function AppReleasesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="App Releases"
-        description="Register new driver/rider app builds and manage which ones are live."
+        title="App releases"
+        className="mb-0"
+        actions={(
+          <div className="flex items-end gap-3">
+            <div className="w-40 space-y-1.5">
+              <Label htmlFor="release-app" className="sr-only">App</Label>
+              <Select value={app} onValueChange={setApp}>
+                <SelectTrigger id="release-app">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {APPS.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={() => { setFormError(null); setFormOpen(true); }}>New release</Button>
+          </div>
+        )}
       />
 
-      <div className="max-w-xs space-y-1.5">
-        <Label htmlFor="release-app">App</Label>
-        <Select value={app} onValueChange={setApp}>
-          <SelectTrigger id="release-app">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {APPS.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Register Release</CardTitle>
-          <CardDescription>
-            Download URL can be a path like <code>/downloads/driver-app-1.0.0.apk</code> for a file
-            committed into <code>public/downloads/</code>, or a full URL for iOS/TestFlight.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreate} className="space-y-4">
-            {formError && (
-              <Alert variant="destructive">
-                <AlertDescription>{formError}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="release-platform">Platform</Label>
-                <Select value={form.platform} onValueChange={(v) => setForm((p) => ({ ...p, platform: v }))}>
-                  <SelectTrigger id="release-platform">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PLATFORMS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="release-version">Version</Label>
-                <Input id="release-version" value={form.version} onChange={setField('version')} placeholder="e.g. 1.0.1" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="release-version-code">Version Code</Label>
-                <Input id="release-version-code" type="number" min="1" step="1" value={form.versionCode} onChange={setField('versionCode')} placeholder="0" />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="release-download-url">Download URL</Label>
-              <Input
-                id="release-download-url"
-                value={form.downloadUrl}
-                onChange={setField('downloadUrl')}
-                placeholder="/downloads/driver-app-1.0.0.apk"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="release-notes">Release Notes</Label>
-              <Textarea id="release-notes" value={form.releaseNotes} onChange={setField('releaseNotes')} placeholder="What changed in this build" />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="release-mandatory">Mandatory Update</Label>
-              <div className="flex items-center h-9 gap-2">
-                <Switch
-                  id="release-mandatory"
-                  checked={form.mandatory}
-                  onCheckedChange={(v) => setForm((p) => ({ ...p, mandatory: v }))}
-                  aria-label="Mark this release as a mandatory update"
-                />
-                <span className="text-sm text-muted-foreground">{form.mandatory ? 'Mandatory' : 'Optional'}</span>
-              </div>
-            </div>
-
-            <Button type="submit" disabled={createM.isPending}>
-              {createM.isPending ? 'Registering…' : 'Register Release'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Release History</CardTitle>
-          <CardDescription>All registered builds for the selected app, newest first.</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent className="pt-6">
           <AsyncSection
             isLoading={historyQ.isLoading}
             error={historyQ.error}
@@ -257,6 +197,76 @@ export function AppReleasesPage() {
           </AsyncSection>
         </CardContent>
       </Card>
+
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>New {APPS.find((a) => a.value === app)?.label.toLowerCase()} release</DialogTitle>
+            <DialogDescription>Paste the link people download this build from.</DialogDescription>
+          </DialogHeader>
+  <form onSubmit={handleCreate} className="space-y-4">
+    {formError && (
+      <Alert variant="destructive">
+        <AlertDescription>{formError}</AlertDescription>
+      </Alert>
+    )}
+
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="space-y-1.5">
+        <Label htmlFor="release-platform">Platform</Label>
+        <Select value={form.platform} onValueChange={(v) => setForm((p) => ({ ...p, platform: v }))}>
+          <SelectTrigger id="release-platform">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PLATFORMS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="release-version">Version</Label>
+        <Input id="release-version" value={form.version} onChange={setField('version')} placeholder="e.g. 1.0.1" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="release-version-code">Version Code</Label>
+        <Input id="release-version-code" type="number" min="1" step="1" value={form.versionCode} onChange={setField('versionCode')} placeholder="0" />
+      </div>
+    </div>
+
+    <div className="space-y-1.5">
+      <Label htmlFor="release-download-url">Download URL</Label>
+      <Input
+        id="release-download-url"
+        value={form.downloadUrl}
+        onChange={setField('downloadUrl')}
+        placeholder="https://"
+      />
+    </div>
+
+    <div className="space-y-1.5">
+      <Label htmlFor="release-notes">Release Notes</Label>
+      <Textarea id="release-notes" value={form.releaseNotes} onChange={setField('releaseNotes')} placeholder="What changed in this build" />
+    </div>
+
+    <div className="space-y-1.5">
+      <Label htmlFor="release-mandatory">Mandatory Update</Label>
+      <div className="flex items-center h-9 gap-2">
+        <Switch
+          id="release-mandatory"
+          checked={form.mandatory}
+          onCheckedChange={(v) => setForm((p) => ({ ...p, mandatory: v }))}
+          aria-label="Mark this release as a mandatory update"
+        />
+        <span className="text-sm text-muted-foreground">{form.mandatory ? 'Mandatory' : 'Optional'}</span>
+      </div>
+    </div>
+
+    <Button type="submit" disabled={createM.isPending}>
+      {createM.isPending ? 'Registering…' : 'Register Release'}
+    </Button>
+  </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

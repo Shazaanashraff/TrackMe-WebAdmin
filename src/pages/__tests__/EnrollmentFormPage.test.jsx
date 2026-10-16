@@ -92,3 +92,18 @@ describe('EnrollmentFormPage — offline', () => {
     expect(screen.getAllByText(/unsaved changes/i).length).toBeGreaterThan(0);
   });
 });
+
+describe('EnrollmentFormPage — what an admin sees', () => {
+  it('shows field labels only, with no internal key or form version', () => {
+    setup();
+    expect(screen.getByText('Student ID')).toBeInTheDocument();
+    expect(screen.queryByText('studentId')).not.toBeInTheDocument();
+    expect(screen.queryByText(/form version/i)).not.toBeInTheDocument();
+    expect(screen.getByText('School')).toBeInTheDocument();
+  });
+
+  it('says once, under the title, what is always collected', () => {
+    setup();
+    expect(screen.getByText(/full name and guardian phone are always collected/i)).toBeInTheDocument();
+  });
+});

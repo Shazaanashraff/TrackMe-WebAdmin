@@ -56,16 +56,24 @@ function setup(opts = {}) {
   return { user };
 }
 
+// Creating a route happens in a dialog opened from the page header.
+async function openCreateForm(user) {
+  await user.click(screen.getByRole('button', { name: /add route/i }));
+  await screen.findByRole('dialog');
+}
+
 describe('RoutesPage', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('renders the page heading', () => {
     setup();
-    expect(screen.getByRole('heading', { level: 1, name: /route management/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /^routes$/i })).toBeInTheDocument();
   });
 
-  it('renders the create route form with required fields', () => {
-    setup();
+  it('renders the create route form with required fields in a dialog', async () => {
+    const { user } = setup();
+    expect(screen.queryByLabelText(/route id/i)).not.toBeInTheDocument();
+    await openCreateForm(user);
     expect(screen.getByLabelText(/route id/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/route name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/source/i)).toBeInTheDocument();
@@ -92,12 +100,13 @@ describe('RoutesPage', () => {
     setup();
     // Western has 1 route, Central has 1 route
     const westernRow = screen.getByText('Western Province').closest('button');
-    expect(within(westernRow).getByText('1 routes')).toBeInTheDocument();
+    expect(within(westernRow).getByText('1 route')).toBeInTheDocument();
   });
 
-  it('shows routes by province manager subtitle', () => {
+  it('titles the list "Provinces"', () => {
     setup();
-    expect(screen.getByText(/routes by province manager/i)).toBeInTheDocument();
+    expect(screen.getByText('Provinces')).toBeInTheDocument();
+    expect(screen.queryByText(/routes by province manager/i)).not.toBeInTheDocument();
   });
 
   it('shows each province manager\'s real registered email, not a guessed formula (issue #16)', () => {
@@ -106,9 +115,9 @@ describe('RoutesPage', () => {
     expect(screen.getByText('central.manager@trackme.com')).toBeInTheDocument();
   });
 
-  it('falls back to a plain message when no manager is assigned to a province', () => {
+  it('shows no manager line for a province without one', () => {
     setup({ managers: [MANAGER_W] });
-    expect(screen.getAllByText('No manager assigned').length).toBeGreaterThan(0);
+    expect(screen.queryByText('No manager assigned')).not.toBeInTheDocument();
     expect(screen.queryByText(/central\.manager@trackme\.com/i)).toBeNull();
   });
 
@@ -127,7 +136,7 @@ describe('RoutesPage', () => {
     const routeLowercase = { ...ROUTE_C, _id: 'r-lower', province: 'central' };
     setup({ routes: [ROUTE_W, routeLowercase] });
     const centralRow = screen.getByText('Central Province').closest('button');
-    expect(within(centralRow).getByText('1 routes')).toBeInTheDocument();
+    expect(within(centralRow).getByText('1 route')).toBeInTheDocument();
     expect(screen.queryByText('Unassigned')).not.toBeInTheDocument();
   });
 
@@ -135,7 +144,7 @@ describe('RoutesPage', () => {
     const routeSuffixed = { ...ROUTE_C, _id: 'r-suffixed', province: 'Western Province' };
     setup({ routes: [routeSuffixed] });
     const westernRow = screen.getByText('Western Province').closest('button');
-    expect(within(westernRow).getByText('1 routes')).toBeInTheDocument();
+    expect(within(westernRow).getByText('1 route')).toBeInTheDocument();
     expect(screen.queryByText('Unassigned')).not.toBeInTheDocument();
   });
 
@@ -171,17 +180,19 @@ describe('RoutesPage', () => {
     await user.click(screen.getByText('Western Province').closest('button'));
     await screen.findByText('Colombo–Kandy');
     await user.click(screen.getByRole('button', { name: /all provinces/i }));
-    expect(screen.getByText('Routes by Province Manager')).toBeInTheDocument();
+    expect(screen.getByText('Provinces')).toBeInTheDocument();
   });
 
   it('validates required fields before submit', async () => {
     const { user } = setup();
+    await openCreateForm(user);
     await user.click(screen.getByRole('button', { name: /create route/i }));
     expect(await screen.findByText(/route id is required/i)).toBeInTheDocument();
   });
 
   it('rejects a non-numeric distance value instead of silently submitting NaN (issue #74)', async () => {
     const { user } = setup();
+    await openCreateForm(user);
     await user.type(screen.getByLabelText(/route id/i), 'RT-X');
     await user.type(screen.getByLabelText(/route name/i), 'Test Route');
     await user.type(screen.getByLabelText(/source/i), 'A');
@@ -198,6 +209,7 @@ describe('RoutesPage', () => {
 
   it('rejects a non-numeric fare value instead of silently submitting NaN', async () => {
     const { user } = setup();
+    await openCreateForm(user);
     await user.type(screen.getByLabelText(/route id/i), 'RT-X');
     await user.type(screen.getByLabelText(/route name/i), 'Test Route');
     await user.type(screen.getByLabelText(/source/i), 'A');
@@ -211,6 +223,7 @@ describe('RoutesPage', () => {
 
   it('validates stop fields when a partial stop is entered', async () => {
     const { user } = setup();
+    await openCreateForm(user);
     // Add a stop then fill only the name (leaving lat/lng empty)
     await user.click(screen.getByRole('button', { name: /add stop/i }));
     await user.type(screen.getByLabelText(/stop 1 name/i), 'Midpoint');
@@ -228,6 +241,7 @@ describe('RoutesPage', () => {
   it('calls createSystemRoute mutation with correct payload', async () => {
     const createMut = makeMutation();
     const { user } = setup({ createMut });
+    await openCreateForm(user);
 
     await user.type(screen.getByLabelText(/route id/i), 'RT-NW-01');
     await user.type(screen.getByLabelText(/route name/i), 'Colombo–Negombo');
@@ -260,6 +274,7 @@ describe('RoutesPage', () => {
     const conflict = Object.assign(new Error('A route with this routeId already exists'), { status: 409 });
     const createMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(conflict) });
     const { user } = setup({ createMut });
+    await openCreateForm(user);
 
     await user.type(screen.getByLabelText(/route id/i), 'RT-NW-01');
     await user.type(screen.getByLabelText(/route name/i), 'Colombo–Negombo');
@@ -275,6 +290,7 @@ describe('RoutesPage', () => {
   it('defaults QR attendance to disabled and includes it in the create payload when enabled', async () => {
     const createMut = makeMutation();
     const { user } = setup({ createMut });
+    await openCreateForm(user);
 
     expect(screen.getByLabelText(/enable qr attendance/i)).not.toBeChecked();
 
@@ -294,9 +310,10 @@ describe('RoutesPage', () => {
     });
   });
 
-  it('resets form after successful create', async () => {
+  it('closes the dialog and starts blank next time after a successful create', async () => {
     const createMut = makeMutation();
     const { user } = setup({ createMut });
+    await openCreateForm(user);
 
     await user.type(screen.getByLabelText(/route id/i), 'RT-TMP');
     await user.type(screen.getByLabelText(/route name/i), 'Temp Route');
@@ -307,13 +324,15 @@ describe('RoutesPage', () => {
     await user.click(screen.getByRole('button', { name: /create route/i }));
 
     await waitFor(() => expect(createMut.mutateAsync).toHaveBeenCalled());
-    await waitFor(() => {
-      expect(screen.getByLabelText(/route id/i)).toHaveValue('');
-    });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await openCreateForm(user);
+    expect(screen.getByLabelText(/route id/i)).toHaveValue('');
   });
 
   it('can add and remove stops', async () => {
     const { user } = setup();
+    await openCreateForm(user);
     await user.click(screen.getByRole('button', { name: /add stop/i }));
     expect(screen.getByLabelText(/stop 1 name/i)).toBeInTheDocument();
 
@@ -323,6 +342,7 @@ describe('RoutesPage', () => {
 
   it('keeps a stop\'s own values attached to it (not its position) after reordering (issue #17)', async () => {
     const { user } = setup();
+    await openCreateForm(user);
     await user.click(screen.getByRole('button', { name: /add stop/i }));
     await user.click(screen.getByRole('button', { name: /add stop/i }));
     await user.type(screen.getByLabelText(/stop 1 name/i), 'First');
@@ -338,6 +358,7 @@ describe('RoutesPage', () => {
 
   it('keeps a validation error attached to the invalid stop after reordering, not to whatever is now in its old position (issue #17)', async () => {
     const { user } = setup();
+    await openCreateForm(user);
     await user.click(screen.getByRole('button', { name: /add stop/i }));
     await user.click(screen.getByRole('button', { name: /add stop/i }));
     // Stop 1 ("Bad") is left partially filled (no lat/lng) — invalid.

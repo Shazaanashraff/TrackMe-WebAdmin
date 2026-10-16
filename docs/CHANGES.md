@@ -18,6 +18,23 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-10-16 — shadcn charts with load animation; super admin pages trimmed
+- **Branch:** claude/overview-charts-superadmin
+- **Modules touched:** [DASHBOARD](modules/DASHBOARD.md), [ACCOUNTS](modules/ACCOUNTS.md), [OPERATIONS](modules/OPERATIONS.md), [ROUTES](modules/ROUTES.md), [APP_RELEASES](modules/APP_RELEASES.md)
+- **What changed:**
+  - Added the shadcn `chart` primitive (`ui/chart.jsx`, recharts). The manager Payments preview now uses it: a grouped monthly bar chart and a horizontal expense breakdown. Charts sit behind a skeleton and then mount, so the bars grow in; reduced motion skips both (`hooks/use-chart-ready.js`).
+  - Super admin Dashboard: one Fleet card (managers, active, inactive and pending only when above zero), an animated "Vehicles by manager" chart from the operations endpoint, and a "Waiting for approval" list. The old "Active Routes" table (it listed managers and printed "Unnamed" and "0 vehicles"), bookings, rating, snapshot and analytics placeholder are removed. Shared `SummaryCard` also drives the manager overview.
+  - Managers: no stat cards or subtitle; Edit, Activate/Deactivate and Delete are in a row menu next to View.
+  - Operations: vehicle requests come first; no stat cards, bookings, revenue or rating; request types and activity use plain words (`lib/labels.js`); the developer note under the audit log is gone.
+  - Routes: titled "Routes"; Create route is a dialog opened from the header; province rows hide "No manager assigned"; "1 route" singular.
+  - App releases: history first, new release in a dialog, one line per build (version, build, mandatory), no repo-workflow hint in the UI.
+  - Enrollment form: one line under the title replaces the banner; no raw field keys or form version.
+- **Why:** super admin portal cleanup from the page audit.
+- **Contract impact:** none.
+- **Tests:** unit tests rewritten for DashboardPage, ManagersPage, OperationsPage, RoutesPage, AppReleasesPage, EnrollmentFormPage, ManagerDashboardPage; new `lib/labels` tests.
+- **Docs updated:** this entry.
+- **Follow-ups / known issues:** the "Columns" button on every table and the shell (breadcrumb, ⌘K search, duplicate sign out) are unchanged. Route IDs are still typed by hand. The Payments charts use sample data.
+
 ## 2026-10-16 — Manager pages cleanup: tracking, drivers, enrollments, settings
 - **Branch:** claude/manager-pages-cleanup
 - **Modules touched:** [TRACKING](modules/TRACKING.md), [BUSES](modules/BUSES.md), [ENROLLMENT_REQUESTS](modules/ENROLLMENT_REQUESTS.md), [SETTINGS](modules/SETTINGS.md)

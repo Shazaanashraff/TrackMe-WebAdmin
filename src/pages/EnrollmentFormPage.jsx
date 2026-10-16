@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { useOnlineStatus } from '@/hooks/use-online-status';
+import { sentenceCase } from '@/lib/labels';
 import { useEnrollmentSchema, useOrganizations, useSaveEnrollmentSchema } from '@/hooks/use-enrollment-schema';
 
 export function EnrollmentFormPage() {
@@ -77,7 +78,11 @@ export function EnrollmentFormPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Enrollment form" description="Choose only the details your organization needs for each student or employee." />
+      <PageHeader
+        title="Enrollment form"
+        description="Full name and guardian phone are always collected. Choose the extra details."
+        className="mb-0"
+      />
 
       {superAdmin ? (
         <Card>
@@ -85,13 +90,12 @@ export function EnrollmentFormPage() {
             <label className="text-sm font-medium block mb-2" htmlFor="organization-select">Organization</label>
             <Select value={organizationId} onValueChange={setOrganizationId}>
               <SelectTrigger id="organization-select"><SelectValue placeholder="Select an organization" /></SelectTrigger>
-              <SelectContent>{organizations.map((organization) => <SelectItem key={organization._id} value={organization._id}>{organization.name} · {organization.serviceType}</SelectItem>)}</SelectContent>
+              <SelectContent>{organizations.map((organization) => <SelectItem key={organization._id} value={organization._id}>{organization.name} · {sentenceCase(organization.serviceType)}</SelectItem>)}</SelectContent>
             </Select>
           </CardContent>
         </Card>
       ) : null}
 
-      <Alert><AlertDescription>Full name and guardian/contact phone are always collected by Pingo. The fields below are the organization-specific details added to that standard information.</AlertDescription></Alert>
 
       {schemaQ.isLoading ? <Skeleton className="h-72 w-full rounded-xl" /> : schemaQ.error && !config ? (
         !isOnline
@@ -102,7 +106,7 @@ export function EnrollmentFormPage() {
           <CardHeader className="flex-row items-start justify-between gap-3">
             <div>
               <CardTitle>{config.organization.name}</CardTitle>
-              <CardDescription>{config.organization.serviceType} · Form version {config.schemaVersion}</CardDescription>
+              <CardDescription>{sentenceCase(config.organization.serviceType)}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               {isDirty && <span className="rounded-full border border-status-warning/30 bg-status-warning/10 px-2 py-0.5 text-xs font-medium text-status-warning">Unsaved changes</span>}
@@ -116,7 +120,6 @@ export function EnrollmentFormPage() {
               <div key={field.key} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center sm:gap-4 rounded-xl border border-border px-3 py-3 sm:px-4">
                 <div>
                   <div className="font-medium text-sm">{field.label}</div>
-                  <div className="text-xs text-muted-foreground font-mono break-all">{field.key}</div>
                 </div>
                 <div className="flex items-center gap-5">
                   <label className="flex items-center gap-2 coarse:min-h-11 text-sm">
@@ -142,9 +145,6 @@ export function EnrollmentFormPage() {
               </Alert>
             )}
             <div className="flex items-center justify-end gap-3 pt-3">
-              {isDirty && isOnline && (
-                <span className="text-xs text-muted-foreground">Unsaved changes</span>
-              )}
               <Button onClick={submit} disabled={save.isPending || !isOnline}>
                 <Save className="mr-2 h-4 w-4" />{save.isPending ? 'Saving…' : 'Save form'}
               </Button>

@@ -15,6 +15,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -28,6 +31,8 @@ import { useManagers } from '@/hooks/use-managers';
 import { SERVICE_TYPES } from '@/lib/serviceTypes';
 
 const UNASSIGNED = '__unassigned__';
+
+const routeCount = (n) => `${n} ${n === 1 ? 'route' : 'routes'}`;
 
 const PROVINCES = [
   { name: 'Western', slug: 'western' },
@@ -201,6 +206,7 @@ export function RoutesPage() {
   const [formError, setFormError] = useState(null);
   const [invalidStopIds, setInvalidStopIds] = useState([]);
   const [selectedProvince, setSelectedProvince] = useState(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const [editTarget, setEditTarget] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
@@ -287,6 +293,7 @@ export function RoutesPage() {
       });
       toast('Route created successfully');
       setForm(EMPTY_FORM);
+      setCreateOpen(false);
       setInvalidStopIds([]);
     } catch (err) {
       setFormError(err?.message || 'Failed to create route');
@@ -371,159 +378,164 @@ export function RoutesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Route Management"
-        description="Create system routes and browse assignments by province manager."
+        title="Routes"
+        className="mb-0"
+        actions={(
+          <Button onClick={() => setCreateOpen(true)} disabled={!isOnline} title={isOnline ? undefined : 'Unavailable offline'}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Add route
+          </Button>
+        )}
       />
 
-      {/* Create route form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Create Route</CardTitle>
-          <CardDescription>Stops are optional and can be added, reordered, or removed before saving.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreate} className="space-y-4">
-            {formError && (
-              <Alert variant="destructive">
-                <AlertDescription>{formError}</AlertDescription>
-              </Alert>
-            )}
+      {/* Create route */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create route</DialogTitle>
+          </DialogHeader>
+  <form onSubmit={handleCreate} className="space-y-4">
+    {formError && (
+      <Alert variant="destructive">
+        <AlertDescription>{formError}</AlertDescription>
+      </Alert>
+    )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="route-id">Route ID</Label>
-                <Input id="route-id" value={form.routeId} onChange={setField('routeId')} placeholder="e.g. RT-001" />
-              </div>
-              <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="route-name">Route Name</Label>
-                <Input id="route-name" value={form.routeName} onChange={setField('routeName')} placeholder="e.g. Colombo–Kandy Express" />
-              </div>
-            </div>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="space-y-1.5">
+        <Label htmlFor="route-id">Route ID</Label>
+        <Input id="route-id" value={form.routeId} onChange={setField('routeId')} placeholder="e.g. RT-001" />
+      </div>
+      <div className="sm:col-span-2 space-y-1.5">
+        <Label htmlFor="route-name">Route Name</Label>
+        <Input id="route-name" value={form.routeName} onChange={setField('routeName')} placeholder="e.g. Colombo–Kandy Express" />
+      </div>
+    </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="route-source">Source</Label>
-                <Input id="route-source" value={form.source} onChange={setField('source')} placeholder="City or terminal" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="route-dest">Destination</Label>
-                <Input id="route-dest" value={form.destination} onChange={setField('destination')} placeholder="City or terminal" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="route-dist">Distance (km)</Label>
-                <Input id="route-dist" type="number" min="0.1" step="0.1" value={form.distance} onChange={setField('distance')} placeholder="0" />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="route-fare">Fare (LKR)</Label>
-                <Input id="route-fare" type="number" min="1" step="1" value={form.fare} onChange={setField('fare')} placeholder="0" />
-              </div>
-            </div>
+    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+      <div className="space-y-1.5">
+        <Label htmlFor="route-source">Source</Label>
+        <Input id="route-source" value={form.source} onChange={setField('source')} placeholder="City or terminal" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="route-dest">Destination</Label>
+        <Input id="route-dest" value={form.destination} onChange={setField('destination')} placeholder="City or terminal" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="route-dist">Distance (km)</Label>
+        <Input id="route-dist" type="number" min="0.1" step="0.1" value={form.distance} onChange={setField('distance')} placeholder="0" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="route-fare">Fare (LKR)</Label>
+        <Input id="route-fare" type="number" min="1" step="1" value={form.fare} onChange={setField('fare')} placeholder="0" />
+      </div>
+    </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="route-service">Service Type</Label>
-                <Select value={form.serviceType} onValueChange={(v) => setForm((p) => ({ ...p, serviceType: v }))}>
-                  <SelectTrigger id="route-service">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SERVICE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="route-qr">QR Attendance</Label>
-                <div className="flex items-center h-9 gap-2">
-                  <Switch
-                    id="route-qr"
-                    checked={form.qrEnabled}
-                    onCheckedChange={(v) => setForm((p) => ({ ...p, qrEnabled: v }))}
-                    aria-label="Enable QR attendance for this route"
-                  />
-                  <span className="text-sm text-muted-foreground">{form.qrEnabled ? 'Enabled' : 'Disabled'}</span>
-                </div>
-              </div>
-            </div>
+    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+      <div className="space-y-1.5">
+        <Label htmlFor="route-service">Service Type</Label>
+        <Select value={form.serviceType} onValueChange={(v) => setForm((p) => ({ ...p, serviceType: v }))}>
+          <SelectTrigger id="route-service">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SERVICE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="route-qr">QR Attendance</Label>
+        <div className="flex items-center h-9 gap-2">
+          <Switch
+            id="route-qr"
+            checked={form.qrEnabled}
+            onCheckedChange={(v) => setForm((p) => ({ ...p, qrEnabled: v }))}
+            aria-label="Enable QR attendance for this route"
+          />
+          <span className="text-sm text-muted-foreground">{form.qrEnabled ? 'Enabled' : 'Disabled'}</span>
+        </div>
+      </div>
+    </div>
 
-            {/* Stops section */}
-            <div className="rounded-xl border border-border bg-surface-muted p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">Stops (Optional)</span>
-                <Button type="button" size="sm" variant="outline" onClick={addStop}>
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                  Add Stop
+    {/* Stops section */}
+    <div className="rounded-xl border border-border bg-surface-muted p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold">Stops (optional)</span>
+        <Button type="button" size="sm" variant="outline" onClick={addStop}>
+          <Plus className="h-3.5 w-3.5 mr-1" />
+          Add Stop
+        </Button>
+      </div>
+
+      {form.stops.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No stops yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {form.stops.map((stop, i) => {
+            const stopInvalid = invalidStopIds.includes(stop.clientId);
+            return (
+            <div key={stop.clientId} className="grid grid-cols-12 gap-2 items-center">
+              <div className="col-span-12 sm:col-span-5">
+                <Input
+                  aria-label={`Stop ${i + 1} name`}
+                  aria-invalid={stopInvalid}
+                  placeholder={`Stop ${i + 1} name`}
+                  value={stop.stopName}
+                  onChange={(e) => updateStop(i, 'stopName', e.target.value)}
+                />
+              </div>
+              <div className="col-span-4 sm:col-span-2">
+                <Input
+                  aria-label={`Stop ${i + 1} latitude`}
+                  aria-invalid={stopInvalid}
+                  type="number"
+                  placeholder="Lat"
+                  value={stop.lat}
+                  onChange={(e) => updateStop(i, 'lat', e.target.value)}
+                />
+              </div>
+              <div className="col-span-4 sm:col-span-2">
+                <Input
+                  aria-label={`Stop ${i + 1} longitude`}
+                  aria-invalid={stopInvalid}
+                  type="number"
+                  placeholder="Lng"
+                  value={stop.lng}
+                  onChange={(e) => updateStop(i, 'lng', e.target.value)}
+                />
+              </div>
+              <div className="col-span-4 sm:col-span-3 flex gap-1 justify-end">
+                <Button type="button" size="sm" variant="ghost" aria-label="Move up" disabled={i === 0} onClick={() => moveStop(i, 'up')}>
+                  <ArrowUp className="h-3.5 w-3.5" />
+                </Button>
+                <Button type="button" size="sm" variant="ghost" aria-label="Move down" disabled={i === form.stops.length - 1} onClick={() => moveStop(i, 'down')}>
+                  <ArrowDown className="h-3.5 w-3.5" />
+                </Button>
+                <Button type="button" size="sm" variant="ghost" aria-label="Remove stop" onClick={() => removeStop(i)}>
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
                 </Button>
               </div>
-
-              {form.stops.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No stops added. Stops are optional.</p>
-              ) : (
-                <div className="space-y-2">
-                  {form.stops.map((stop, i) => {
-                    const stopInvalid = invalidStopIds.includes(stop.clientId);
-                    return (
-                    <div key={stop.clientId} className="grid grid-cols-12 gap-2 items-center">
-                      <div className="col-span-12 sm:col-span-5">
-                        <Input
-                          aria-label={`Stop ${i + 1} name`}
-                          aria-invalid={stopInvalid}
-                          placeholder={`Stop ${i + 1} name`}
-                          value={stop.stopName}
-                          onChange={(e) => updateStop(i, 'stopName', e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-4 sm:col-span-2">
-                        <Input
-                          aria-label={`Stop ${i + 1} latitude`}
-                          aria-invalid={stopInvalid}
-                          type="number"
-                          placeholder="Lat"
-                          value={stop.lat}
-                          onChange={(e) => updateStop(i, 'lat', e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-4 sm:col-span-2">
-                        <Input
-                          aria-label={`Stop ${i + 1} longitude`}
-                          aria-invalid={stopInvalid}
-                          type="number"
-                          placeholder="Lng"
-                          value={stop.lng}
-                          onChange={(e) => updateStop(i, 'lng', e.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-4 sm:col-span-3 flex gap-1 justify-end">
-                        <Button type="button" size="sm" variant="ghost" aria-label="Move up" disabled={i === 0} onClick={() => moveStop(i, 'up')}>
-                          <ArrowUp className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button type="button" size="sm" variant="ghost" aria-label="Move down" disabled={i === form.stops.length - 1} onClick={() => moveStop(i, 'down')}>
-                          <ArrowDown className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button type="button" size="sm" variant="ghost" aria-label="Remove stop" onClick={() => removeStop(i)}>
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
 
-            {!isOnline && (
-              <Alert variant="warning">
-                <AlertDescription>
-                  You&apos;re offline. Your entries stay here — reconnect to create the route.
-                </AlertDescription>
-              </Alert>
-            )}
+    {!isOnline && (
+      <Alert variant="warning">
+        <AlertDescription>
+          You&apos;re offline. Your entries stay here — reconnect to create the route.
+        </AlertDescription>
+      </Alert>
+    )}
 
-            <Button type="submit" disabled={createM.isPending || !isOnline}>
-              {createM.isPending ? 'Creating…' : 'Create Route'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <Button type="submit" disabled={createM.isPending || !isOnline}>
+      {createM.isPending ? 'Creating…' : 'Create route'}
+    </Button>
+  </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Province drill-down or list */}
       {selectedProvince ? (
@@ -533,13 +545,13 @@ export function RoutesPage() {
               <CardTitle className="text-base">
                 {selectedProvince === UNASSIGNED ? 'Unassigned Routes' : `${selectedProvince} Province`}
               </CardTitle>
-              {selectedProvince !== UNASSIGNED && (
-                <CardDescription>{managerEmailByProvince[selectedProvince] || 'No manager assigned'}</CardDescription>
+              {selectedProvince !== UNASSIGNED && managerEmailByProvince[selectedProvince] && (
+                <CardDescription>{managerEmailByProvince[selectedProvince]}</CardDescription>
               )}
             </div>
             <div className="flex items-center gap-3">
               <StaleChip updatedAt={routesQ.dataUpdatedAt} offline={!isOnline} />
-              <Badge variant="secondary">{visibleRoutes.length} routes</Badge>
+              <Badge variant="secondary">{routeCount(visibleRoutes.length)}</Badge>
               <Button size="sm" variant="outline" onClick={() => setSelectedProvince(null)}>← All provinces</Button>
             </div>
           </CardHeader>
@@ -557,12 +569,11 @@ export function RoutesPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-base">Routes by Province Manager</CardTitle>
-              <CardDescription>Click a province to view its routes</CardDescription>
+              <CardTitle className="text-base">Provinces</CardTitle>
             </div>
             <div className="flex items-center gap-3">
               <StaleChip updatedAt={routesQ.dataUpdatedAt} offline={!isOnline} />
-              <span className="text-sm text-muted-foreground tabular-nums">{routes.length} routes total</span>
+              <span className="text-sm text-muted-foreground tabular-nums">{routeCount(routes.length)} total</span>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
@@ -579,9 +590,11 @@ export function RoutesPage() {
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-foreground text-sm">{province.name} Province</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{managerEmailByProvince[province.name] || 'No manager assigned'}</p>
+                        {managerEmailByProvince[province.name] && (
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{managerEmailByProvince[province.name]}</p>
+                        )}
                       </div>
-                      <Badge variant={count > 0 ? 'default' : 'secondary'}>{count} routes</Badge>
+                      <Badge variant={count > 0 ? 'default' : 'secondary'}>{routeCount(count)}</Badge>
                       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     </button>
                   );
@@ -599,7 +612,7 @@ export function RoutesPage() {
                         <p className="font-semibold text-foreground text-sm">Unassigned</p>
                         <p className="text-xs text-muted-foreground mt-0.5">No province manager</p>
                       </div>
-                      <Badge variant="outline">{unassignedCount} routes</Badge>
+                      <Badge variant="outline">{routeCount(unassignedCount)}</Badge>
                       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     </button>
                   </>

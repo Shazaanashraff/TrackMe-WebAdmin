@@ -50,31 +50,45 @@ function setup(opts = {}) {
   return { user };
 }
 
+// Registering a build happens in a dialog opened from the header.
+async function openForm(user) {
+  await user.click(screen.getByRole('button', { name: /new release/i }));
+  await screen.findByRole('dialog');
+}
+
 describe('AppReleasesPage', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('renders the page heading', () => {
     setup();
-    expect(screen.getByRole('heading', { level: 1, name: /app releases/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /^app releases$/i })).toBeInTheDocument();
   });
 
-  it('renders the create-release form fields', () => {
-    setup();
+  it('shows the history first and opens the create form in a dialog', async () => {
+    const { user } = setup();
+    expect(screen.queryByLabelText(/download url/i)).not.toBeInTheDocument();
+    await openForm(user);
     expect(screen.getByLabelText(/^version$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/version code/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/download url/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/release notes/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /register release/i })).toBeInTheDocument();
+    // No repo-workflow instructions in the UI.
+    expect(screen.queryByText(/public\/downloads/i)).not.toBeInTheDocument();
   });
 
   it('renders the history table with existing releases', () => {
     setup();
     expect(screen.getByText('1.0.0')).toBeInTheDocument();
     expect(screen.getByText('0.9.0')).toBeInTheDocument();
+    // One line per build: platform in words, mandatory shown beside the version.
+    expect(screen.getAllByText('Android')).toHaveLength(2);
+    expect(screen.getAllByText('Mandatory')).toHaveLength(1);
   });
 
   it('validates required fields before submit', async () => {
     const { user } = setup();
+    await openForm(user);
     await user.click(screen.getByRole('button', { name: /register release/i }));
     expect(await screen.findByText(/version is required/i)).toBeInTheDocument();
   });
@@ -82,6 +96,7 @@ describe('AppReleasesPage', () => {
   it('submits the create mutation with the correct payload', async () => {
     const createMut = makeMutation();
     const { user } = setup({ createMut });
+    await openForm(user);
 
     await user.type(screen.getByLabelText(/^version$/i), '1.0.1');
     await user.type(screen.getByLabelText(/version code/i), '2');
@@ -138,6 +153,7 @@ describe('AppReleasesPage', () => {
     const conflict = new Error('A release with this version already exists');
     const createMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(conflict) });
     const { user } = setup({ createMut });
+    await openForm(user);
 
     await user.type(screen.getByLabelText(/^version$/i), '1.0.0');
     await user.type(screen.getByLabelText(/version code/i), '1');
