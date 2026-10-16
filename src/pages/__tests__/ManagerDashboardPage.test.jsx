@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ManagerDashboardPage } from '../ManagerDashboardPage';
@@ -129,5 +129,19 @@ describe('ManagerDashboardPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Hide amounts' }));
     expect(document.body.textContent).not.toMatch(/LKR/);
+  });
+
+  it('holds the charts behind a skeleton, then mounts them so they animate in', () => {
+    vi.useFakeTimers();
+    try {
+      setup();
+      expect(document.querySelectorAll('[data-chart]')).toHaveLength(0);
+      expect(document.querySelectorAll('[aria-hidden].animate-pulse').length).toBe(2);
+
+      act(() => { vi.advanceTimersByTime(700); });
+      expect(document.querySelectorAll('[data-chart]')).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

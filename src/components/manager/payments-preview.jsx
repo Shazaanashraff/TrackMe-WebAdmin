@@ -1,58 +1,68 @@
 import { useState } from 'react';
+import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from 'recharts';
 import { Eye, EyeOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent,
+} from '@/components/ui/chart';
+import { Skeleton } from '@/components/ui/skeleton';
 import { formatLKR } from '@/components/shared/money';
+import { prefersReducedMotion, useChartReady } from '@/hooks/use-chart-ready';
 
 // Placeholder figures for the Payments module, which has no backend yet. They
 // only shape the preview, so the card says "Sample data" and is never fed from
-// the API. Replace this array with the real monthly series when it exists.
+// the API. Replace these arrays with the real series when it exists.
 const SAMPLE_MONTHS = [
-  { label: 'May', received: 412000, expenses: 268000 },
-  { label: 'Jun', received: 436000, expenses: 281000 },
-  { label: 'Jul', received: 398000, expenses: 302000 },
-  { label: 'Aug', received: 455000, expenses: 274000 },
-  { label: 'Sep', received: 471000, expenses: 295000 },
-  { label: 'Oct', received: 489000, expenses: 288000 },
+  { month: 'May', received: 412000, expenses: 268000 },
+  { month: 'Jun', received: 436000, expenses: 281000 },
+  { month: 'Jul', received: 398000, expenses: 302000 },
+  { month: 'Aug', received: 455000, expenses: 274000 },
+  { month: 'Sep', received: 471000, expenses: 295000 },
+  { month: 'Oct', received: 489000, expenses: 288000 },
 ];
 
 const SAMPLE_EXPENSES = [
-  { label: 'Fuel', amount: 148000 },
-  { label: 'Maintenance', amount: 74000 },
-  { label: 'Driver wages', amount: 52000 },
-  { label: 'Insurance', amount: 14000 },
+  { category: 'Fuel', amount: 148000 },
+  { category: 'Maintenance', amount: 74000 },
+  { category: 'Driver wages', amount: 52000 },
+  { category: 'Insurance', amount: 14000 },
 ];
 
-const MASK = '••••••';
-const CHART_HEIGHT = 160;
+const MONTHLY_CONFIG = {
+  received: { label: 'Received', color: 'var(--primary)' },
+  expenses: { label: 'Expenses', color: 'var(--status-warning)' },
+};
+const EXPENSE_CONFIG = { amount: { label: 'Expenses', color: 'var(--status-warning)' } };
 
-function Amount({ value, revealed }) {
-  return (
-    <span className="font-mono tabular-nums">
-      {revealed ? formatLKR(value) : MASK}
-    </span>
-  );
-}
+const MASK = '••••••';
 
 function Summary({ label, value, revealed }) {
   return (
     <div className="rounded-lg border border-border bg-surface-muted px-3 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-foreground">
-        <Amount value={value} revealed={revealed} />
+      <p className="mt-1 font-mono text-lg font-semibold tabular-nums text-foreground">
+        {revealed ? formatLKR(value) : MASK}
       </p>
     </div>
   );
 }
 
+function ChartSkeleton({ className }) {
+  return <Skeleton className={className} aria-hidden />;
+}
+
 export function PaymentsPreview() {
   const [revealed, setRevealed] = useState(false);
+  const ready = useChartReady(600);
+  const animate = !prefersReducedMotion();
 
   const latest = SAMPLE_MONTHS[SAMPLE_MONTHS.length - 1];
-  const peak = Math.max(...SAMPLE_MONTHS.flatMap((m) => [m.received, m.expenses]));
   const expenseTotal = SAMPLE_EXPENSES.reduce((sum, e) => sum + e.amount, 0);
-  const topExpense = Math.max(...SAMPLE_EXPENSES.map((e) => e.amount));
+
+  // Tooltips and bar labels carry the amounts, so both honour the eye toggle.
+  const money = (value) => (revealed ? formatLKR(value) : MASK);
 
   return (
     <Card>
@@ -85,65 +95,73 @@ export function PaymentsPreview() {
         </div>
 
         <section aria-label="Monthly received and expenses">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h4 className="text-sm font-medium text-foreground">Monthly received vs expenses</h4>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-sm bg-primary" aria-hidden />
-                Received
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-sm bg-status-warning" aria-hidden />
-                Expenses
-              </span>
-            </div>
-          </div>
-          <div className="grid grid-cols-6 gap-2 sm:gap-4" style={{ height: CHART_HEIGHT + 24 }}>
-            {SAMPLE_MONTHS.map((m) => (
-              <div key={m.label} className="flex min-w-0 flex-col items-center justify-end gap-2">
-                <div
-                  className="flex w-full items-end justify-center gap-1 border-b border-border"
-                  style={{ height: CHART_HEIGHT }}
-                  title={revealed ? `${m.label}: received ${formatLKR(m.received)}, expenses ${formatLKR(m.expenses)}` : undefined}
-                >
-                  <div
-                    className="w-full max-w-5 rounded-t bg-primary"
-                    style={{ height: `${(m.received / peak) * 100}%` }}
-                  />
-                  <div
-                    className="w-full max-w-5 rounded-t bg-status-warning"
-                    style={{ height: `${(m.expenses / peak) * 100}%` }}
-                  />
-                </div>
-                <span className="text-xs text-muted-foreground">{m.label}</span>
-              </div>
-            ))}
-          </div>
+          <h4 className="mb-2 text-sm font-medium text-foreground">Monthly received vs expenses</h4>
+          {ready ? (
+            <ChartContainer config={MONTHLY_CONFIG} className="aspect-auto h-52 w-full">
+              <BarChart data={SAMPLE_MONTHS} margin={{ top: 8, right: 4, left: 4, bottom: 0 }} barGap={4}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent formatter={(value, name) => (
+                    <div className="flex w-full items-center justify-between gap-4">
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <span
+                          className="h-2.5 w-2.5 rounded-[2px]"
+                          style={{ backgroundColor: `var(--color-${name})` }}
+                        />
+                        {MONTHLY_CONFIG[name]?.label}
+                      </span>
+                      <span className="font-mono font-medium tabular-nums">{money(value)}</span>
+                    </div>
+                  )}
+                  />}
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar
+                  dataKey="received" fill="var(--color-received)" radius={[4, 4, 0, 0]}
+                  isAnimationActive={animate} animationDuration={900} animationBegin={0} animationEasing="ease-out"
+                />
+                <Bar
+                  dataKey="expenses" fill="var(--color-expenses)" radius={[4, 4, 0, 0]}
+                  isAnimationActive={animate} animationDuration={900} animationBegin={180} animationEasing="ease-out"
+                />
+              </BarChart>
+            </ChartContainer>
+          ) : (
+            <ChartSkeleton className="h-52 w-full" />
+          )}
         </section>
 
         <section aria-label="Expense breakdown">
-          <h4 className="mb-3 text-sm font-medium text-foreground">Where the money goes</h4>
-          <ul className="space-y-3">
-            {SAMPLE_EXPENSES.map((e) => (
-              <li key={e.label} className="space-y-1">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-foreground">{e.label}</span>
-                  <span className="text-muted-foreground">
-                    <Amount value={e.amount} revealed={revealed} />
-                  </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
-                  <div
-                    className="h-full rounded-full bg-status-warning"
-                    style={{ width: `${(e.amount / topExpense) * 100}%` }}
+          <div className="mb-2 flex items-baseline justify-between gap-3">
+            <h4 className="text-sm font-medium text-foreground">Where the money goes</h4>
+            <p className="text-xs text-muted-foreground">
+              Total expenses <span className="font-mono tabular-nums">{money(expenseTotal)}</span>
+            </p>
+          </div>
+          {ready ? (
+            <ChartContainer config={EXPENSE_CONFIG} className="aspect-auto h-44 w-full">
+              <BarChart data={SAMPLE_EXPENSES} layout="vertical" margin={{ top: 0, right: 96, left: 8, bottom: 0 }}>
+                <YAxis
+                  dataKey="category" type="category" tickLine={false} axisLine={false} width={96}
+                />
+                <XAxis dataKey="amount" type="number" hide />
+                <Bar
+                  dataKey="amount" fill="var(--color-amount)" radius={4} barSize={14}
+                  isAnimationActive={animate} animationDuration={1000} animationBegin={300} animationEasing="ease-out"
+                >
+                  <LabelList
+                    dataKey="amount" position="right" offset={8}
+                    className="fill-muted-foreground font-mono"
+                    formatter={(value) => money(value)}
                   />
-                </div>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Total expenses <Amount value={expenseTotal} revealed={revealed} />
-          </p>
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          ) : (
+            <ChartSkeleton className="h-44 w-full" />
+          )}
         </section>
       </CardContent>
     </Card>
