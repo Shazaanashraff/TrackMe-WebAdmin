@@ -24,7 +24,6 @@ test.describe('Manager creates a custom-route vehicle', () => {
 
     const dialog = page.getByRole('dialog');
 
-    // --- Step 1: Vehicle Details ---
     await dialog.getByLabel(/vehicle id/i).fill('CUST-VEH-1');
     await dialog.getByLabel(/vehicle name/i).fill('School Shuttle');
     await dialog.getByLabel(/number plate/i).fill('CAB-1234');
@@ -35,14 +34,9 @@ test.describe('Manager creates a custom-route vehicle', () => {
     await expect(dialog.getByText(/driver will record the route/i)).toBeVisible();
     await expect(dialog.getByLabel(/^route$/i)).toHaveCount(0);
 
-    await dialog.getByRole('button', { name: /continue/i }).click();
-
-    // --- Step 2: Driver (optional) — deliberately left empty ---
-    await dialog.getByRole('button', { name: /continue/i }).click();
-
-    // --- Step 3: Review & Create. The mock's fleet starts empty, so this is
-    // the manager's first vehicle and is created outright rather than
-    // submitted for approval (hence "Create Vehicle", not "Submit Request").
+    // The mock's fleet starts empty, so this is the manager's first vehicle and
+    // is created outright rather than submitted for approval (hence "Create
+    // Vehicle", not "Submit Request").
     await dialog.getByRole('button', { name: /create vehicle/i }).click();
 
     await expect(dialog).not.toBeVisible({ timeout: 10_000 });
@@ -57,6 +51,6 @@ test.describe('Manager creates a custom-route vehicle', () => {
     expect((vehicleRequests[0] as { routeId?: string }).routeId).toBeFalsy();
 
     expect(vehicles).toHaveLength(1);
-    await expect(page.getByText('CUST-VEH-1')).toBeVisible();
+    await expect(page.getByText('School Shuttle')).toBeVisible();
   });
 });

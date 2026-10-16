@@ -18,7 +18,8 @@ deliberately low-profile (issue #15) rather than a large empty placeholder card.
 | File | Responsibility |
 |---|---|
 | `src/pages/DashboardPage.jsx` | Super-admin dashboard: KPI stat cards, a compact operations snapshot (top 6 routes), pending-vehicle-request count, and the compact Analytics note. |
-| `src/pages/ManagerDashboardPage.jsx` | Manager dashboard: booking-summary stat cards, confirmed/cancelled counts, and the compact Booking Trend note. |
+| `src/pages/ManagerDashboardPage.jsx` | Manager dashboard: one Vehicles card (total, active, and pending only when above zero), a 2/3 Payments preview on the left and a 1/3 "On a journey" list on the right. |
+| `src/components/manager/payments-preview.jsx` | The Payments "Coming soon" section: sample monthly received/expenses chart and expense breakdown. Amounts are masked until the eye button is pressed. Sample data only, no API. |
 | `src/hooks/use-dashboard.js` | `useSuperAdminDashboard()`, `useManagerDashboard()` — the two dashboard KPI queries. |
 | `src/hooks/use-operations.js` | `useOperationsOverview()`, `usePendingVehicleRequests()` — reused by `DashboardPage` for its operations snapshot and pending-request count (not duplicated from `OperationsPage`). |
 | `src/components/shared/stat-card.jsx` | The KPI tile both pages render in a grid. |
@@ -31,6 +32,7 @@ DashboardPage        → useSuperAdminDashboard() ──────────
                       → usePendingVehicleRequests()  ──────┘
 
 ManagerDashboardPage → useManagerDashboard() → adminApi.getManagerDashboard() → GET /api/manager/dashboard
+                     → useManagerFleetLive() → GET /api/manager/vehicles/live (same cache as Live tracking)
 ```
 
 ## 4. Contracts (API)
@@ -72,7 +74,7 @@ Backend side: [`ADMIN.md`](../../../backend/docs/modules/ADMIN.md).
 | Layer | File | What it locks |
 |---|---|---|
 | RTL | `src/pages/__tests__/DashboardPage.test.jsx` | KPI stat cards, no fabricated currency symbols, empty-operations state, the compact Analytics placeholder (issue #15) — asserts no `py-10` ancestor around the "Not enough data yet" text; partial-failure isolation (issue #26) — `useOperationsOverview` failing alone leaves the KPI cards rendering normally, with exactly one scoped `ErrorState`, not a page-wide banner |
-| RTL | `src/pages/__tests__/ManagerDashboardPage.test.jsx` | booking-summary stat cards, confirmed/cancelled counts, pending-request count, fleet snapshot rows, the compact Booking Trend placeholder (issue #15) — asserts no `py-12` ancestor |
+| RTL | `src/pages/__tests__/ManagerDashboardPage.test.jsx` | one Vehicles card, pending hidden at zero, no booking metrics, running-vehicle list linking to `/manager/tracking?vehicle=<id>`, Payments amounts hidden until the eye button is pressed |
 
 ## 7a. Offline behaviour (Offline & Caching Audit §7)
 
@@ -109,10 +111,17 @@ Vehicles card passes the count as `value` and the utilization percentage as `hin
 concatenate them back into one string, which produced an unreadable `6 (75%)` at phone
 widths. `StatCard` values are `text-2xl sm:text-3xl` with `break-words`, which is what keeps
 a long `Money` value (`LKR 1,284,500.50`) inside its box.
+## Manager dashboard layout (2026-10-16)
+
+One Vehicles card holds Total, Active and Pending (pending is not rendered at zero). Below it,
+two thirds is the Payments preview and one third lists vehicles currently broadcasting
+(`trackingState !== 'offline'`); each links to Live tracking with that vehicle selected.
+Payments is a labelled sample until a payments API exists; nothing on it comes from the backend.
+
 ## No booking metrics on the manager dashboard (2026-09-23)
 
-The manager dashboard shows **three** stats: Total Vehicles, Active Vehicles (with a
-utilization hint) and Pending Requests. Total Revenue, Booking Summary and Booking Trend
+The manager dashboard used to show **three** stats: Total Vehicles, Active Vehicles (with a
+utilization hint) and Pending Requests, now merged into the Vehicles card. Total Revenue, Booking Summary and Booking Trend
 were removed, and they should not come back without the reason below changing first.
 
 `GET /api/manager/dashboard` still returns a `bookings` aggregate, and it is real code:

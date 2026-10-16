@@ -18,6 +18,19 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-10-16 — Manager overview rebuilt; Vehicles page trimmed
+- **Branch:** claude/magical-goldberg-47veeb
+- **Modules touched:** [DASHBOARD](modules/DASHBOARD.md), [BUSES](modules/BUSES.md)
+- **What changed:**
+  - Manager Overview: the three stat cards are one Vehicles card (total, active, pending hidden at zero); the page description is gone. Two thirds is a Payments "Coming soon" preview (sample monthly received/expenses chart and expense breakdown, amounts masked until the eye button is pressed); one third lists vehicles on a journey, each linking to Live tracking with that vehicle selected.
+  - Vehicles page: title is "Vehicles" with no subtitle, the repeated stat cards are removed, each row shows the vehicle name with its plate beneath (Vehicle ID moved to a read-only field in the edit dialog), Edit and "Delete Req" are icon buttons with tooltips, empty cells use an em dash, service is sentence case.
+  - Add Vehicle is one step and collects vehicle details only; it points to the Drivers page for drivers.
+- **Why:** cleanup of the manager portal from the page audit.
+- **Contract impact:** none. The overview now also reads `GET /api/manager/vehicles/live`.
+- **Tests:** `ManagerDashboardPage` and `ManagerVehiclesPage` unit tests rewritten; `e2e/custom-routes.spec.ts` and `e2e/cross-role-onboarding.spec.ts` updated for the single-step dialog.
+- **Docs updated:** DASHBOARD.md, BUSES.md, this entry.
+- **Follow-ups / known issues:** picking an existing driver while creating a vehicle needs a backend change (`POST /api/manager/vehicle-accounts` and the approval handler have no `driverId`, and no endpoint assigns an existing driver to a vehicle). Payments is sample data until a payments API exists. `e2e/responsive-manager.spec.ts` tracking cases fail without a backend (websocket console error), same as before this change.
+
 ## 2026-10-16 — Renamed TrackMe to Pingo; landing offers both apps as direct downloads
 - **Branch:** feat/pingo-rename
 - **Modules touched:** [LANDING](modules/LANDING.md), [APP_RELEASES](modules/APP_RELEASES.md)
@@ -41,7 +54,8 @@ when source under `src/` changed. One entry per session/PR is enough.
   - **No hover colour changes** (points no longer turn dark, no pointer glow, no button colour swaps, no widening panel). 01 and 02 are now big solid sky-blue numerals. The rider half is a download area: two badges and a phone showing the live map.
   - **Footer:** the wordmark's line is taller and has room beneath it so the tail of the "g" is not cut off.
   - **Bug fix (production only): every pinned scroll animation was dead on the deployed site.** `setupGsap()` ran from `MotionProvider`'s effect, which runs after its children's, so the hero and story created their ScrollTriggers before the plugin was registered; React's dev-only double effect hid it. GSAP now registers when `gsapSetup.js` is imported (regression test `gsapSetup.test.js`).
-  - **New hero: the word PINGO with the film showing through its letters.** After the opening the page is only the nav, the frame and the word, which drops in slowly from the top (about 3.6s, no bounce, with depth). Scrolling grows the word and opens a circle of film from the middle, then the words arrive (question, buttons, drifting words, "Right here."). The buttons are hidden until the film brings them in (the nav keeps "Get the app"). One line on a phone too. The film is longer (4.6 screens, 3.6 on a phone) and the scrub lag doubled so it all moves more slowly. The nav's "P" tile is now a rounded square.
+  - **New hero: the word PINGO with the film showing through its letters.** After the opening the page is only the nav, the frame and the word, which drops in slowly from the top (about 3.6s, no bounce, with depth). Scrolling grows the word and opens a circle of film from the middle, then the words arrive (question, buttons, drifting words, "Right here."). The buttons are hidden until the film brings them in (the nav keeps "Get the app"). One line on a phone too. The film is longer (4.6 screens, 3.6 on a phone) and the scrub lag doubled so it all moves more slowly. The nav's "P" tile is now a rounded square.
+
   - Removed dead code: `Badge`, `LiveEta`, `eta`, `buildStackedPlay`, `STACK_TILT`, the `l-spot` / `l-outline-ink` / `l-badge-idle` CSS.
 - **Why:** feedback that the nav did not look right live, the sections were too wordy and plain, 01/02 were hard to see, and the phone version felt stale when scrolling.
 - **Contract impact:** none.

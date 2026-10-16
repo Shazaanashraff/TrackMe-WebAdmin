@@ -92,15 +92,12 @@ test.describe('Cross-role onboarding', () => {
     // Custom route (driver records): skips the route picker entirely, same as
     // e2e/custom-routes.spec.ts's create flow.
     await vehicleDialog.getByLabel(/custom route/i).click();
-    await vehicleDialog.getByRole('button', { name: /continue/i }).click();
-    // Driver step: left unassigned — not required to create the vehicle.
-    await vehicleDialog.getByRole('button', { name: /continue/i }).click();
     await vehicleDialog.getByRole('button', { name: /create vehicle/i }).click();
 
     await expect(vehicleDialog).not.toBeVisible({ timeout: 10_000 });
     expect(createRequests).toHaveLength(0); // this is a vehicle, not a bus-account request
     expect(vehicles).toHaveLength(1);
     expect(vehicles[0]).toMatchObject({ vehicleId: 'VEH-100', numberPlate: 'CAB-1234' });
-    await expect(page.getByText('VEH-100')).toBeVisible();
+    await expect(page.getByText('CAB-1234').first()).toBeVisible();
   });
 });

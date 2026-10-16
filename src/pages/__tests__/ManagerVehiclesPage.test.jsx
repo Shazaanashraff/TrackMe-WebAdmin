@@ -43,7 +43,7 @@ async function chooseOption(user, triggerName, optionName) {
   await user.click(await screen.findByRole('option', { name: optionName }));
 }
 
-async function fillStep0(user, { routeMode = 'EXISTING' } = {}) {
+async function fillForm(user, { routeMode = 'EXISTING' } = {}) {
   await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
   await screen.findByRole('dialog');
 
@@ -60,8 +60,6 @@ async function fillStep0(user, { routeMode = 'EXISTING' } = {}) {
     const option = await screen.findByRole('option', { name: /Public Route/i });
     await user.click(option);
   }
-
-  await user.click(screen.getByRole('button', { name: /continue/i }));
 }
 
 const VEHICLES = [
@@ -123,7 +121,7 @@ describe('ManagerVehiclesPage', () => {
 
   it('renders the page heading', () => {
     setup();
-    expect(screen.getByRole('heading', { level: 1, name: /vehicle management/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /^vehicles$/i })).toBeInTheDocument();
   });
 
   it('shows loading skeletons when fetching', () => {
@@ -136,18 +134,29 @@ describe('ManagerVehiclesPage', () => {
     expect(screen.getByText(/failed to load/i)).toBeInTheDocument();
   });
 
-  it('renders stat cards with correct counts', () => {
-    setup({ vehicles: VEHICLES }); // 1 vehicle, 1 active
-    expect(screen.getByText('Total Vehicles')).toBeInTheDocument();
-    expect(screen.getByText('Active Fleet')).toBeInTheDocument();
-    expect(screen.getByText('Inactive Fleet')).toBeInTheDocument();
+  // The overview page owns the fleet counts; repeating them above the table
+  // was removed in the cleanup.
+  it('shows no stat cards or page description above the table', () => {
+    setup({ vehicles: VEHICLES });
+    expect(screen.queryByText('Total Vehicles')).not.toBeInTheDocument();
+    expect(screen.queryByText('Active Fleet')).not.toBeInTheDocument();
+    expect(screen.queryByText('Inactive Fleet')).not.toBeInTheDocument();
+    expect(screen.queryByText(/review managed vehicles/i)).not.toBeInTheDocument();
   });
 
   it('renders vehicle rows in the table', async () => {
     setup();
     expect(screen.getByText('Shuttle 1')).toBeInTheDocument();
+    // Name with the plate beneath it; the internal Vehicle ID lives in the edit dialog.
     expect(screen.getByText('AB-1234')).toBeInTheDocument();
-    expect(screen.getByText('VEHICLE-1')).toBeInTheDocument();
+    expect(screen.queryByText('VEHICLE-1')).not.toBeInTheDocument();
+  });
+
+  it('labels the row actions as icon buttons', () => {
+    setup();
+    expect(screen.getByRole('button', { name: 'Edit vehicle' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Request deletion' })).toBeInTheDocument();
+    expect(screen.queryByText('Delete Req')).not.toBeInTheDocument();
   });
 
   it('shows empty state when no vehicles', () => {
@@ -196,12 +205,8 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     const createMut = makeMutation();
     const { user } = setup({ createMut });
 
-    await fillStep0(user, { routeMode: 'CUSTOM' });
+    await fillForm(user, { routeMode: 'CUSTOM' });
 
-    // Step 1 is the driver, which a vehicle can go without.
-    await user.click(screen.getByRole('button', { name: /continue/i }));
-
-    // Step 2: submit
     // The default fixture manager already has a vehicle, so this submits as a
     // request rather than an immediate creation — see the label toggle test.
     await user.click(screen.getByRole('button', { name: /create vehicle|submit request/i }));
@@ -212,8 +217,9 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     expect(payload.routeId).toBe('');
   }, 20000);
 
-  it('will not advance past step 0 with a plate that is not Sri Lankan', async () => {
-    const { user } = setup();
+  it('will not submit a plate that is not Sri Lankan', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ createMut });
 
     await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
     await screen.findByRole('dialog');
@@ -221,24 +227,25 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     await user.type(screen.getByLabelText(/vehicle name/i), 'Shuttle 98');
     // Three digits where a plate needs four.
     await user.type(screen.getByLabelText(/number plate/i), 'ABC-123');
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.click(screen.getByRole('button', { name: /create vehicle|submit request/i }));
 
     expect(await screen.findByText(/Sri Lankan number plate/i)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/initial password/i)).not.toBeInTheDocument();
+    expect(createMut.mutateAsync).not.toHaveBeenCalled();
   }, 20000);
 
-  it('will not advance past step 0 with a Vehicle ID already in the fleet (issue #49)', async () => {
-    const { user } = setup({ vehicles: VEHICLES }); // VEHICLES[0].vehicleId === 'VEHICLE-1'
+  it('will not submit a Vehicle ID already in the fleet (issue #49)', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ vehicles: VEHICLES, createMut }); // VEHICLES[0].vehicleId === 'VEHICLE-1'
 
     await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
     await screen.findByRole('dialog');
     // Case-insensitive duplicate of the existing vehicle's ID.
     await user.type(screen.getByLabelText(/vehicle id/i), 'vehicle-1');
     await user.type(screen.getByLabelText(/number plate/i), 'ABC-1234');
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.click(screen.getByRole('button', { name: /create vehicle|submit request/i }));
 
     expect(await screen.findByText(/already in use/i)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/initial password/i)).not.toBeInTheDocument();
+    expect(createMut.mutateAsync).not.toHaveBeenCalled();
   }, 20000);
 
   it('tidies an accepted plate into its canonical form on blur', async () => {
@@ -253,25 +260,22 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     expect(plate).toHaveValue('WP CAB-4321');
   }, 20000);
 
-  it('does not require a routeId to advance past step 0 in Custom mode', async () => {
-    const { user } = setup();
+  it('does not require a routeId to submit in Custom mode', async () => {
+    const createMut = makeMutation();
+    const { user } = setup({ createMut });
 
-    await fillStep0(user, { routeMode: 'CUSTOM' });
+    await fillForm(user, { routeMode: 'CUSTOM' });
+    await user.click(screen.getByRole('button', { name: /create vehicle|submit request/i }));
 
-    // If we reached step 1, the password field is visible
-    expect(screen.getByLabelText(/initial password/i)).toBeInTheDocument();
+    await waitFor(() => expect(createMut.mutateAsync).toHaveBeenCalledTimes(1));
   });
 
   it('submits routeMode EXISTING with the selected routeId by default', async () => {
     const createMut = makeMutation();
     const { user } = setup({ createMut });
 
-    await fillStep0(user, { routeMode: 'EXISTING' });
+    await fillForm(user, { routeMode: 'EXISTING' });
 
-    // Step 1, left blank: the vehicle is created unassigned.
-    await user.click(screen.getByRole('button', { name: /continue/i }));
-
-    // Step 2
     // The default fixture manager already has a vehicle, so this submits as a
     // request rather than an immediate creation — see the label toggle test.
     await user.click(screen.getByRole('button', { name: /create vehicle|submit request/i }));
@@ -280,52 +284,29 @@ describe('ManagerVehiclesPage route assignment toggle', () => {
     const payload = createMut.mutateAsync.mock.calls[0][0];
     expect(payload.routeMode).toBe('EXISTING');
     expect(payload.routeId).toBe('PUB-1');
-    // Same 20s allowance as the other full-wizard runs: driving three Radix
-    // steps through jsdom does not fit in the 5s default.
   }, 20000);
 
-  it('shows validation error when required step 0 fields are empty', async () => {
+  it('shows a validation error when required fields are empty', async () => {
     const { user } = setup();
 
     await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
     await screen.findByRole('dialog');
 
-    // Click Continue without filling anything
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    // Submit without filling anything
+    await user.click(screen.getByRole('button', { name: /create vehicle|submit request/i }));
     expect(screen.getByText(/please complete/i)).toBeInTheDocument();
   });
 
-  it('lets the whole driver step be skipped, leaving the vehicle unassigned', async () => {
+  it('collects no driver details and points to the Drivers page instead', async () => {
     const { user } = setup();
 
-    await fillStep0(user, { routeMode: 'CUSTOM' });
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await user.click(screen.getByRole('button', { name: /^add vehicle$/i }));
+    await screen.findByRole('dialog');
 
-    // Reached the review step rather than being held back, and it says the
-    // vehicle is going in without a driver.
-    expect(screen.getByRole('button', { name: /create vehicle|submit request/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/unassigned/i).length).toBeGreaterThan(0);
-  }, 20000);
-
-  it('asks for a password once a driver is named', async () => {
-    const { user } = setup();
-
-    await fillStep0(user, { routeMode: 'CUSTOM' });
-    await user.type(screen.getByLabelText(/driver name/i), 'Kamal');
-    await user.click(screen.getByRole('button', { name: /continue/i }));
-
-    expect(screen.getByText(/a driver needs an initial password/i)).toBeInTheDocument();
-  }, 20000);
-
-  it('will not take a password with nobody to give it to', async () => {
-    const { user } = setup();
-
-    await fillStep0(user, { routeMode: 'CUSTOM' });
-    await user.type(screen.getByLabelText(/initial password/i), 'Sup3rSecret!');
-    await user.click(screen.getByRole('button', { name: /continue/i }));
-
-    expect(screen.getByText(/name the driver this password belongs to/i)).toBeInTheDocument();
-  }, 20000);
+    expect(screen.queryByLabelText(/driver name/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/initial password/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /drivers page/i })).toHaveAttribute('href', '/manager/accounts');
+  });
 });
 
 // ----------------------------------------------------------------
@@ -459,9 +440,9 @@ describe('ManagerVehiclesPage edit and delete', () => {
     expect(updateMut.mutateAsync).not.toHaveBeenCalled();
   });
 
-  it('opens delete confirmation dialog when Delete Req is clicked', async () => {
+  it('opens delete confirmation dialog when Request deletion is clicked', async () => {
     const { user } = setup();
-    await user.click(screen.getByRole('button', { name: /delete req/i }));
+    await user.click(screen.getByRole('button', { name: 'Request deletion' }));
 
     await screen.findByRole('alertdialog');
     expect(screen.getByText(/request vehicle deletion/i)).toBeInTheDocument();
@@ -471,7 +452,7 @@ describe('ManagerVehiclesPage edit and delete', () => {
     const deleteMut = makeMutation();
     const { user } = setup({ deleteMut });
 
-    await user.click(screen.getByRole('button', { name: /delete req/i }));
+    await user.click(screen.getByRole('button', { name: 'Request deletion' }));
     await screen.findByRole('alertdialog');
 
     // ConfirmDialog with requireReason=true — type a reason
@@ -492,7 +473,7 @@ describe('ManagerVehiclesPage edit and delete', () => {
     const deleteMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(new Error('Server unavailable')) });
     const { user } = setup({ deleteMut });
 
-    await user.click(screen.getByRole('button', { name: /delete req/i }));
+    await user.click(screen.getByRole('button', { name: 'Request deletion' }));
     await screen.findByRole('alertdialog');
 
     const reasonInput = screen.getByPlaceholderText(/reason \(required\)/i);
@@ -544,23 +525,21 @@ describe('ManagerVehiclesPage create — bootstrap vs request', () => {
   it('creates the vehicle immediately when the manager has no vehicles yet', async () => {
     const createMut = makeMutation({
       mutateAsync: vi.fn().mockResolvedValue({
-        data: { vehicle: { vehicleId: 'VEHICLE-99' }, driver: { driverCode: 'DRV-1234-5678' } },
+        data: { vehicle: { vehicleId: 'VEHICLE-99' }, driver: null },
       }),
     });
     const { user } = setup({ vehicles: [], createMut });
 
-    await fillStep0(user, { routeMode: 'CUSTOM' });
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await fillForm(user, { routeMode: 'CUSTOM' });
 
-    // With no vehicles yet, the review step offers immediate creation, not a request.
-    expect(screen.getByText(/this is your first vehicle, so it will be created right away/i))
-      .toBeInTheDocument();
+    // With no vehicles yet, the dialog offers immediate creation, not a request.
+    expect(screen.queryByText(/sent to a super admin for approval/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^create vehicle$/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /^create vehicle$/i }));
 
     await waitFor(() => expect(createMut.mutateAsync).toHaveBeenCalledTimes(1));
-    expect(toast).toHaveBeenCalledWith(expect.stringMatching(/vehicle created.*driver id/i));
+    expect(toast).toHaveBeenCalledWith('Vehicle created');
   }, 20000);
 
   it('submits a request instead of creating when the manager already has a vehicle', async () => {
@@ -571,11 +550,10 @@ describe('ManagerVehiclesPage create — bootstrap vs request', () => {
     });
     const { user } = setup({ vehicles: VEHICLES, createMut });
 
-    await fillStep0(user, { routeMode: 'CUSTOM' });
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await fillForm(user, { routeMode: 'CUSTOM' });
 
-    // Already has a vehicle, so the review step says this one is a request.
-    expect(screen.getByText(/not your first vehicle.*submitted for super admin approval/i))
+    // Already has a vehicle, so the dialog says this one is a request.
+    expect(screen.getByText(/not your first vehicle.*sent to a super admin for approval/i))
       .toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^submit request$/i })).toBeInTheDocument();
 
@@ -584,7 +562,6 @@ describe('ManagerVehiclesPage create — bootstrap vs request', () => {
     await waitFor(() => expect(createMut.mutateAsync).toHaveBeenCalledTimes(1));
     // Not the immediate-creation toast — the request went to a super admin instead.
     expect(toast).toHaveBeenCalledWith(expect.stringMatching(/submitted for super admin approval/i));
-    expect(toast).not.toHaveBeenCalledWith(expect.stringMatching(/driver id/i));
   }, 20000);
 });
 
@@ -733,8 +710,7 @@ describe('ManagerVehiclesPage misc edge cases (issue #27)', () => {
 
     render(<MemoryRouter><ManagerVehiclesPage /></MemoryRouter>);
 
-    await fillStep0(user, { routeMode: 'CUSTOM' });
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await fillForm(user, { routeMode: 'CUSTOM' });
 
     const submitBtn = screen.getByRole('button', { name: /create vehicle|submit request/i });
     await user.dblClick(submitBtn);
@@ -747,8 +723,7 @@ describe('ManagerVehiclesPage misc edge cases (issue #27)', () => {
     const createMut = makeMutation({ mutateAsync: vi.fn().mockRejectedValue(conflict) });
     const { user } = setup({ createMut });
 
-    await fillStep0(user, { routeMode: 'CUSTOM' });
-    await user.click(screen.getByRole('button', { name: /continue/i }));
+    await fillForm(user, { routeMode: 'CUSTOM' });
     await user.click(screen.getByRole('button', { name: /create vehicle|submit request/i }));
 
     expect(await screen.findByText('A vehicle with this ID already exists')).toBeInTheDocument();

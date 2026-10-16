@@ -24,7 +24,7 @@ goes through `ManagerVehicleRequest` and needs super-admin approval (see
 
 | File | Responsibility |
 |---|---|
-| `src/pages/ManagerVehiclesPage.jsx` | The page: fleet table, create wizard (3 steps), edit dialog, delete-request `ConfirmDialog`. |
+| `src/pages/ManagerVehiclesPage.jsx` | The page: fleet table, single-step create dialog (vehicle only, no driver fields), edit dialog, delete-request `ConfirmDialog`. |
 | `src/hooks/use-vehicles.js` | `useManagerVehicles`, `useManagerAssignableRoutes`, `useManagerRequests`, `useCreateManagerVehicle`, `useUpdateManagerVehicle`, `useRequestDeleteVehicle`, `useResetVehicleAccountPassword`. |
 | `src/lib/serviceTypes.js` | Shared `SERVICE_TYPES` constant (also used by RoutesPage/OperationsPage — issue #19). |
 
@@ -62,7 +62,7 @@ Backend side: [`BUSES.md`](../../../backend/docs/modules/BUSES.md) (vehicle CRUD
 
 ## 5. Not visible in the frontend
 
-- **The delete button says "Delete Req" and the dialog says "Request Vehicle Deletion"** — this is
+- **The row's trash icon (tooltip "Request deletion") opens the dialog titled "Request Vehicle Deletion"** — this is
   not a euphemism, it genuinely only files a request; nothing is removed until a super-admin
   approves it on Operations. The Status column shows a second "Deletion pending" badge
   (`StatusBadge status="pending"`) whenever `useManagerRequests()` has a PENDING `DELETE_VEHICLE`
@@ -124,7 +124,7 @@ Backend side: [`BUSES.md`](../../../backend/docs/modules/BUSES.md) (vehicle CRUD
 
 | Layer | File | What it locks |
 |---|---|---|
-| Unit | `src/pages/__tests__/ManagerVehiclesPage.test.jsx` | create wizard (route modes, driver step, plate/ID validation), edit dialog (validated route dropdown), delete-request flow incl. failure-preserves-reason (issue #48) and the pending-deletion badge (issue #66), route/vehicle table columns (issue #67). |
+| Unit | `src/pages/__tests__/ManagerVehiclesPage.test.jsx` | create dialog (route modes, plate/ID validation), edit dialog (validated route dropdown), delete-request flow incl. failure-preserves-reason (issue #48) and the pending-deletion badge (issue #66), route/vehicle table columns (issue #67). |
 | e2e (Playwright) | `e2e/cross-role-onboarding.spec.ts` | a freshly-created manager's first vehicle, created via `routeMode: CUSTOM`, comes back outright (`data.vehicle`) rather than as a pending super-admin request — the create-first-vehicle-directly branch of `POST /api/manager/vehicle-accounts` (issue #28). |
 
 ## 8. Change protocol
@@ -144,9 +144,8 @@ Enforced by [`e2e/responsive-manager.spec.ts`](../../e2e/responsive-manager.spec
 375x800 in light and dark. See [`CHANGES.md`](../CHANGES.md) 2026-09-22.
 
 Page specifics: below `md` the 9-column fleet table renders as a card per vehicle via
-`DataTable`'s `renderMobileCard` — name and status, then plate and vehicle id on a monospace
-line, then driver, route, service and organization as a label/value list, then the same Edit
-and Delete Req buttons. **No column is dropped**: this table has no row click and no
+`DataTable`'s `renderMobileCard` — name with the plate beneath it and status, then driver, route, service and organization as a label/value list, then the same Edit
+and Request deletion icon buttons. **No column is dropped**: this table has no row click and no
 row-detail view, so a field hidden on a phone would be unreachable, not merely deferred. The
-create wizard's and edit dialog's form grids are `grid-cols-1 sm:grid-cols-2` (one is
+create and edit dialogs' form grids are `grid-cols-1 sm:grid-cols-2` (one is
 `sm:grid-cols-3`).
