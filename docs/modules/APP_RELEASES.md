@@ -3,9 +3,9 @@
 Super-admin registry of driver/rider app builds (APK/TestFlight links), and the public endpoint
 the landing page reads to show real download links instead of "Coming soon".
 
-**Status:** `SHIPPED` — frontend complete against the backend contract below. Binaries for both
-apps (`driver-app-1.0.0.apk`, `rider-app-1.0.0.apk`) are already committed into
-`public/downloads/`; registering them via this page is the remaining manual step.
+**Status:** `SHIPPED` — frontend complete against the backend contract below. Android 1.0.0 for
+both apps is attached to the GitHub Release `apps-v1.0.0` on `TrackMe-WebAdmin` and registered
+via this page; iOS has no build or TestFlight link yet.
 
 **Role:** super-admin only. `/releases` is a flat super-admin route (this branch has no
 `/admin/*` prefix — see `docs/modules/AUTH.md`). No manager-scoped data is involved.
@@ -21,8 +21,8 @@ turn its "Coming soon" store buttons into real download links the moment a build
 see [`LANDING.md`](LANDING.md) §4, which this doc cross-references rather than duplicates.
 
 The hard constraint: this page only **registers metadata** pointing at a binary. It does not
-upload or build anything. The binary itself is committed straight into `public/downloads/` by
-whoever cuts the release, then registered here.
+upload or build anything. The binary itself is attached to a GitHub Release by whoever cuts the
+release, then its URL is registered here.
 
 ## 2. Key files (one job each)
 
@@ -36,7 +36,7 @@ whoever cuts the release, then registered here.
 | `src/pages/landing/JoinSection.jsx` | Consumes `useAppDownloadLinks()` for the rider store buttons and the driver panel's direct-download line. |
 | `src/App.jsx` | `/releases` route, super-admin only. |
 | `src/layout/AppShell.jsx` / `Topbar.jsx` | "Releases" nav entry (`SUPER_ADMIN_NAV`) and breadcrumb label (`ROUTE_LABELS`). |
-| `public/downloads/*.apk` | The committed binaries themselves (see §5). |
+| GitHub Release `apps-v1.0.0` | Where the APK binaries live (see §5); not in this repo. |
 
 ## 3. Data flow
 
@@ -65,12 +65,13 @@ from the public endpoint above instead of only reading the static `APP_LINKS` pl
 
 ## 5. Not visible in the frontend
 
-- **Hosting model:** app binaries are committed directly into `public/downloads/` (e.g.
-  `driver-app-1.0.0.apk`, `rider-app-1.0.0.apk`) — there is no object storage or CDN upload step.
-  The manual release flow is: build the APK/IPA → commit it into `public/downloads/` → register its
-  metadata via this page with a `downloadUrl` of `/downloads/<file>.apk` (or a full TestFlight URL
-  for iOS). Deleting or renaming a committed binary without first retracting (or re-pointing) the
-  matching release leaves a dead link on the public landing page.
+- **Hosting model:** app binaries are GitHub Release assets (e.g.
+  `https://github.com/Shazaanashraff/TrackMe-WebAdmin/releases/download/apps-v1.0.0/pingo-driver-1.0.0.apk`).
+  They are **not** committed to the repo: each APK is over 100 MB, GitHub's per-file limit, and
+  Vercel would serve a Git LFS pointer stub instead of the file. The manual release flow is: build
+  the APK/IPA → upload it to a GitHub Release → register its metadata via this page with the full
+  asset URL (or a full TestFlight URL for iOS). Deleting a Release asset without first retracting
+  (or re-pointing) the matching release leaves a dead link on the public landing page.
 - `fileSizeBytes` is accepted by the backend contract but not surfaced anywhere in this page's UI
   yet — the create form does not collect it.
 - The "latest" lookup the landing page uses only covers **android** for both apps; no iOS driver

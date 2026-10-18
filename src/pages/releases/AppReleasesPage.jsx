@@ -239,7 +239,7 @@ export function AppReleasesPage() {
         id="release-download-url"
         value={form.downloadUrl}
         onChange={setField('downloadUrl')}
-        placeholder="https://"
+        placeholder="https://github.com/…/releases/download/apps-v1.0.0/pingo-driver-1.0.0.apk"
       />
     </div>
 
