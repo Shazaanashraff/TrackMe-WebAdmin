@@ -1123,14 +1123,6 @@ export function ManagerAccountsPage() {
                 {lastCreated.driverCode || 'Not issued'}
               </code>
             </div>
-            {lastCreated.email && (
-              <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Or signs in with
-                </p>
-                <p className="font-medium text-foreground">{lastCreated.email}</p>
-              </div>
-            )}
             {lastCreated.vehicle && (
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">Vehicle</p>

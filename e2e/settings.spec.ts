@@ -16,6 +16,19 @@ test.describe('Manager settings', () => {
     // unmocked it 401s, and api.js sends the browser to
     // /login?reason=session_expired before this page can be read.
     await mockManagerShellBackend(page);
+    // The QR boarding card reads the manager's route list, then each route's
+    // own document for its owner and switch state.
+    const qrPatches: unknown[] = [];
+    await page.route('**/api/manager/routes', (route) =>
+      route.fulfill({ json: { success: true, data: [{ routeId: 'OWN-1', routeName: 'Own Route 1' }] } }));
+    await page.route('**/api/routes/OWN-1', (route) =>
+      route.fulfill({
+        json: { success: true, data: { routeId: 'OWN-1', routeName: 'Own Route 1', managerId: 'mgr-1', qrEnabled: false } },
+      }));
+    await page.route('**/api/manager/routes/OWN-1/qr', async (route) => {
+      qrPatches.push(route.request().postDataJSON());
+      await route.fulfill({ json: { success: true, data: { routeId: 'OWN-1', qrEnabled: true } } });
+    });
 
     await page.goto('/manager/settings');
 
@@ -28,6 +41,12 @@ test.describe('Manager settings', () => {
     await page.getByRole('button', { name: /save changes/i }).click();
 
     await expect(page.getByText(/profile updated/i)).toBeVisible();
+
+    const qr = page.getByRole('switch', { name: 'QR boarding for Own Route 1' });
+    await expect(qr).not.toBeChecked();
+    await qr.click();
+    await expect(qr).toBeChecked();
+    expect(qrPatches).toEqual([{ qrEnabled: true }]);
 
     await page.getByRole('button', { name: /change password/i }).click();
     await expect(page).toHaveURL(/\/forgot-password$/);
