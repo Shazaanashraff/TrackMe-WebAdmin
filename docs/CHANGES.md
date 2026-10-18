@@ -21,9 +21,9 @@ when source under `src/` changed. One entry per session/PR is enough.
 ## 2026-10-18 — Tracking map: vehicle icon turned to its heading
 - **Branch:** feature/live-map-markers
 - **Modules touched:** [TRACKING](modules/TRACKING.md)
-- **What changed:** the manager fleet map draws each vehicle as a top-down vehicle image
-  (`lib/vehicle-icon.js`) turned to the driver's GPS heading instead of a circle. It keeps the
-  last direction while parked; the roof stripe keeps the live / stale / offline colour; the
+- **What changed:** the manager fleet map draws each vehicle as a white passenger van seen
+  from above (`lib/vehicle-icon.js`) turned to the driver's GPS heading instead of a circle. It
+  keeps the last direction while parked; the van's outline keeps the live / stale / offline colour; the
   selected vehicle is drawn larger. Click-to-select is unchanged.
 - **Why:** vehicles read as dots; the passenger app got the same vehicle image at the same time.
 - **Contract impact:** none. `location.heading` was already in the tracking payload; the driver

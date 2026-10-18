@@ -98,7 +98,7 @@ function FleetMarkers({ plotted, selectedVehicleId, onSelect }) {
         position: point,
         title: record.vehicle?.vehicleName || record.vehicleId,
         zIndex: selected ? 2 : 1,
-        // Top-down vehicle turned to its heading; the roof stripe carries the
+        // White van turned to its heading; its outline carries the
         // live / stale / offline colour.
         icon: {
           url: vehicleIconUrl({ heading, accent: markerColor(state) }),

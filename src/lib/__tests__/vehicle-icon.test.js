@@ -16,8 +16,12 @@ describe('vehicleIconSvg', () => {
     expect(vehicleIconSvg({ heading: -90 })).toContain('rotate(270 27 27)');
   });
 
-  it('paints the roof stripe in the tracking-state colour', () => {
-    expect(vehicleIconSvg({ accent: '#b45309' })).toContain('fill="#b45309"');
+  it('outlines the van in the tracking-state colour', () => {
+    expect(vehicleIconSvg({ accent: '#b45309' })).toContain('stroke="#b45309"');
+  });
+
+  it('draws the van on its own, with no badge circle', () => {
+    expect(vehicleIconSvg()).not.toContain('<circle');
   });
 });
 
