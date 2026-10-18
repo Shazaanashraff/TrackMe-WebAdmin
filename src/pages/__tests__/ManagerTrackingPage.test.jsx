@@ -27,18 +27,32 @@ const googleMapsMock = vi.hoisted(() => {
       this.extend = vi.fn();
     }
   }
-  return { markerInstances, map, Marker, LatLngBounds };
+  class Size {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+    }
+  }
+  class Point {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+    }
+  }
+  return { markerInstances, map, Marker, LatLngBounds, Size, Point };
 });
 
 // Split by library exactly as the Maps JS API splits it. A single object for
 // every library name would let the page ask for the wrong one and still pass
 // here, which is how `SymbolPath` off the maps library reached the browser and
-// crashed the page on its first plotted vehicle.
+// crashed the page on its first plotted vehicle. The vehicle icon now needs Size
+// and Point, which live in core too.
 vi.mock('@vis.gl/react-google-maps', () => {
   const libraries = {
     core: {
       LatLngBounds: googleMapsMock.LatLngBounds,
-      SymbolPath: { CIRCLE: 'circle' },
+      Size: googleMapsMock.Size,
+      Point: googleMapsMock.Point,
     },
     marker: { Marker: googleMapsMock.Marker },
     maps: { Map: class {} },
@@ -118,7 +132,10 @@ describe('ManagerTrackingPage', () => {
     expect(googleMapsMock.markerInstances.at(-1).options.position).toEqual({ lat: 7.2906, lng: 80.6337 });
     // Drawn from the marker and core libraries. Reading either name off the
     // maps library instead leaves it undefined and throws on the first plot.
-    expect(googleMapsMock.markerInstances.at(-1).options.icon.path).toBe('circle');
+    const { icon } = googleMapsMock.markerInstances.at(-1).options;
+    expect(icon.url.startsWith('data:image/svg+xml')).toBe(true);
+    expect(icon.scaledSize).toBeInstanceOf(googleMapsMock.Size);
+    expect(icon.anchor).toBeInstanceOf(googleMapsMock.Point);
     await waitFor(() => expect(screen.getByText('36 km/h')).toBeInTheDocument());
     expect(screen.getByText('90° E')).toBeInTheDocument();
     expect(screen.getAllByText('Kamal Perera')).toHaveLength(2);
@@ -196,6 +213,43 @@ describe('ManagerTrackingPage', () => {
     renderPage();
 
     expect(await screen.findByTestId('fleet-map')).toBeInTheDocument();
+  });
+
+  it('draws the vehicle turned to its GPS heading, larger when selected', async () => {
+    renderPage();
+
+    await waitFor(() => expect(googleMapsMock.markerInstances.length).toBeGreaterThan(0));
+    const { icon } = googleMapsMock.markerInstances.at(-1).options;
+    expect(decodeURIComponent(icon.url)).toContain('rotate(90 27 27)');
+    // VH-001 is the only plotted vehicle, so it is the selected one.
+    expect(icon.scaledSize.width).toBe(52);
+    expect(icon.anchor).toEqual(expect.objectContaining({ x: 26, y: 26 }));
+  });
+
+  it('keeps the last direction when a later fix arrives without a heading (parked)', async () => {
+    const { rerender } = renderPage();
+    await waitFor(() => expect(googleMapsMock.markerInstances.length).toBeGreaterThan(0));
+
+    mockTracking({
+      fleet: [{
+        ...FLEET[0],
+        location: { ...FLEET[0].location, lat: 7.2907, heading: null, receivedAt: now() },
+      }],
+    });
+    rerender(<MemoryRouter initialEntries={['/manager/tracking']}>{page()}</MemoryRouter>);
+
+    await waitFor(() => expect(googleMapsMock.markerInstances.at(-1).options.position.lat).toBe(7.2907));
+    expect(decodeURIComponent(googleMapsMock.markerInstances.at(-1).options.icon.url)).toContain('rotate(90 27 27)');
+  });
+
+  it('faces north when no heading has ever arrived', async () => {
+    mockTracking({
+      fleet: [{ ...FLEET[0], location: { ...FLEET[0].location, heading: null } }],
+    });
+    renderPage();
+
+    await waitFor(() => expect(googleMapsMock.markerInstances.length).toBeGreaterThan(0));
+    expect(decodeURIComponent(googleMapsMock.markerInstances.at(-1).options.icon.url)).toContain('rotate(0 27 27)');
   });
 
   it('mounts the map as soon as one vehicle has a position', async () => {

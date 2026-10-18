@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { APIProvider, Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
 import { AlertTriangle, Bus as VehicleIcon, MapPin, WifiOff } from 'lucide-react';
@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { getGoogleMapsApiKey } from '@/lib/googleMaps';
+import { headingOf, vehicleIconUrl } from '@/lib/vehicle-icon';
 import { trackingState, useManagerFleetTracking } from '@/hooks/use-tracking';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 
@@ -55,30 +56,32 @@ function MapViewport({ selectedPoint, fleetPoints }) {
   return null;
 }
 
-function markerColors(state) {
+const ICON_PX = 40;
+const SELECTED_ICON_PX = 52;
+
+function markerColor(state) {
   const styles = getComputedStyle(document.documentElement);
-  const fillColor = state === 'live'
+  return state === 'live'
     ? styles.getPropertyValue('--status-settled').trim()
     : state === 'stale'
       ? styles.getPropertyValue('--status-warning').trim()
       : styles.getPropertyValue('--muted-foreground').trim();
-  return {
-    fillColor,
-    strokeColor: styles.getPropertyValue('--surface').trim(),
-  };
 }
 
 function FleetMarkers({ plotted, selectedVehicleId, onSelect }) {
   const map = useMap();
-  // Marker comes from the marker library and SymbolPath from core. Both used
-  // to be read off the maps library, which loads fine and simply has neither,
-  // so every plotted vehicle threw on `SymbolPath.CIRCLE` and took the page
-  // down with it. The names are only resolved at use, so the wrong library is
-  // invisible until a marker is actually drawn.
+  // Marker comes from the marker library; Size and Point come from core. These
+  // used to be read off the maps library, which loads fine and simply has none
+  // of them, so every plotted vehicle threw and took the page down with it. The
+  // names are only resolved at use, so the wrong library is invisible until a
+  // marker is actually drawn.
   const core = useMapsLibrary('core');
   const markerLib = useMapsLibrary('marker');
+  // The direction each vehicle last faced. The driver app sends no heading while
+  // parked, so a vehicle keeps its last direction instead of snapping north.
+  const lastHeadingRef = useRef({});
   const plottedKey = plotted.map(({ record, point }) => (
-    `${record.vehicleId}:${point.lat}:${point.lng}:${trackingState(record)}`
+    `${record.vehicleId}:${point.lat}:${point.lng}:${trackingState(record)}:${headingOf(record.location)}`
   )).join('|');
 
   useEffect(() => {
@@ -87,20 +90,20 @@ function FleetMarkers({ plotted, selectedVehicleId, onSelect }) {
     const markers = plotted.map(({ record, point }) => {
       const selected = record.vehicleId === selectedVehicleId;
       const state = trackingState(record);
-      const colors = markerColors(state);
+      const heading = headingOf(record.location) ?? lastHeadingRef.current[record.vehicleId] ?? 0;
+      lastHeadingRef.current[record.vehicleId] = heading;
+      const size = selected ? SELECTED_ICON_PX : ICON_PX;
       const marker = new markerLib.Marker({
         map,
         position: point,
         title: record.vehicle?.vehicleName || record.vehicleId,
         zIndex: selected ? 2 : 1,
+        // White van turned to its heading; its outline carries the
+        // live / stale / offline colour.
         icon: {
-          path: core.SymbolPath.CIRCLE,
-          scale: selected ? 11 : 8,
-          fillColor: colors.fillColor,
-          fillOpacity: selected ? 0.95 : 0.72,
-          strokeColor: colors.strokeColor,
-          strokeOpacity: 1,
-          strokeWeight: selected ? 4 : 2,
+          url: vehicleIconUrl({ heading, accent: markerColor(state) }),
+          scaledSize: new core.Size(size, size),
+          anchor: new core.Point(size / 2, size / 2),
         },
       });
       const listener = marker.addListener('click', () => onSelect(record.vehicleId));

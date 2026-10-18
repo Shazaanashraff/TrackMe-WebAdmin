@@ -18,6 +18,21 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-10-18 — Tracking map: vehicle icon turned to its heading
+- **Branch:** feature/live-map-markers
+- **Modules touched:** [TRACKING](modules/TRACKING.md)
+- **What changed:** the manager fleet map draws each vehicle as a white passenger van seen
+  from above (`lib/vehicle-icon.js`) turned to the driver's GPS heading instead of a circle. It
+  keeps the last direction while parked; the van's outline keeps the live / stale / offline colour; the
+  selected vehicle is drawn larger. Click-to-select is unchanged.
+- **Why:** vehicles read as dots; the passenger app got the same vehicle image at the same time.
+- **Contract impact:** none. `location.heading` was already in the tracking payload; the driver
+  app now fills it (driver-app `feature/live-map-markers`).
+- **Tests:** `ManagerTrackingPage.test.jsx` (icon url/size/anchor, rotation, last heading kept,
+  north by default; core mock gains Size and Point), new `lib/__tests__/vehicle-icon.test.js`.
+- **Docs updated:** TRACKING.md gotchas, TESTING_GUIDE rows.
+- **Follow-ups / known issues:** rotation can only be seen with a moving driver.
+
 ## 2026-10-16 — shadcn charts with load animation; super admin pages trimmed
 - **Branch:** claude/overview-charts-superadmin
 - **Modules touched:** [DASHBOARD](modules/DASHBOARD.md), [ACCOUNTS](modules/ACCOUNTS.md), [OPERATIONS](modules/OPERATIONS.md), [ROUTES](modules/ROUTES.md), [APP_RELEASES](modules/APP_RELEASES.md)

@@ -130,8 +130,15 @@ is about the account.
   breadcrumb/polyline or 15/30/60-minute selector.
 - Socket fan-out assumes one backend instance. Scaling the backend horizontally requires the
   Socket.IO Redis adapter first; REST polling stays cross-process correct.
+- **Vehicles are a white passenger van seen from above, turned to their heading.**
+  `src/lib/vehicle-icon.js` builds the SVG (same drawing as the passenger app's live map). Google image markers cannot
+  rotate, so the heading from `location.heading` is baked into the SVG as
+  `rotate(h 27 27)`. The driver app sends no heading while parked, so `FleetMarkers` keeps
+  each vehicle's last direction in a ref (north until one arrives). The van's outline carries
+  the live / stale / offline colour the circle used to show; the selected vehicle is 52 px,
+  others 40 px. Heading is part of `plottedKey`, so a turn redraws the marker.
 - **Maps symbols come from three different libraries.** `useMapsLibrary('maps')` gives `Map`;
-  `Marker` is in `'marker'`; `SymbolPath` and `LatLngBounds` are in `'core'`. Asking for the wrong
+  `Marker` is in `'marker'`; `Size`, `Point` and `LatLngBounds` are in `'core'`. Asking for the wrong
   library still resolves to a real object, so the mistake only surfaces where the missing name is
   used — for markers, the first vehicle with a position, which crashes the page. Test mocks for
   `useMapsLibrary` must therefore be keyed by library name.
