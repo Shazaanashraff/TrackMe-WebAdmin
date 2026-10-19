@@ -106,7 +106,7 @@ export function LandingNav() {
           data-nav-pill
           data-scrolled={scrolled}
           className={cn(
-            'l-nav-glint pointer-events-auto relative flex w-full max-w-[38rem] items-center justify-between gap-1.5 rounded-full py-1.5 pl-2 pr-1.5 shadow-[0_16px_50px_-14px_rgb(0_0_0/0.7)] backdrop-blur-2xl transition-colors duration-500 sm:gap-2',
+            'l-nav-glint pointer-events-auto relative flex w-full max-w-[38rem] md:max-w-[46rem] items-center justify-between gap-1.5 rounded-full py-1.5 pl-2 pr-1.5 shadow-[0_16px_50px_-14px_rgb(0_0_0/0.7)] backdrop-blur-2xl transition-colors duration-500 sm:gap-2',
             scrolled || open ? 'bg-l-ink/85' : 'bg-l-ink/55',
           )}
         >
@@ -130,7 +130,7 @@ export function LandingNav() {
                 href={link.href}
                 aria-current={current === link.href ? 'location' : undefined}
                 className={cn(
-                  'rounded-full px-4 py-2 text-sm font-medium',
+                  'whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium',
                   current === link.href ? 'bg-l-bone/10 text-l-bone' : 'text-l-bone/70',
                 )}
               >

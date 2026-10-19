@@ -19,7 +19,7 @@ when source under `src/` changed. One entry per session/PR is enough.
 ```
 
 ## 2026-10-19 — Manager portal link on the landing nav; driver password in the Drivers directory
-- **Branch:** feat/manager-portal-nav (from feat/pingo-rename)
+- **Branch:** feat/manager-portal-nav-main (rebased onto origin/main)
 - **Modules touched:** [LANDING](modules/LANDING.md), [ACCOUNTS](modules/ACCOUNTS.md)
 - **What changed:**
   - Landing nav: "Manager portal" pill beside "Get the app" (desktop) and "Visit manager portal" in the phone menu, both to `/manager/dashboard` (dashboard if signed in, else login).
