@@ -102,6 +102,7 @@ model in [`AUTH.md`](../../../backend/docs/modules/AUTH.md).
   the other's page would still be a bug worth its own test.
 - `ManagerAccountsPage`'s enrollment-key `ConfirmDialog` (rotate) is destructive-styled and always
   requires confirmation; the reveal ("Show key") action is not, since it's non-destructive.
+- The Drivers directory has a **Password** column (and a Password block on the phone card): "Show password" is one audited read per click, held in page state until Hide, never fetched with the list, disabled offline, dropped after a reset. It shares its error handling with the row menu's "View password" dialog.
 - The password-reveal endpoint returns the plaintext password and **is** audit-logged — do not add
   caching, prefetch-on-hover, or any path that calls it without a direct user action. (The
   enrollment-key reveal is different: not audit-logged, and cached in memory on purpose — but

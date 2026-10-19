@@ -228,6 +228,42 @@ function EnrollmentKeyCell({ driver, isOnline, shown, onToggle, onKeyState }) {
   );
 }
 
+// The sign-in password sits behind the same Show / Hide as the enrollment key,
+// but it cannot be a cached query: every read is audit-logged server-side, so
+// each reveal is one deliberate request and the value lives only in page state
+// until Hide. Nothing is fetched while the directory renders.
+function PasswordCell({
+  driver, isOnline, password, loading, onShow, onHide, onCopy,
+}) {
+  if (password == null) {
+    return (
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={loading || !isOnline}
+        title={!isOnline ? 'Reconnect to view the password' : 'Viewing is recorded against your account'}
+        aria-label={`Show password for ${driver.name}`}
+        onClick={() => onShow(driver)}
+      >
+        {loading ? 'Loading…' : 'Show password'}
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <code
+        data-testid={`driver-password-${driver._id}`}
+        className="break-all rounded bg-surface-muted px-1.5 py-0.5 text-xs sm:whitespace-nowrap sm:break-normal"
+      >
+        {password}
+      </code>
+      <Button size="sm" variant="ghost" onClick={() => onCopy(password)}>Copy</Button>
+      <Button size="sm" variant="ghost" onClick={() => onHide(driver._id)}>Hide</Button>
+    </div>
+  );
+}
+
 export function ManagerAccountsPage() {
   const navigate = useNavigate();
   const isOnline = useOnlineStatus();
@@ -261,6 +297,10 @@ export function ManagerAccountsPage() {
   // Held in state only while the dialog is open, and dropped on close — the
   // password is never kept alongside the cached driver list.
   const [viewedPassword, setViewedPassword] = useState(null);
+  // driverId -> a password revealed in the directory itself. Same rule as the
+  // dialog: in-page state only, never beside the cached driver list.
+  const [revealedPasswords, setRevealedPasswords] = useState({});
+  const [loadingPasswordId, setLoadingPasswordId] = useState(null);
   const [rotateTarget, setRotateTarget] = useState(null);
   const [disableTarget, setDisableTarget] = useState(null);
   const [newPassword, setNewPassword] = useState('');
@@ -447,10 +487,13 @@ export function ManagerAccountsPage() {
     }
   };
 
-  const handleViewPassword = async (driver) => {
+  // One audited read, shared by the row menu's dialog and the directory's
+  // Show password. Resolves to the password, or null once the refusal has been
+  // explained to the manager.
+  const loadPassword = async (driver) => {
     try {
       const res = await viewPwM.mutateAsync({ driverId: driver._id });
-      setViewedPassword({ driver, password: res?.data?.password || '' });
+      return res?.data?.password || '';
     } catch (err) {
       // The two expected refusals are worth distinguishing: one is a server
       // setting, the other means this driver simply needs a reset.
@@ -461,17 +504,40 @@ export function ManagerAccountsPage() {
       } else {
         toast(err?.message || 'Could not load the password');
       }
+      return null;
     }
   };
 
-  const handleCopyPassword = async () => {
+  const handleViewPassword = async (driver) => {
+    const password = await loadPassword(driver);
+    if (password != null) setViewedPassword({ driver, password });
+  };
+
+  const handleShowPassword = async (driver) => {
+    setLoadingPasswordId(driver._id);
+    const password = await loadPassword(driver);
+    setLoadingPasswordId(null);
+    if (password != null) setRevealedPasswords((prev) => ({ ...prev, [driver._id]: password }));
+  };
+
+  const handleHidePassword = useCallback((driverId) => {
+    setRevealedPasswords((prev) => {
+      const copy = { ...prev };
+      delete copy[driverId];
+      return copy;
+    });
+  }, []);
+
+  const copyPassword = async (password) => {
     try {
-      await navigator.clipboard.writeText(viewedPassword.password);
+      await navigator.clipboard.writeText(password);
       toast('Password copied');
     } catch {
       toast('Could not copy to clipboard');
     }
   };
+
+  const handleCopyPassword = () => copyPassword(viewedPassword.password);
 
   const handleConfirmReset = async () => {
     if (!resetTarget) return;
@@ -481,6 +547,8 @@ export function ManagerAccountsPage() {
     }
     try {
       await resetPwM.mutateAsync({ driverId: resetTarget._id, password: newPassword });
+      // A revealed password is now the old one; drop it rather than show it stale.
+      handleHidePassword(resetTarget._id);
       setResetTarget(null);
       setNewPassword('');
       toast('Password updated successfully');
@@ -572,6 +640,18 @@ export function ManagerAccountsPage() {
     );
   };
 
+  const renderPasswordCell = (driver) => (
+    <PasswordCell
+      driver={driver}
+      isOnline={isOnline}
+      password={revealedPasswords[driver._id]}
+      loading={loadingPasswordId === driver._id}
+      onShow={handleShowPassword}
+      onHide={handleHidePassword}
+      onCopy={copyPassword}
+    />
+  );
+
   const renderActionsCell = (driver) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -641,6 +721,13 @@ export function ManagerAccountsPage() {
           </div>
         );
       },
+    },
+    {
+      id: 'password',
+      header: 'Password',
+      accessorKey: '_id',
+      enableSorting: false,
+      cell: (info) => renderPasswordCell(info.row.original),
     },
     {
       id: 'organization',
@@ -733,7 +820,7 @@ export function ManagerAccountsPage() {
     // give TanStack a new `columns` array every time and cost it its internal
     // state; the array must stay stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [revertable, shownKeys, toggleKeyShown, liveByDriverId, fleetQ.isLoading, navigate, isOnline, rememberRevertable]);
+  ], [revertable, shownKeys, toggleKeyShown, liveByDriverId, fleetQ.isLoading, navigate, isOnline, rememberRevertable, revealedPasswords, loadingPasswordId]);
 
   // Below md the 11-column directory renders a card per row. Nothing is
   // dropped: there is no row-detail view, and the edit dialog exposes only the
@@ -787,6 +874,13 @@ export function ManagerAccountsPage() {
           <span className="text-muted-foreground">Email: </span>
           {driver.email || 'None'}
         </p>
+
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+            Password
+          </p>
+          {renderPasswordCell(driver)}
+        </div>
 
         {/* These two carried column headers in the table. Without them
             "None / No vehicle" reads as a stray sentence, so the card

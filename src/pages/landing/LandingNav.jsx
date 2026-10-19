@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDown } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowDown, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LogoMark } from './LogoMark';
 import { NAV_LINKS } from './config';
@@ -13,6 +14,9 @@ const SECTIONS = ['top', 'what', 'how-it-works', 'join'];
 // The full-screen menu a phone gets.
 const MENU = [...NAV_LINKS, { label: 'Get the app', href: '#join' }];
 
+// A gated route: a signed-in manager lands on their dashboard, anyone else is sent on to /login.
+const PORTAL_PATH = '/manager/dashboard';
+
 const MENU_ORIGIN = 'calc(100% - 2.3rem) 2.6rem'; // where the menu button is: the menu opens out of it
 
 /**
@@ -20,8 +24,8 @@ const MENU_ORIGIN = 'calc(100% - 2.3rem) 2.6rem'; // where the menu button is: t
  * link, four ticks that stretch and light up as you pass each section, and one button, "Get the app".
  * A glint runs round its edge, a thin line along the bottom fills as the page scrolls, and it slides
  * away on the way down and comes back on the way up so it never sits over the content. On a phone a
- * round menu button opens a full-screen menu out of its corner. Nothing else: the manager's sign in
- * lives in the footer.
+ * round menu button opens a full-screen menu out of its corner. "Manager portal" sits beside the
+ * button on desktop and closes the phone menu.
  */
 export function LandingNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -149,6 +153,13 @@ export function LandingNav() {
           </nav>
 
           <div className="flex items-center gap-1.5">
+            <Link
+              to={PORTAL_PATH}
+              className="hidden h-10 shrink-0 items-center gap-1.5 rounded-full border border-l-bone/25 px-4 text-sm font-medium text-l-bone transition-colors hover:border-l-bone/60 hover:bg-l-bone/10 md:inline-flex"
+            >
+              Manager portal
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
             <a
               href="#join"
               className="group inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-l-bone px-4 text-sm font-semibold text-l-ink sm:px-5 coarse:h-11"
@@ -211,6 +222,19 @@ export function LandingNav() {
               <span className="font-display text-[clamp(2.6rem,12vw,4rem)] font-semibold leading-none text-l-bone">{link.label}</span>
             </a>
           ))}
+          <Link
+            to={PORTAL_PATH}
+            tabIndex={open ? 0 : -1}
+            onClick={() => setOpen(false)}
+            className="mt-8 inline-flex items-center justify-between gap-3 self-start rounded-full border border-l-bone/30 py-3 pl-6 pr-5 text-base font-medium text-l-bone"
+            style={{
+              opacity: open ? 1 : 0,
+              transition: `opacity 0.7s ease ${open ? 0.3 + MENU.length * 0.1 : 0}s`,
+            }}
+          >
+            Visit manager portal
+            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
         </nav>
       </div>
     </>

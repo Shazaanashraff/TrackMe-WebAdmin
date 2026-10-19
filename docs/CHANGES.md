@@ -18,6 +18,18 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-10-19 — Manager portal link on the landing nav; driver password in the Drivers directory
+- **Branch:** feat/manager-portal-nav (from feat/pingo-rename)
+- **Modules touched:** [LANDING](modules/LANDING.md), [ACCOUNTS](modules/ACCOUNTS.md)
+- **What changed:**
+  - Landing nav: "Manager portal" pill beside "Get the app" (desktop) and "Visit manager portal" in the phone menu, both to `/manager/dashboard` (dashboard if signed in, else login).
+  - Drivers page: a Password column / card block with per-row Show, Copy, Hide. One audited read per reveal, kept in page state only.
+- **Why:** managers could see a driver's email but not the password to hand over; the portal had no way in from the public page's nav.
+- **Contract impact:** none (uses the existing password-reveal endpoint).
+- **Tests:** `LandingNav` and `ManagerAccountsPage` unit tests added.
+- **Docs updated:** LANDING, ACCOUNTS, TESTING_GUIDE row.
+- **Follow-ups / known issues:** the landing footer sentence/test about "sign in only in the footer" now means the *link named sign in*.
+
 ## 2026-10-18 — Tracking map: vehicle icon turned to its heading
 - **Branch:** feature/live-map-markers
 - **Modules touched:** [TRACKING](modules/TRACKING.md)

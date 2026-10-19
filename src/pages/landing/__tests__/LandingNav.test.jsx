@@ -36,7 +36,18 @@ describe('LandingNav (the floating pill)', () => {
     expect(cta.className).toMatch(/bg-l-bone/); // the one filled button: the primary action
   });
 
-  it('has no manager sign in (it lives in the footer) and no turning ring around the mark', () => {
+  it('offers the manager portal on the pill and in the phone menu, both through the gated dashboard route', () => {
+    renderNav();
+
+    // /manager/dashboard sends a signed-out visitor on to /login, so one target covers both cases.
+    const banner = screen.getByRole('banner');
+    expect(within(banner).getByRole('link', { name: /manager portal/i })).toHaveAttribute('href', '/manager/dashboard');
+    fireEvent.click(screen.getByRole('button', { name: /open menu/i }));
+    const menu = document.getElementById('landing-menu');
+    expect(within(menu).getByRole('link', { name: /visit manager portal/i })).toHaveAttribute('href', '/manager/dashboard');
+  });
+
+  it('has no manager sign in link (the footer keeps that) and no turning ring around the mark', () => {
     const { container } = renderNav();
 
     expect(screen.queryByRole('link', { name: /sign in/i })).toBeNull();
@@ -155,8 +166,8 @@ describe('LandingNav (the phone menu)', () => {
     expect(menu().className).toMatch(/(^| )visible/);
     expect(menu().style.clipPath).toMatch(/circle\(150vmax/);
     const links = within(menu()).getAllByRole('link');
-    expect(links.map((a) => a.getAttribute('href'))).toEqual(['#how-it-works', '#join']);
-    expect(links.map((a) => a.textContent)).toEqual(['01How it works', '02Get the app']);
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['#how-it-works', '#join', '/manager/dashboard']);
+    expect(links.map((a) => a.textContent)).toEqual(['01How it works', '02Get the app', 'Visit manager portal']);
     links.forEach((a) => expect(a).toHaveAttribute('tabindex', '0'));
   });
 

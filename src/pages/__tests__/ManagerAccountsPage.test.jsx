@@ -884,6 +884,64 @@ describe('ManagerAccountsPage: viewing a driver password', () => {
   });
 });
 
+describe('ManagerAccountsPage: password column in the directory', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  const viewing = (password = 'DriverPass1!') => makeMutation({
+    mutateAsync: vi.fn().mockResolvedValue({ data: { password } }),
+  });
+
+  it('offers Show password on every row and fetches nothing up front', () => {
+    const viewPwMut = viewing();
+    setup({ viewPwMut });
+
+    expect(screen.getByRole('button', { name: 'Show password for Kamal Perera' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /show password for/i })).toHaveLength(DRIVERS.length);
+    expect(viewPwMut.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('reveals one driver password in the row, leaving the others hidden', async () => {
+    const viewPwMut = viewing('Secret123!');
+    const { user } = setup({ viewPwMut });
+
+    await user.click(screen.getByRole('button', { name: 'Show password for Kamal Perera' }));
+
+    expect(viewPwMut.mutateAsync).toHaveBeenCalledWith({ driverId: 'driver-1' });
+    expect(await screen.findByTestId('driver-password-driver-1')).toHaveTextContent('Secret123!');
+    expect(screen.queryByTestId('driver-password-driver-2')).not.toBeInTheDocument();
+    expect(viewPwMut.mutateAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it('puts the password away again on Hide', async () => {
+    const { user } = setup({ viewPwMut: viewing() });
+    await user.click(screen.getByRole('button', { name: 'Show password for Kamal Perera' }));
+    await screen.findByTestId('driver-password-driver-1');
+
+    await user.click(screen.getByRole('button', { name: 'Hide' }));
+
+    expect(screen.queryByTestId('driver-password-driver-1')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show password for Kamal Perera' })).toBeInTheDocument();
+  });
+
+  it('explains a driver with no stored password and keeps the cell hidden', async () => {
+    const viewPwMut = makeMutation({
+      mutateAsync: vi.fn().mockRejectedValue({ code: 'PASSWORD_NOT_RECOVERABLE' }),
+    });
+    const { user } = setup({ viewPwMut });
+
+    await user.click(screen.getByRole('button', { name: 'Show password for Kamal Perera' }));
+
+    expect(toast).toHaveBeenCalledWith(expect.stringMatching(/reset it to set a new one/i));
+    expect(screen.queryByTestId('driver-password-driver-1')).not.toBeInTheDocument();
+  });
+
+  it('is disabled offline, since a reveal needs the server', () => {
+    setup({ online: false });
+
+    expect(screen.getByRole('button', { name: 'Show password for Kamal Perera' })).toBeDisabled();
+  });
+});
+
 // How many people ride with each driver, and the way through to who they are.
 // A rider of a non-private driver enrols with no approval step, so this column
 // is the only place in the portal that ever counts them.
