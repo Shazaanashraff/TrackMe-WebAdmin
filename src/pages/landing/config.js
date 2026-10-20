@@ -48,7 +48,7 @@ export const APP_LINKS = {
 // { email, source: 'landing' } -- the backend must match it (see driverInterest.js).
 export const DRIVER_INTEREST_ENDPOINT = null;
 
-export const PRIVACY_URL = 'https://shazaanashraff.github.io/trackme-privacy/';
+export const PRIVACY_URL = 'https://shazaanashraff.github.io/pingo-privacy/';
 
 // The links in the nav (the "Get the app" button beside them is its own thing, see LandingNav).
 export const NAV_LINKS = [
