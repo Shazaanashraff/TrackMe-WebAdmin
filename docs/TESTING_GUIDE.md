@@ -101,6 +101,13 @@
 | AppShell Requests nav badge | RTL (Vitest) | src/layout/__tests__/AppShell.test.jsx | badge shows the pending count from `useEnrollmentRequestCount` | nav badge wiring changes |
 | Requests nav badge stays live | unit (Vitest) | src/hooks/__tests__/use-enrollment-requests.test.jsx | the count query polls every `ENROLLMENT_COUNT_POLL_MS` so a request arriving after sign-in reaches the badge without a reload, stays disabled for super-admins, and a loaded PENDING queue writes its own length into the count cache (a non-pending queue does not) | the count polling interval, the badge cache key, or the queue-to-badge sync changes |
 
+## Notifications (manager bell)
+| Item (fn / flow) | Test type | Test file | Cases covered | Update when |
+|---|---|---|---|---|
+| NotificationBell | unit | src/components/manager/__tests__/notification-bell.test.jsx | badge shows the unread count (label "Notifications, N unread"), caps at 9+, hidden when all read; panel lists notices, opening an unread one marks it read, a read one is not re-sent; Mark all read calls through and is disabled with nothing unread; empty and error (Try again refetches) states | the bell's states, badge or read behaviour change |
+| useManagerNotifications / mark read hooks | unit | src/hooks/__tests__/use-manager-notifications.test.jsx | loads list (limit 20) and unread count; a `notification:new` socket event refetches both; socket closed on unmount; disabled opens no socket and fetches nothing; mark one read updates list and count at once; mark all read | the socket event, polling, or the optimistic update change |
+| Topbar bell gate | unit | src/layout/__tests__/Topbar.test.jsx | managers get the bell, super-admins do not | who gets the bell changes |
+
 ## Tracking
 | Item (fn / flow) | Test type | Test file | Cases covered | Update when |
 |---|---|---|---|---|

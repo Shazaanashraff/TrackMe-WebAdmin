@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ColorModeProvider } from '@/theme/ColorMode';
+// The bell has its own suite; here it only matters who gets one.
+vi.mock('@/components/manager/notification-bell', () => ({
+  NotificationBell: () => <button type="button" aria-label="Notifications">bell</button>,
+}));
+
 import { Topbar } from '../Topbar';
 import { SUPER_ADMIN_NAV, MANAGER_NAV } from '../AppShell';
 
@@ -57,6 +62,14 @@ describe('Topbar', () => {
     renderTopbar({ role: 'admin', path: '/manager/route-approvals' });
     expect(screen.getByText('Manager')).toBeInTheDocument();
     expect(screen.getByText('Route Approvals')).toBeInTheDocument();
+  });
+
+  it('shows the notification bell to a manager only', () => {
+    const { unmount } = renderTopbar({ role: 'admin', path: '/manager/dashboard' });
+    expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
+    unmount();
+    renderTopbar({ role: 'super-admin', path: '/dashboard' });
+    expect(screen.queryByRole('button', { name: 'Notifications' })).toBeNull();
   });
 
   it('derives a label from the pathname when no exact match exists', () => {

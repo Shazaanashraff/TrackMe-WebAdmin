@@ -60,4 +60,10 @@ export const qk = {
     list: () => ['app-releases', 'list'],
     history: (app) => ['app-releases', 'history', app],
   },
+  // The manager's notification bell (Topbar).
+  notifications: {
+    all: () => ['notifications'],
+    list: () => ['notifications', 'list'],
+    unread: () => ['notifications', 'unread'],
+  },
 };

@@ -16,6 +16,8 @@ The documentation map for web-admin. [`../CLAUDE.md`](../CLAUDE.md) routes you h
   for private-driver enrollment requests, incl. managed-rider-profile account surfacing.
 - **[modules/LANDING.md](modules/LANDING.md)** — the public landing page at `/`: hero, scroll story,
   rider/driver section, and the three open items before launch.
+- **[modules/NOTIFICATIONS.md](modules/NOTIFICATIONS.md)** — the manager's Topbar bell: riders leaving or
+  coming back because of an account deletion, live over Socket.IO.
 - **[modules/TRACKING.md](modules/TRACKING.md)** — manager fleet snapshot, selected-vehicle live
   socket stream, map states and authorization.
 
