@@ -18,6 +18,14 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+## 2026-10-26 — Landing: the laptop shows the current PinGo portal
+- **Branch:** feature/landing-journey
+- **Modules touched:** [LANDING](modules/LANDING.md)
+- **What changed:** retook the four portal captures the laptop cycles through (`public/landing/portal-overview|vehicles|drivers|enrollments.jpg`) from the current PinGo portal (they showed the old TrackMe design). Overview, vehicles, drivers and enrollments, from the E2E mock data.
+- **Why:** the laptop in "How it works" should show the real app. The phone screens are still drawn in code: the rider app is a separate project and has no screenshots in its repo.
+- **Contract impact:** none. **Tests:** none needed (images only; the existing `PortalScreen` tests use the same file names and alt text). **Docs updated:** `modules/LANDING.md`.
+- **Follow-ups:** phone screens need real screenshots of the rider app (live map, join with a key, riders); they would go in as images inside the phone frame.
+
 ## 2026-10-19 — Manager portal link on the landing nav; driver password in the Drivers directory
 - **Branch:** feat/manager-portal-nav-main (rebased onto origin/main)
 - **Modules touched:** [LANDING](modules/LANDING.md), [ACCOUNTS](modules/ACCOUNTS.md)

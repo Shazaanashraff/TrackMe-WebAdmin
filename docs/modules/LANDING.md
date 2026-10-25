@@ -1,6 +1,6 @@
 # LANDING — Web Admin
 
-> **Brand:** the public site is called **Pingo** (it was TrackMe). The manager portal behind `/login` and the real captures of it in `public/landing/portal-*.jpg` still say TrackMe until the portal itself is renamed; re-take the captures then.
+> **Brand:** the public site is called **Pingo**, and so is the manager portal now ("PinGo"). The captures of the portal in `public/landing/portal-*.jpg` were retaken on 2026-10-26 from the current portal and show the current design.
 
 The public marketing page at `/`: what TrackMe is, how it works for riders and fleet managers, and
 where a rider or a driver goes next.
@@ -68,7 +68,7 @@ icon-in-a-box grids, and paragraphs of copy. (The one glass element is the float
 | `scripts/check-landing-budget.mjs` | `npm run check:landing-budget` after a build: fails if the landing chunk exceeds 120 KB gzipped. |
 | `src/hooks/use-media-query.js` | `useMediaQuery(query)`, used to pick the compact (phone) story layout and the phone-only animations. |
 | `public/landing/hero.mp4`, `hero-tall.mp4`, `hero-*.webp` | The hero clips, both cut from the 4K source: **1920x1080 at 5 Mbps (9 MB)** and a **810x1440 portrait cut at 3.4 Mbps (6 MB)** that follows the bus, each with a `poster` (the first frame, shown while it loads) and a `still` (used instead of the video for reduced motion), as WebP. See §6 for how they were made and the footage's licence/brand caveat. |
-| `public/landing/portal-*.jpg` | Real captures of the manager portal in dark mode, taken from the E2E mock data (not real fleets). Re-take them if the portal's look changes. |
+| `public/landing/portal-*.jpg` | Real captures of the current manager portal in dark mode (overview, vehicles, drivers, enrollments; 1280x800), taken from the E2E mock data (not real fleets or people). To retake: a throwaway Playwright spec that sets `localStorage['webadmin-color-mode']='dark'`, calls `loginAsManager`, `mockManagerBackend` and `mockManagerPortalData` from `e2e/helpers.ts`, opens `/manager/dashboard`, `/manager/vehicles`, `/manager/accounts` and `/manager/requests`, waits 3.5s and saves JPEG screenshots (live tracking is left out: with no live stream its map is empty). Retake them when the portal's look changes. The phone screens are still drawn in code: the rider app is not part of this repo. |
 
 ## 3. Data flow
 
