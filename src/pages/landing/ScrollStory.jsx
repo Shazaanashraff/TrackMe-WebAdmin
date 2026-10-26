@@ -12,12 +12,10 @@ import { useMotion } from './motion/context';
 import { useGsapContext } from './motion/useGsapContext';
 import { useViewportSize } from './motion/useViewportSize';
 import { CURTAIN_VARS, clearCurtain } from './curtain';
-import MapScreen from './screens/MapScreen';
-import EnrollScreen from './screens/EnrollScreen';
-import ProfilesScreen from './screens/ProfilesScreen';
+import AppScreen from './screens/AppScreen';
 import PortalScreen from './screens/PortalScreen';
 
-const PHONE_SCREENS = [MapScreen, EnrollScreen, ProfilesScreen];
+const PHONE_SCREENS = [0, 1, 2]; // which real app screenshot each phone chapter shows (APP_SHOTS)
 const DESKTOP_QUERY = '(min-width: 1024px)';
 
 // Each word of a title sits behind its own mask, so the film can lift it into view.
@@ -74,13 +72,13 @@ function PhoneStage({ fixedWidth = false }) {
     <PhoneFrame
       className={fixedWidth ? 'w-full' : 'w-[min(300px,76vw,calc((100svh_-_10rem)*0.4865))]'}
     >
-      {PHONE_SCREENS.map((Screen, i) => (
+      {PHONE_SCREENS.map((shot, i) => (
         <div
           key={STORY[i].key}
           data-screen={i}
           className={cn('absolute inset-0', i > 0 && 'opacity-0')}
         >
-          <Screen />
+          <AppScreen shot={shot} />
         </div>
       ))}
     </PhoneFrame>
@@ -189,7 +187,7 @@ function StackedStory() {
   return (
     <div className="mx-auto max-w-2xl space-y-20 px-4 pb-4 sm:px-8 sm:pb-16 lg:max-w-6xl lg:space-y-28 lg:px-10">
       {STORY.map((item, i) => {
-        const Screen = PHONE_SCREENS[i];
+        const shot = PHONE_SCREENS[i];
         const isLaptop = item.device === 'laptop';
         return (
           <Reveal
@@ -222,7 +220,7 @@ function StackedStory() {
               ) : (
                 <PhoneFrame className={cn('sm:rotate-0', i % 2 === 0 ? '-rotate-3' : 'rotate-3')}>
                   <div className="absolute inset-0">
-                    <Screen />
+                    <AppScreen shot={shot} />
                   </div>
                 </PhoneFrame>
               )}

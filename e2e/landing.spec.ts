@@ -340,9 +340,9 @@ test.describe('Landing page — small phone', () => {
     expect(Math.abs(inputBox!.width - buttonBox!.width)).toBeLessThan(2);
   });
 
-  test('both apps offer an Android download; iPhone says "Coming soon" until a release is registered', async ({ page }) => {
+  test('both apps offer an Android download; the iPhone badges say "Coming soon" until a release is registered', async ({ page }) => {
     await page.goto('/#join');
-    await expect(page.getByRole('button', { name: /iphone/i })).toHaveCount(2);
+    await expect(page.getByRole('button', { name: /coming soon/i })).toHaveCount(2); // the rider and the driver iPhone badge
     await expect(page.getByText(/coming soon/i)).toHaveCount(2);
     await expect(page.getByRole('link', { name: /android.*rider app/i })).toHaveAttribute('href', /rider-app.*\.apk$/);
     await expect(page.getByRole('link', { name: /android.*driver app/i })).toHaveAttribute('href', /driver-app.*\.apk$/);
@@ -645,7 +645,8 @@ test.describe('Landing page — the story film', () => {
     const box = await page.locator('#how-it-works ' + selector).first().boundingBox();
     return box!.x + box!.width / 2;
   };
-  const marker = (page: Page) => page.locator('#how-it-works [data-marker]').getAttribute('transform');
+  // The picture on a phone screen: which capture it is, and how far it has been pushed in.
+  const shotOf = (page: Page, chapter: number) => page.locator(`#how-it-works [data-screen="${chapter}"] img[data-app-shot]`);
 
   // Copy that is on show, by chapter: every block is in the page, only one is visible.
   const visibleCopy = (page: Page) =>
@@ -683,10 +684,10 @@ test.describe('Landing page — the story film', () => {
     }
   });
 
-  test('starts with the map phone on the left and the first chapter\'s title on the right', async ({ page }) => {
+  test('starts with the app home on the left and the first chapter\'s title on the right', async ({ page }) => {
     await playStoryTo(page, 0.3);
 
-    await expect(page.getByRole('heading', { level: 3, name: 'See it coming.' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 3, name: 'Go live.' })).toBeVisible();
     expect(await centreX(page, '[data-phone]')).toBeLessThan(720);
     expect(await centreX(page, '[data-copy]')).toBeGreaterThan(720);
   });
@@ -702,40 +703,26 @@ test.describe('Landing page — the story film', () => {
     expect(sides).toEqual(['left', 'right', 'left']);
   });
 
-  test('the shuttle drives its route as you scroll: the marker moves and the countdown falls', async ({ page }) => {
+  test('each phone chapter shows a real screen of the Pingo app, and the screens take turns', async ({ page }) => {
+    const sources: string[] = [];
+    for (const chapter of [0, 1, 2]) {
+      await playStoryTo(page, chapter + 0.5);
+      await expect.poll(async () => Number(await shotOf(page, chapter).evaluate((el) => getComputedStyle(el.closest('[data-screen]')!).opacity)), { timeout: 6000 }).toBeGreaterThan(0.95);
+      sources.push((await shotOf(page, chapter).getAttribute('src')) as string);
+      // The picture is really there: it loaded and has its own size.
+      expect(await shotOf(page, chapter).evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 300)).toBe(true);
+    }
+    expect(sources).toEqual(['/landing/app-home.webp', '/landing/app-profile.webp', '/landing/app-riders.webp']);
+  });
+
+  test('the app screen is pushed in a little as its chapter plays', async ({ page }) => {
+    const scale = () => shotOf(page, 0).evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).a);
+
     await playStoryTo(page, 0.14);
-    await expect.poll(() => text(page, '[data-eta]'), { timeout: 6000 }).toBe('4 min');
-    await page.waitForTimeout(800);
-    const start = await marker(page);
-
-    await playStoryTo(page, 0.6);
-    await expect.poll(() => marker(page), { timeout: 6000 }).not.toBe(start);
-    await expect.poll(() => text(page, '[data-eta]'), { timeout: 6000 }).toMatch(/^[123] min$/);
-
-    await playStoryTo(page, 0.9); // the content has finished: the shuttle has arrived
-    await expect.poll(() => text(page, '[data-eta]'), { timeout: 6000 }).toBe('Here');
-    await expect.poll(() => text(page, '[data-away]')).toBe('At your stop');
-  });
-
-  test('types the driver key, sends the request, and waits for approval', async ({ page }) => {
-    const typed = async () =>
-      (await page.locator('#how-it-works [data-key-char]').allTextContents()).join('').replace(/ /g, '');
-
-    await playStoryTo(page, 1.5);
-    await expect.poll(typed, { timeout: 6000 }).toBe('TM4F7K'); // the whole key is in...
-    expect(await text(page, '[data-status-title]')).toBe('Not sent yet'); // ...but not sent yet
-
-    await playStoryTo(page, 1.9);
-    await expect.poll(() => text(page, '[data-status-title]'), { timeout: 6000 }).toBe('Waiting for approval');
-    expect(await text(page, '[data-button-label]')).toBe('Request sent');
-  });
-
-  test('the second rider\'s shuttle closes in as the riders chapter plays', async ({ page }) => {
-    await playStoryTo(page, 2.14);
-    await expect.poll(() => text(page, '[data-profile-eta]'), { timeout: 6000 }).toBe('6 min');
-
-    await playStoryTo(page, 2.9);
-    await expect.poll(() => text(page, '[data-profile-eta]'), { timeout: 6000 }).toBe('2 min');
+    await expect.poll(scale, { timeout: 6000 }).toBeLessThan(1.003);
+    await playStoryTo(page, 0.9);
+    await expect.poll(scale, { timeout: 6000 }).toBeGreaterThan(1.015);
+    expect(await scale()).toBeLessThanOrEqual(1.03); // little enough that the app's bottom bar stays in view
   });
 
   test('the phone becomes a laptop for the manager chapter, which ends on an approval', async ({ page }) => {
@@ -759,7 +746,7 @@ test.describe('Landing page — the story film', () => {
 
     await playStoryTo(page, 0.14);
     await expect.poll(() => visibleCopy(page), { timeout: 6000 }).toEqual([0]);
-    await expect.poll(() => text(page, '[data-eta]'), { timeout: 6000 }).toBe('4 min');
+    await expect.poll(() => shotOf(page, 0).evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).a), { timeout: 6000 }).toBeLessThan(1.003);
     expect(await opacityOf(page, '[data-phone]')).toBeGreaterThan(0.95);
     await expect.poll(() => centreX(page, '[data-device]'), { timeout: 6000 }).toBeLessThan(720);
   });
@@ -801,13 +788,13 @@ test.describe('Landing page — the story, without the film', () => {
     expect(await storyState(page)).toEqual({ step: undefined, side: undefined });
     await expect(page.locator('#how-it-works [data-story-stage]')).toHaveCount(0);
     await expect(page.locator('#how-it-works .pin-spacer')).toHaveCount(0);
-    for (const title of ['See it coming.', 'Join with a key.', 'One login, every rider.', 'Run the whole fleet.']) {
+    for (const title of ['Go live.', 'Share your key.', 'Know your riders.', 'Run the whole fleet.']) {
       await expect(page.getByRole('heading', { level: 3, name: title })).toBeAttached();
     }
 
     // Chapters sit in two columns, the device alternating sides as it does in the film.
-    const first = await page.getByRole('heading', { level: 3, name: 'See it coming.' }).boundingBox();
-    const second = await page.getByRole('heading', { level: 3, name: 'Join with a key.' }).boundingBox();
+    const first = await page.getByRole('heading', { level: 3, name: 'Go live.' }).boundingBox();
+    const second = await page.getByRole('heading', { level: 3, name: 'Share your key.' }).boundingBox();
     expect(first!.x).toBeGreaterThan(720); // copy on the right: the phone is on the left
     expect(second!.x).toBeLessThan(720);
   });
@@ -889,7 +876,7 @@ test.describe('Landing page — the look', () => {
     await pill.waitFor();
 
     const box = (await pill.boundingBox())!;
-    expect(box.width).toBeLessThanOrEqual(38 * 16 + 1);
+    expect(box.width).toBeLessThanOrEqual(46 * 16 + 1); // 38rem on a phone, 46rem from md up (room for the Manager portal link)
     expect(box.width).toBeLessThan(1440 - 100);
     expect(box.y).toBeGreaterThanOrEqual(8);
     expect(Math.abs(box.x + box.width / 2 - 720)).toBeLessThan(2);
@@ -1141,7 +1128,7 @@ test.describe('Landing page — a phone, as a phone', () => {
     await expect(page.locator('#landing-menu')).toBeVisible();
     await expect(page.getByRole('button', { name: /close menu/i })).toHaveAttribute('aria-expanded', 'true');
     const links = page.locator('#landing-menu').getByRole('link');
-    await expect(links).toHaveText(['01How it works', '02Get the app']);
+    await expect(links).toHaveText(['01How it works', '02Get the app', 'Visit manager portal']);
 
     await links.nth(1).click();
     await expect(page.locator('#landing-menu')).toBeHidden();

@@ -44,7 +44,6 @@ function renderStory() {
 
 const opacity = (el) => Number(gsap.getProperty(el, 'opacity'));
 const x = (el) => Number(gsap.getProperty(el, 'xPercent'));
-const text = (el, selector) => el.querySelector(selector).textContent;
 
 describe('the story film, played by hand', () => {
   let story;
@@ -79,7 +78,7 @@ describe('the story film, played by hand', () => {
     expect(film.duration()).toBeCloseTo(CHAPTERS);
   });
 
-  it('opens on chapter one: the phone at the left showing the map, and only its copy visible', () => {
+  it('opens on chapter one: the phone at the left showing the app home, and only its copy visible', () => {
     at(0);
 
     expect(x(story.device)).toBe(0);
@@ -159,62 +158,22 @@ describe('the story film, played by hand', () => {
     expect(opacity(story.laptop)).toBeGreaterThan(0.99);
   });
 
-  it('drives the shuttle along its route, counting the arrival down as it goes', () => {
-    const route = story.one('[data-route]');
-    route.getTotalLength = () => 100;
-    route.getPointAtLength = (distance) => ({ x: distance, y: distance * 2 });
-    film.kill();
-    film = buildStoryFilm(story.section, story.stage, { detached: true });
-    const map = story.screens[0];
+  it('pushes each phone screen in slowly while its chapter plays, and back out as you scroll up', () => {
+    const scale = (i) => Number(gsap.getProperty(story.screens[i].querySelector('[data-app-shot]'), 'scale'));
 
+    at(0.2); // chapter one's content starts
+    expect(scale(0)).toBeCloseTo(1, 2);
+    at(0.5);
+    expect(scale(0)).toBeGreaterThan(1);
+    at(0.9); // its content has finished
+    const end = scale(0);
+    expect(end).toBeGreaterThan(1.015);
+    expect(end).toBeLessThanOrEqual(1.03);
+
+    at(1.5); // chapter two's screen is mid-push
+    expect(scale(1)).toBeGreaterThan(1);
     at(0.2);
-    expect(text(map, '[data-eta]')).toBe('4 min');
-    expect(text(map, '[data-away]')).toBe('3 stops away');
-    expect(map.querySelector('[data-marker]').getAttribute('transform')).toBe('translate(0.0 0.0)');
-
-    at(0.56); // 60% of the way through the chapter's content
-    expect(text(map, '[data-eta]')).toBe('2 min');
-    expect(map.querySelector('[data-marker]').getAttribute('transform')).toBe('translate(60.0 120.0)');
-    expect(map.querySelector('[data-travelled]').getAttribute('stroke-dasharray')).toBe('0.6000 1');
-
-    at(0.9); // the content has finished: the shuttle is at the rider's stop
-    expect(text(map, '[data-eta]')).toBe('Here');
-    expect(text(map, '[data-away]')).toBe('At your stop');
-  });
-
-  it('types the driver key, sends the request, then waits for the manager', () => {
-    const join = story.screens[1];
-    const boxes = () => Array.from(join.querySelectorAll('[data-key-box]')).map((box) => box.getAttribute('data-on'));
-
-    at(1.12);
-    expect(boxes()).toEqual(Array(6).fill('false'));
-    expect(text(join, '[data-status-title]')).toBe('Not sent yet');
-
-    at(1.5); // the whole key is in, nothing sent yet
-    expect(boxes()).toEqual(Array(6).fill('true'));
-    expect(text(join, '[data-key-box]:first-child')).toBe('T');
-    expect(text(join, '[data-button-label]')).toBe('Request to join');
-    expect(text(join, '[data-status-title]')).toBe('Not sent yet');
-
-    at(1.88);
-    expect(text(join, '[data-button-label]')).toBe('Request sent');
-    expect(text(join, '[data-status-title]')).toBe('Waiting for approval');
-    expect(join.querySelectorAll('[data-step-dot][data-done="true"]')).toHaveLength(2); // the manager step is still to come
-  });
-
-  it('adds riders one at a time and closes the second rider\'s shuttle in', () => {
-    const riders = story.screens[2];
-    const eta = () => text(riders, '[data-profile-eta]');
-
-    at(2.12);
-    expect(eta()).toBe('6 min');
-    expect(opacity(riders.querySelectorAll('[data-rider]')[2])).toBe(0);
-
-    at(2.5);
-    riders.querySelectorAll('[data-rider]').forEach((rider) => expect(opacity(rider)).toBeGreaterThan(0.99));
-
-    at(2.88);
-    expect(eta()).toBe('2 min');
+    expect(scale(0)).toBeCloseTo(1, 2);
   });
 
   it('changes the portal page as you scroll, ending on the approvals queue with a request approved', () => {
@@ -255,9 +214,7 @@ describe('the story film, played by hand', () => {
     expect(opacity(story.copies[3])).toBe(0);
     expect(opacity(story.laptop)).toBe(0);
     expect(opacity(story.phone)).toBeGreaterThan(0.99);
-    expect(text(story.screens[0], '[data-eta]')).toBe('4 min');
-    expect(text(story.screens[1], '[data-status-title]')).toBe('Not sent yet');
-    expect(text(story.screens[2], '[data-profile-eta]')).toBe('6 min');
+    story.screens.forEach((screen) => expect(Number(gsap.getProperty(screen.querySelector('[data-app-shot]'), 'scale'))).toBeCloseTo(1, 2));
   });
 });
 

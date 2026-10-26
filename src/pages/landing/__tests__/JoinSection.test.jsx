@@ -95,13 +95,13 @@ describe('JoinSection — the question and the two numbered halves', () => {
     expect(container.querySelector('[data-wipe]')).toBeNull();
   });
 
-  it('draws the rider half as the download area: the iPhone and Android badges and a phone showing the live map', () => {
+  it('draws the rider half as the download area: the iPhone and Android badges and a phone showing the real app', () => {
     const { container } = render(<JoinSection />);
     const [rider] = container.querySelectorAll('[data-panel]');
 
     expect(rider.querySelectorAll('button, a[href]')).toHaveLength(2);
     // Decorative: a phone rising from the bottom edge (wide) and under the badges inside an arch (phone).
-    expect(rider.querySelectorAll('[aria-hidden="true"] [data-map-screen], [aria-hidden="true"] [data-route]').length).toBeGreaterThan(0);
+    expect(rider.querySelectorAll('[aria-hidden="true"] img[data-app-shot]').length).toBeGreaterThan(0);
     expect(rider.querySelector('[data-arch]')).not.toBeNull();
   });
 

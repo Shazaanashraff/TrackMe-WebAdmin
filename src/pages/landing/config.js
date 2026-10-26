@@ -67,21 +67,21 @@ export const POINTS = [
 
 export const STORY = [
   {
-    key: 'track',
-    audience: 'For riders',
-    title: 'See it coming.',
+    key: 'live',
+    audience: 'For drivers',
+    title: 'Go live.',
     device: 'phone',
   },
   {
-    key: 'join',
-    audience: 'For riders',
-    title: 'Join with a key.',
+    key: 'share',
+    audience: 'For drivers',
+    title: 'Share your key.',
     device: 'phone',
   },
   {
-    key: 'family',
-    audience: 'For riders',
-    title: 'One login, every rider.',
+    key: 'riders',
+    audience: 'For drivers',
+    title: 'Know your riders.',
     device: 'phone',
   },
   {
@@ -90,6 +90,16 @@ export const STORY = [
     title: 'Run the whole fleet.',
     device: 'laptop',
   },
+];
+
+// Real captures of the driver app (the same app a driver installs), cycled one per phone chapter:
+// the home screen with the GO button, the profile with the enrollment key riders join with, and the
+// riders list. `tint` is the colour at the top of each picture, which fills the strip under the phone's
+// camera notch so the picture sits below it. Taken from the app running on the web against sample data (no real people), 390x844.
+export const APP_SHOTS = [
+  { key: 'home', tint: '#151e33', src: '/landing/app-home.webp', alt: 'Pingo driver app home: the duty card with the GO button and the assigned vehicle' },
+  { key: 'profile', tint: '#151e33', src: '/landing/app-profile.webp', alt: 'Pingo driver app profile: the enrollment key riders join with, with copy and share' },
+  { key: 'riders', tint: '#f5f7fb', src: '/landing/app-riders.webp', alt: 'Pingo driver app riders: the list of enrolled riders with their pickup points' },
 ];
 
 // Real captures of the manager portal (dark theme), cycled inside the laptop.

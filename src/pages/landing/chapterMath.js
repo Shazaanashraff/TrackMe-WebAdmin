@@ -38,12 +38,6 @@ export const SIDE_X = [0, 100, 0, 100];
  */
 export const SIDE_X_COMPACT = [-12, 12, -12, 0];
 
-/**
- * Where along the map's route the shuttle passes each stop (0 = where it starts, 1 = the rider's
- * stop). Measured from the route drawn in MapScreen; if that path changes, measure again.
- */
-export const STOP_FRACTIONS = [0, 0.38, 0.73, 1];
-
 const clamp01 = (value) => Math.min(1, Math.max(0, value));
 
 /** 0..1 across the stretch [from, to] of a chapter's own 0..1 progress. */
@@ -55,34 +49,6 @@ export function windowProgress(progress, from, to) {
 /** The master-timeline time at which a chapter's content starts. */
 export function contentStart(chapter) {
   return chapter + CONTENT_START;
-}
-
-/** How many of the key's characters have been typed so far. */
-export function keyReveal(progress, count = 6) {
-  return Math.round(windowProgress(progress, 0.04, 0.5) * count);
-}
-
-/** What the join screen says at a given moment: nothing sent, request sent, then waiting. */
-export function enrollStatus(progress) {
-  if (progress < 0.6) return 'idle';
-  if (progress < 0.74) return 'sent';
-  return 'waiting';
-}
-
-/** Whole minutes until the shuttle arrives, rounded up: four, closing to none. */
-export function etaMinutes(progress) {
-  return Math.ceil((240 * (1 - clamp01(progress))) / 60);
-}
-
-/** How many stops are still ahead of the shuttle, the rider's own included. */
-export function stopsAway(progress) {
-  const done = clamp01(progress);
-  return STOP_FRACTIONS.filter((fraction) => fraction > done).length;
-}
-
-/** The second rider's shuttle: six minutes out, closing to two. */
-export function profileEtaMinutes(progress) {
-  return Math.max(2, Math.ceil((360 - 240 * clamp01(progress)) / 60));
 }
 
 /** "03 / 04": the chapter the visitor is in. */

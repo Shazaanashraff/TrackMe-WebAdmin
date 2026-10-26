@@ -6,16 +6,10 @@ import {
   GLIDE,
   SIDE_X,
   SIDE_X_COMPACT,
-  STOP_FRACTIONS,
   STORY_SCREENS,
   STORY_SCREENS_COMPACT,
   chapterCounter,
   contentStart,
-  enrollStatus,
-  etaMinutes,
-  keyReveal,
-  profileEtaMinutes,
-  stopsAway,
   storyScreens,
   windowProgress,
 } from '../chapterMath';
@@ -74,90 +68,6 @@ describe('windowProgress', () => {
   it('treats an empty window as a step instead of dividing by zero', () => {
     expect(windowProgress(0.3, 0.5, 0.5)).toBe(0);
     expect(windowProgress(0.5, 0.5, 0.5)).toBe(1);
-  });
-});
-
-describe('the shuttle ride (chapter one)', () => {
-  it('starts four minutes out and three stops away, and ends at the rider\'s stop', () => {
-    expect(etaMinutes(0)).toBe(4);
-    expect(stopsAway(0)).toBe(3);
-    expect(etaMinutes(1)).toBe(0);
-    expect(stopsAway(1)).toBe(0);
-  });
-
-  it('only ever counts down as the shuttle drives, never back up', () => {
-    let eta = Infinity;
-    let stops = Infinity;
-    for (let p = 0; p <= 1.0001; p += 0.01) {
-      expect(etaMinutes(p)).toBeLessThanOrEqual(eta);
-      expect(stopsAway(p)).toBeLessThanOrEqual(stops);
-      eta = etaMinutes(p);
-      stops = stopsAway(p);
-    }
-  });
-
-  it('counts whole minutes, rounded up', () => {
-    expect(etaMinutes(0.24)).toBe(4);
-    expect(etaMinutes(0.26)).toBe(3);
-    expect(etaMinutes(0.9)).toBe(1);
-  });
-
-  it('counts a stop as passed the moment the shuttle reaches it', () => {
-    const [, first, second] = STOP_FRACTIONS;
-    expect(STOP_FRACTIONS[0]).toBe(0);
-    expect(STOP_FRACTIONS.at(-1)).toBe(1);
-
-    expect(stopsAway(first - 0.01)).toBe(3);
-    expect(stopsAway(first)).toBe(2);
-    expect(stopsAway(second - 0.01)).toBe(2);
-    expect(stopsAway(second)).toBe(1);
-    expect(stopsAway(0.99)).toBe(1); // only the rider's own stop is left
-    expect(stopsAway(1)).toBe(0);
-  });
-
-  it('keeps the stop fractions in order, so a later stop is never passed first', () => {
-    const sorted = [...STOP_FRACTIONS].sort((a, b) => a - b);
-    expect(STOP_FRACTIONS).toEqual(sorted);
-  });
-});
-
-describe('joining with a key (chapter two)', () => {
-  it('types the key one character at a time, all six by the middle of the chapter', () => {
-    expect(keyReveal(0)).toBe(0);
-    expect(keyReveal(0.27)).toBeGreaterThan(0);
-    expect(keyReveal(0.27)).toBeLessThan(6);
-    expect(keyReveal(0.5)).toBe(6);
-    expect(keyReveal(1)).toBe(6);
-  });
-
-  it('only ever types more, never fewer', () => {
-    let typed = -1;
-    for (let p = 0; p <= 1.0001; p += 0.01) {
-      expect(keyReveal(p)).toBeGreaterThanOrEqual(typed);
-      typed = keyReveal(p);
-    }
-  });
-
-  it('goes from nothing sent, to sent, to waiting for the manager, and no further', () => {
-    expect(enrollStatus(0)).toBe('idle');
-    expect(enrollStatus(0.5)).toBe('idle');
-    expect(enrollStatus(0.65)).toBe('sent');
-    expect(enrollStatus(0.8)).toBe('waiting');
-    expect(enrollStatus(1)).toBe('waiting');
-  });
-
-  it('only sends once the whole key has been typed', () => {
-    for (let p = 0; p <= 1.0001; p += 0.01) {
-      if (enrollStatus(p) !== 'idle') expect(keyReveal(p)).toBe(6);
-    }
-  });
-});
-
-describe('the second rider\'s shuttle (chapter three)', () => {
-  it('starts six minutes out and closes to two, never below', () => {
-    expect(profileEtaMinutes(0)).toBe(6);
-    expect(profileEtaMinutes(1)).toBe(2);
-    expect(profileEtaMinutes(5)).toBe(2);
   });
 });
 

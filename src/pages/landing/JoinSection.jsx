@@ -12,7 +12,7 @@ import { CURTAIN_VARS, risesOver } from './curtain';
 import { useMotion } from './motion/context';
 import { EASE, gsap } from './motion/gsapSetup';
 import { useGsapContext } from './motion/useGsapContext';
-import MapScreen from './screens/MapScreen';
+import AppScreen from './screens/AppScreen';
 
 // One store badge: the platform's mark, a small line above the name. With no link yet it is a plain,
 // disabled badge that says "Coming soon" rather than a button that goes nowhere (a fallback only:
@@ -167,7 +167,7 @@ export function JoinSection({ onDriverSubmit }) {
                   <div className="rotate-[6deg]">
                     <PhoneFrame className="w-full">
                       <div className="absolute inset-0">
-                        <MapScreen />
+                        <AppScreen shot={0} />
                       </div>
                     </PhoneFrame>
                   </div>
@@ -181,7 +181,7 @@ export function JoinSection({ onDriverSubmit }) {
               >
                 <PhoneFrame className="w-[200px] xl:w-[230px]">
                   <div className="absolute inset-0">
-                    <MapScreen />
+                    <AppScreen shot={0} />
                   </div>
                 </PhoneFrame>
               </div>
