@@ -18,13 +18,17 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
-## 2026-10-26 — Landing: the laptop shows the current PinGo portal
+## 2026-10-26 — Landing: real app screens in the phone and the laptop
 - **Branch:** feature/landing-journey
 - **Modules touched:** [LANDING](modules/LANDING.md)
-- **What changed:** retook the four portal captures the laptop cycles through (`public/landing/portal-overview|vehicles|drivers|enrollments.jpg`) from the current PinGo portal (they showed the old TrackMe design). Overview, vehicles, drivers and enrollments, from the E2E mock data.
-- **Why:** the laptop in "How it works" should show the real app. The phone screens are still drawn in code: the rider app is a separate project and has no screenshots in its repo.
-- **Contract impact:** none. **Tests:** none needed (images only; the existing `PortalScreen` tests use the same file names and alt text). **Docs updated:** `modules/LANDING.md`.
-- **Follow-ups:** phone screens need real screenshots of the rider app (live map, join with a key, riders); they would go in as images inside the phone frame.
+- **What changed:**
+  - **The laptop shows the current PinGo portal.** Retook the four captures (overview, vehicles, drivers, enrollments) from the current portal (they showed the old TrackMe design).
+  - **The phone shows the real driver app.** Ran the driver app on the web against a mocked API and captured its home, profile (enrollment key) and riders screens (`public/landing/app-*.webp`, sample data only). They replace the code-drawn map, join and riders screens. The three phone chapters are now the driver's side: "Go live.", "Share your key.", "Know your riders." The phone in the rider/driver section shows the app's home. A slow 2% push-in keeps each picture alive.
+  - Removed the code-drawn screens (`MapScreen`, `EnrollScreen`, `ProfilesScreen`, `map.js`, `enroll.js`, `profiles.js`) and the maths only they used (`STOP_FRACTIONS`, `etaMinutes`, `stopsAway`, `keyReveal`, `enrollStatus`, `profileEtaMinutes`).
+  - E2E: fixed three tests broken by teammates' recent landing changes (nav width, the Manager portal link in the phone menu, the iPhone badges).
+- **Why:** the screens in "How it works" should be the actual app, not illustrations.
+- **Contract impact:** none. **Tests:** unit suite and landing e2e updated and green; new tests for the app screens and `playShot`. **Docs updated:** `modules/LANDING.md`, `TESTING_GUIDE.md`.
+- **Follow-ups:** the rider app is not in these repos, so there is no rider-side phone screen (live map, join with a key); add captures if it becomes available.
 
 ## 2026-10-19 — Manager portal link on the landing nav; driver password in the Drivers directory
 - **Branch:** feat/manager-portal-nav-main (rebased onto origin/main)

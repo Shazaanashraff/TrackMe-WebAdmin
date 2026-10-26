@@ -9,14 +9,12 @@ import {
 import { CURTAIN_VARS, RECEDE, curtainScreens, curtainUnits, declareCurtain, sceneProgress } from './curtain';
 import { EASE, gsap } from './motion/gsapSetup';
 import { stepFromProgress } from './story';
-import { playMap } from './screens/map';
-import { playEnroll } from './screens/enroll';
-import { playProfiles } from './screens/profiles';
+import { playShot } from './screens/shot';
 import { playPortal } from './screens/portal';
 
 export const STORY_SCRUB = 1; // a long, soft lag behind the scroll: the swaps should feel weighty, not twitchy
 
-const PHONE_PLAYERS = [playMap, playEnroll, playProfiles];
+const PHONE_PLAYERS = [playShot, playShot, playShot];
 
 /**
  * "How it works" as one film, played by scrolling. The stage is pinned for STORY_SCREENS screens
