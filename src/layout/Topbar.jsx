@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useColorMode } from '@/theme/ColorMode';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { NotificationBell } from '@/components/manager/notification-bell';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -121,6 +122,10 @@ export function Topbar({ user, navItems, onLogout, onRefresh, onMobileMenuOpen }
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
+
+      {/* Manager notices (riders leaving or coming back). Managers only: the
+          super-admin has no notices of their own. */}
+      {isSuperAdmin ? null : <NotificationBell />}
 
       {/* Refresh */}
       <Button

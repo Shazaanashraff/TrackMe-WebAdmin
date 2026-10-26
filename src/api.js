@@ -327,6 +327,18 @@ export const adminApi = {
   // receives lower-latency updates over Socket.IO.
   getManagerFleetLive: () => request('/api/manager/vehicles/live'),
 
+  // The manager's own notices (the Topbar bell): a rider leaving or coming back
+  // because of an account deletion. Same /api/notifications routes the apps use;
+  // the backend scopes them to the signed-in manager.
+  getNotifications: ({ limit = 20 } = {}) => request(`/api/notifications?limit=${limit}`),
+
+  getUnreadNotificationCount: () => request('/api/notifications/count/unread'),
+
+  markNotificationRead: (notificationId) =>
+    request(`/api/notifications/${notificationId}/read`, { method: 'PUT' }),
+
+  markAllNotificationsRead: () => request('/api/notifications/read-all', { method: 'PUT' }),
+
   getManagerVehicleById: (vehicleId) => request(`/api/manager/vehicles/${vehicleId}`),
 
   updateManagerVehicle: (vehicleId, payload) =>

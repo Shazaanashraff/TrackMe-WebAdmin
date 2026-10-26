@@ -18,6 +18,16 @@ when source under `src/` changed. One entry per session/PR is enough.
 - **Follow-ups / known issues:** <or "none">
 ```
 
+
+## 2026-10-25: Manager notification bell
+- **Branch:** feature/account-deletion-password
+- **Modules touched:** notifications (new) — [`docs/modules/NOTIFICATIONS.md`](modules/NOTIFICATIONS.md); layout (Topbar)
+- **What changed:** Managers get a bell in the Topbar with an unread badge and a panel of their notices (a rider left or came back because of an account deletion), live over Socket.IO with a 60 s poll fallback; open marks read, "Mark all read". Super-admins get no bell.
+- **Why:** passenger issues #58/#59: the manager must be told when a rider deletes their account or keeps it.
+- **Tests:** notification-bell (7), use-manager-notifications (5), Topbar (+1).
+- **Docs updated:** NOTIFICATIONS.md (new), README.md, TESTING_GUIDE.md.
+- **Follow-ups / known issues:** none.
+
 ## 2026-10-19 — Manager portal link on the landing nav; driver password in the Drivers directory
 - **Branch:** feat/manager-portal-nav-main (rebased onto origin/main)
 - **Modules touched:** [LANDING](modules/LANDING.md), [ACCOUNTS](modules/ACCOUNTS.md)
